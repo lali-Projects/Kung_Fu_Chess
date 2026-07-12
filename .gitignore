@@ -1,0 +1,40 @@
+# --- קבצי הרצה וספריות (התוצרים של הקימפול) ---
+*.exe
+*.out
+*.app
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.dylib
+
+# --- תיקיות בנייה אוטומטיות (Build Directories) ---
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+# --- הגדרות של Visual Studio (אם אתם משתמשים בה) ---
+.vs/
+*.user
+*.suo
+*.db
+*.opendb
+*.VC.db
+*.VisualState
+
+# --- הגדרות של CLion / CMake (אם רלוונטי) ---
+.cmake/
+cmake-build-debug/
+cmake-build-release/
+CMakeCache.txt
+CMakeFiles/
+Makefile
+
+# --- קבצי מערכת הפעלה ויומני ריצה ---
+*.log
+.DS_Store
+Thumbs.db
