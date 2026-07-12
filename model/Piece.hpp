@@ -4,7 +4,7 @@
 
 enum class Side { WHITE, BLACK };
 enum class PieceType { KING, QUEEN, ROOK, BISHOP, KNIGHT, PAWN };
-enum class PieceState { IDLE, MOVING, CAPTURED }; 
+enum class PieceState { IDLE, MOVING, CAPTURED, AIRBORNE }; 
 
 inline std::string typeToString(PieceType type) {
     switch (type) 

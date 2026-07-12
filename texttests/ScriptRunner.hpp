@@ -5,11 +5,11 @@
 #pragma once
 #include <iostream>
 #include <string>
-#include <sstream> // זה קריטי!
+#include <sstream> 
 #include "Board.hpp"
 #include "BoardPrinter.hpp"
-#include "GameController.hpp"
 #include "GameEngine.hpp"
+#include "GameController.hpp"
 class ScriptRunner {
 private:
     std::istream& input;   // הזרם שממנו נקראות הפקודות
@@ -50,6 +50,11 @@ public:
                 ss >> sub; // קריאת המילה "board"
                 executePrint();
             }
+            else if (command == "jump") {
+              int x, y;
+              ss >> x >> y;
+              executeJump(x, y);
+}
         }
     }
 
@@ -58,4 +63,5 @@ private:
     void executeClick(int x, int y) { controller.click(x, y); }
     void executeWait(int ms) { gameEngine.wait(ms); }
     void executePrint() { BoardPrinter::print(board, output); }
+    void executeJump(int x, int y) { controller.jump(x, y); }
 };

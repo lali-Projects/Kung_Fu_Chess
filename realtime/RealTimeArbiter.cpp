@@ -1,57 +1,100 @@
 #include "RealTimeArbiter.hpp"
 #include "GameEngine.hpp"
 
-void RealTimeArbiter::startMotion(std::shared_ptr<Piece> piece, Position src, Position dst, int startTime, int travelTime) {
-    activeMotion.emplace(piece, src, dst, startTime, travelTime);
+// מתחיל תנועה חדשה של כלי על הלוח
+void RealTimeArbiter::startMotion(std::shared_ptr<Piece> piece, Position source, Position destination, int startTime, int travelTime) {
+    activeMotion.emplace(piece, source, destination, startTime, travelTime);
 }
 
-/**
- * @brief מנהלת את זרימת הזמן ובודקת האם הגיע הזמן לבצע סיום תנועה.
- */
+// ניהול הזמן והבדיקה האם פעולות בזמן אמת הגיעו לסיומן
 void RealTimeArbiter::advanceTime(int currentTime, GameEngine& engine) {
-    if (!activeMotion.has_value() || !activeMotion->hasArrived(currentTime)) {
-        return;
-    }
-
-    processMotionCompletion(engine);
-    activeMotion.reset();
+    handleMotionLogic(currentTime, engine);
+    handleJumpLogic(currentTime);
 }
 
-/**
- * @brief מבצעת את כל הפעולות הנדרשות בעת הגעת כלי ליעדו.
- */
-void RealTimeArbiter::processMotionCompletion(GameEngine& engine) {
-    Position destination = activeMotion->destination;
-    std::shared_ptr<Piece> movingPiece = activeMotion->movingPiece;
-    std::shared_ptr<Piece> targetPiece = board.getPieceAt(destination);
+// ניהול תהליך התנועה (Motion)
+void RealTimeArbiter::handleMotionLogic(int currentTime, GameEngine& engine) {
+    if (activeMotion.has_value() && activeMotion->hasArrived(currentTime)) {
+        resolveMotion(engine);
+        activeMotion.reset();
+    }
+}
 
-    // 1. בדיקת סיום משחק (הכאת מלך)
+// ניהול תהליך הקפיצה (Jump)
+void RealTimeArbiter::handleJumpLogic(int currentTime) {
+    if (activeJump.has_value() && activeJump->hasFinished(currentTime)) {
+        processJumpCompletion();
+    }
+}
+
+// החלטה על אופן סיום התנועה: האם מדובר במהלך תקין או בהתנגשות עם כלי קופץ?
+void RealTimeArbiter::resolveMotion(GameEngine& engine) {
+    Position destination = activeMotion->destination;
+    
+    if (isCollisionWithJump(destination)) {
+        handleJumpCollision(activeMotion->movingPiece);
+    } else {
+        executeStandardMove(engine);
+    }
+}
+
+// בדיקה האם היעד של התנועה תפוס על ידי כלי שנמצא ב"קפיצה" (AIRBORNE)
+bool RealTimeArbiter::isCollisionWithJump(const Position& pos) const {
+    return activeJump.has_value() && activeJump->getPosition() == pos;
+}
+
+// לוגיקה של ביצוע מהלך שחמט רגיל
+void RealTimeArbiter::executeStandardMove(GameEngine& engine) {
+    Position destination = activeMotion->destination;
+    auto movingPiece = activeMotion->movingPiece;
+    auto targetPiece = board.getPieceAt(destination);
+
+    // 1. זיהוי הכאת מלך (סיום משחק)
     if (targetPiece && targetPiece->getType() == PieceType::KING) {
         engine.signalGameOver();
     }
 
-    // 2. ביצוע הכאה בלוח
+    // 2. הסרת הכלי המותקף מהלוח
     if (targetPiece) {
         board.removePiece(destination);
     }
 
-    // 3. ביצוע המהלך עצמו
+    // 3. עדכון מיקום הכלי בלוח
     board.movePiece(activeMotion->source, destination);
 
-    // 4. טיפול בקידום רגלי (Promotion)
+    // 4. בדיקת קידום רגלי למלכה
     handlePawnPromotion(movingPiece, destination);
 }
 
-/**
- * @brief בודקת האם רגלי הגיע לשורת הסיום ומקדמת אותו למלכה במידת הצורך.
- */
+// טיפול מיוחד במקרה של אכילה תוך כדי קפיצה
+void RealTimeArbiter::handleJumpCollision(std::shared_ptr<Piece> movingPiece) {
+    // הכלי המגיע נמחק מהלוח, הכלי הקופץ נשאר במקומו
+    board.removePiece(activeMotion->source);
+    // התנועה בטלה (לא מעדכנים את הלוח ליעד כי המגיע הוסר)
+}
+
+// בדיקת רגלי בשורת הסיום
 void RealTimeArbiter::handlePawnPromotion(std::shared_ptr<Piece> piece, const Position& pos) {
     if (piece && piece->getType() == PieceType::PAWN) {
         int lastRow = (piece->getSide() == Side::WHITE) ? 0 : board.getRows() - 1;
-        
         if (pos.getRow() == lastRow) {
             piece->setType(PieceType::QUEEN);
         }
+    }
+}
+
+
+// התחלת מצב AIRBORNE
+void RealTimeArbiter::startJump(std::shared_ptr<Piece> piece, int startTime, int jumpDuration) {
+    piece->setState(PieceState::AIRBORNE);
+    activeJump.emplace(piece, piece->getPosition(), startTime, jumpDuration);
+}
+
+// סיום מצב AIRBORNE וחזרה ל-IDLE
+void RealTimeArbiter::processJumpCompletion() {
+    if (activeJump.has_value()) {
+        activeJump->getPiece()->setState(PieceState::IDLE);
+        activeJump.reset();
     }
 }
 

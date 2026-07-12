@@ -15,14 +15,22 @@ struct MoveResult {
 
 class GameEngine {
 private:
+    /// הלוח של המשחק
     Board& board;
-    RuleEngine& ruleEngine;
-    RealTimeArbiter arbiter; // מנהל התנועות בזמן אמת
-    int currentTimeMs;
-    bool isGameOver; // דגל המציין אם המשחק הסתיים
 
+    /// מנוע חוקי השחמט
+    RuleEngine& ruleEngine;
+
+    /// אחראי על כל הפעולות המתרחשות לאורך זמן
+    RealTimeArbiter& realTimeArbiter;
+
+    /// הזמן הלוגי הנוכחי של המשחק
+    int currentTimeMs;
+
+    /// האם המשחק הסתיים
+    bool isGameOver;
     void validateNoActiveMotion() const {
-        if (arbiter.hasActiveMotion()) {
+        if (realTimeArbiter.hasActiveMotion()) {
             throw std::runtime_error("MOTION_IN_PROGRESS");
         }
     }
@@ -42,10 +50,20 @@ private:
     }
 
 public:
-    GameEngine(Board& b, RuleEngine& re) 
-        : board(b), ruleEngine(re), arbiter(b), 
-          currentTimeMs(GameConfig::INITIAL_TIME_MS), isGameOver(false) {}
+   GameEngine(Board& board,
+           RuleEngine& ruleEngine,
+           RealTimeArbiter& arbiter)
+    :
+      board(board),
+      ruleEngine(ruleEngine),
+      realTimeArbiter(arbiter),
+      currentTimeMs(GameConfig::INITIAL_TIME_MS),
+      isGameOver(false)
+{}
 
+    const Board& getBoard() const { return board; }
+    int getCurrentTime() const { return currentTimeMs; }
+    
     /**
      * @brief מבקש מהלך. דוחה בקשות אם המשחק הסתיים או שיש תנועה פעילה.
      */
@@ -57,7 +75,7 @@ public:
             validateMoveLegality(from, to);
 
             int travelTime = calculateTravelTime(from, to);
-            arbiter.startMotion(board.getPieceAt(from), from, to, currentTimeMs, travelTime);
+            realTimeArbiter.startMotion(board.getPieceAt(from), from, to, currentTimeMs, travelTime);
             
             return {true, "ok"};
         } catch (const std::exception& e) {
@@ -70,7 +88,7 @@ public:
      */
     void wait(int milliseconds) {
         currentTimeMs += milliseconds;
-        arbiter.advanceTime(currentTimeMs, *this);
+        realTimeArbiter.advanceTime(currentTimeMs, *this);
     }
 
     /**
@@ -80,6 +98,15 @@ public:
         isGameOver = true;
     }
 
-    const Board& getBoard() const { return board; }
-    int getCurrentTime() const { return currentTimeMs; }
+    
+    /**
+ * @brief מבקש להתחיל קפיצה עבור הכלי שנמצא במיקום הנתון.
+ *
+ * הקפיצה אינה מזיזה את הכלי.
+ * היא רק מסמנת אותו כ-AIRBORNE למשך זמן קבוע.
+ *
+ * @param position מיקום הכלי המבקש לקפוץ.
+ * @return MoveResult המציין האם הקפיצה התקבלה.
+ */
+MoveResult requestJump(const Position& position);
 };

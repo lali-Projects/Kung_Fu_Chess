@@ -14,6 +14,21 @@ private:
 public:
     GameController(Board& b, GameEngine& ge) : board(b), gameEngine(ge) {}
 
+    // להוסיף ל-GameController.hpp בתוך ה-public:
+
+     void jump(int pixelX, int pixelY) {
+    Position pos = BoardMapper::pixelToPosition(pixelX, pixelY);
+    if (!board.isInsideBoard(pos)) {
+        return;
+    }
+    
+    // קריאה ל-GameEngine לבצע את הלוגיקה
+    MoveResult result = gameEngine.requestJump(pos);
+    
+    if (!result.success) {
+        std::cout << "ERROR " << result.reason << std::endl;
+    }
+     }
     void click(int pixelX, int pixelY) {
         // 1. תרגום לפיקסלים (פונקציה פשוטה)
         Position pos = BoardMapper::pixelToPosition(pixelX, pixelY);
