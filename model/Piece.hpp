@@ -43,7 +43,8 @@ public:
     // Setters
     void setPosition(const Position& newPos) { pos = newPos; }
     void setState(PieceState newState) { state = newState; } 
-
+    void setType(PieceType newType) { type = newType; }
+    
     virtual std::string toCanonicalString() const {
         std::string sideChar = (getSide() == Side::WHITE) ? "w" : "b";
         return sideChar + typeToString(getType());
