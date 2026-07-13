@@ -20,12 +20,15 @@ public:
                ? grid[pos.getRow()][pos.getCol()] : nullptr;
     }
     
-    void setPieceAt(int r, int c, std::shared_ptr<Piece> p) {
-        if(r >= 0 && r < rows && c >= 0 && c < cols) {
-            grid[r][c] = p;
-            if(p) p->setPosition(Position(r, c));
+   void setPieceAt(int r, int c, std::shared_ptr<Piece> p) {
+    Position pos(r, c);
+    if (isInsideBoard(pos)) {
+        grid[r][c] = p;
+        if (p) {
+            p->setPosition(pos);
         }
     }
+}
     bool isInsideBoard(const Position& to) const
     {
         return to.getRow() < rows && to.getRow() >= 0 && to.getCol() < cols && to.getCol() >=0;
@@ -36,23 +39,22 @@ public:
      * @param to המיקום שאליו רוצים להזיז.
      */
     void movePiece(const Position& from, const Position& to) {
-        if (!isInsideBoard(from) || !isInsideBoard(to)) return;
+    if (!isInsideBoard(from) || !isInsideBoard(to)) return;
 
-        std::shared_ptr<Piece> piece = grid[from.getRow()][from.getCol()];
+    // עצירה מוקדמת: אם המקור והיעד זהים, אין מה לעשות
+    if (from.getRow() == to.getRow() && from.getCol() == to.getCol()) return;
+
+    std::shared_ptr<Piece> piece = grid[from.getRow()][from.getCol()];
+    
+    if (piece) {
+        // 1. הצבת הכלי ביעד (setPieceAt דואגת לעדכן את המערך ואת הכלי עצמו)
+        setPieceAt(to.getRow(), to.getCol(), piece);
         
-        if (piece) {
-            // 1. עדכון המיקום החדש בלוח
-            grid[to.getRow()][to.getCol()] = piece;
-            
-            // 2. עדכון המיקום הפנימי בתוך אובייקט הכלי
-            piece->setPosition(to);
-            
-            // 3. ניקוי המיקום הישן בלוח (רק אם לא הזזנו לאותו המקום)
-            if (!(from.getRow() == to.getRow() && from.getCol() == to.getCol())) {
-                grid[from.getRow()][from.getCol()] = nullptr;
-            }
-        }
+        // 2. ניקוי המיקום הישן בלוח (אפשר להשתמש בפונקציה ייעודית אם קיימת)
+        grid[from.getRow()][from.getCol()] = nullptr; 
+        // הערה: אם יש לך פונקציית removePiece(from), עדיף להשתמש בה כאן!
     }
+}
 
     /**
      * @brief מסירה כלי ממיקום ספציפי בלוח.
