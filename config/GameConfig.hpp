@@ -1,19 +1,23 @@
 #pragma once
+#include <unordered_map>
+#include "Piece.hpp" 
 
 /**
  * @class GameConfig
- * @brief מחלקת הגדרות וקבועים מרכזית למניעת מספרי קסם בקוד העסקי.
+ * @brief מחלקת הגדרות מרכזית. כל המשתנים ניתנים לשינוי דינמי בזמן ריצה.
  */
 class GameConfig {
 public:
-    // גודל פיקסלי של משבצת בלוח (משמש לפענוח קואורדינטות לחיצה)
-    static constexpr int CELL_SIZE_PX = 100;
-    
-    // זמן ברירת המחדל (במילישניות) שלוקח לכלי להגיע למשבצת היעד
-     static constexpr int DEFAULT_TRAVEL_TIME_MS = 1000;
-    // שעון התחלת המשחק
-    static constexpr int INITIAL_TIME_MS = 0;
-    
-    // קבוע המייצג קואורדינטת לחיצה לא תקפה או היעדר בחירה
-    static constexpr int INVALID_COORDINATE = -1;
+    // הגדרות זמנים ומידות
+    static int CELL_SIZE_PX;
+    static int DEFAULT_TRAVEL_TIME_MS;
+    static int INITIAL_TIME_MS;
+
+    // הגדרות תווים ופורמט (כעת כמשתנים רגילים)
+    static char EMPTY_CELL;
+    static char SIDE_WHITE;
+    static char SIDE_BLACK;
+
+    // מפת הכלים (כעת כמשתנה רגיל שניתן לעדכן בזמן ריצה)
+    static std::unordered_map<char, PieceType> TYPE_MAP;
 };

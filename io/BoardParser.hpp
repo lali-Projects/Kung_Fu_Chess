@@ -1,14 +1,17 @@
 #pragma once
 #include "Board.hpp"
+#include "GameConfig.hpp"
+#include "PieceEngine.hpp"
 #include <iostream>
 #include <sstream>
 #include <vector>
 #include <string>
 #include <stdexcept>
-#include "PieceEngine.hpp"
+#include <memory>
 
 class BoardParser {
 private:
+    // קריאת השורות הגולמיות השייכות ללוח בלבד
     static std::vector<std::string> readRawLines(std::istream& is) {
         std::vector<std::string> lines;
         std::string line;
@@ -23,9 +26,16 @@ private:
         return lines;
     }
 
+    // פונקציית עזר לאימות תקינות הטוקן - שמירה על עיקרון ה-SRP
+    static void validateToken(const std::string& token) {
+        if (token.length() < 2 || !PieceEngine::isKnownType(token[1])) {
+            throw std::runtime_error("UNKNOWN_TOKEN");
+        }
+    }
+
 public:
     /**
-     * @brief ממיר זרם קלט ללוח משחק.
+     * @brief ממיר זרם קלט ללוח משחק על בסיס הגדרות דינמיות.
      * זורק exception עם קוד השגיאה המדויק עבור הבודק האוטומטי.
      */
     static std::unique_ptr<Board> parse(std::istream& is) {
@@ -46,21 +56,23 @@ public:
             std::stringstream ss(lines[r]);
             std::string token;
             for (int c = 0; c < cols; ++c) {
-                // זריקת שגיאה ללא הקידומת ERROR - ה-main יוסיף אותה
+                // בדיקת התאמה של רוחב השורה
                 if (!(ss >> token)) throw std::runtime_error("ROW_WIDTH_MISMATCH");
 
-                if (token != ".") {
-                    // בדיקת תקינות דרך המנוע
-                    if (!PieceEngine::isKnownType(token[1])) {
-                        throw std::runtime_error("UNKNOWN_TOKEN");
-                    }
-                    
-                    Side side = (token[0] == 'w') ? Side::WHITE : Side::BLACK;
-                    char typeChar = token[1];
-                    
-                    // יצירת הכלי והצבה בלוח
-                    board->setPieceAt(r, c, PieceEngine::createPiece(typeChar, side, Position(r, c)));
+                // בדיקה דינמית האם מדובר במשבצת ריקה (ללא hard-coding של '.')
+                if (token.length() == 1 && token[0] == GameConfig::EMPTY_CELL) {
+                    continue;
                 }
+
+                // בדיקת תקינות הכלי דרך פונקציית ה-SRP והמנוע
+                validateToken(token);
+                
+                // קביעה דינמית של הצד (ללא hard-coding של 'w')
+                Side side = (token[0] == GameConfig::SIDE_WHITE) ? Side::WHITE : Side::BLACK;
+                char typeChar = token[1];
+                
+                // יצירת הכלי והצבה בלוח
+                board->setPieceAt(r, c, PieceEngine::createPiece(typeChar, side, Position(r, c)));
             }
         }
         return board;

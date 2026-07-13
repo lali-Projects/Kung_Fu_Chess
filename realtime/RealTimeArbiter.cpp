@@ -3,6 +3,7 @@
 
 // מתחיל תנועה חדשה של כלי על הלוח
 void RealTimeArbiter::startMotion(std::shared_ptr<Piece> piece, Position source, Position destination, int startTime, int travelTime) {
+   piece->setState(PieceState::MOVING); 
     activeMotion.emplace(piece, source, destination, startTime, travelTime);
 }
 

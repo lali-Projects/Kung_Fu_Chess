@@ -1,33 +1,36 @@
 #pragma once
 #include "Piece.hpp"
+#include "GameConfig.hpp"
 #include <memory>
 #include <string>
 
 /**
- * @brief מנוע יצירת הכלים (PieceEngine).
- * אחראי על הפיכת נתונים גולמיים לאובייקטים של כלים.
+ * @class PieceEngine
+ * @brief מנוע יצירת הכלים.
+ * אחראי על הפיכת נתונים גולמיים לאובייקטים של כלים בצורה דינמית (DRY).
  */
 class PieceEngine {
 public:
-    // יצירת כלי חדש על סמך סוג, צד ומיקום.
+    /**
+     * @brief יצירת כלי חדש על סמך סוג, צד ומיקום.
+     * משתמש במפת הכלים הדינמית כדי למנוע כפילויות בקוד.
+     */
     static std::shared_ptr<Piece> createPiece(char typeChar, Side side, Position pos) {
-        PieceType type;
-        
-        switch (typeChar) {
-            case 'K': type = PieceType::KING;   break;
-            case 'Q': type = PieceType::QUEEN;  break;
-            case 'R': type = PieceType::ROOK;   break;
-            case 'B': type = PieceType::BISHOP; break;
-            case 'N': type = PieceType::KNIGHT; break;
-            case 'P': type = PieceType::PAWN;   break;
-            default: return nullptr;
+        // חיפוש סוג הכלי במפה הדינמית
+        auto it = GameConfig::TYPE_MAP.find(typeChar);
+        if (it == GameConfig::TYPE_MAP.end()) {
+            return nullptr; // סוג כלי לא מוכר
         }
 
-        return std::make_shared<Piece>(0, side, type, pos);
+        // יצירת הכלי עם זמן התחלתי דינמי מהקונפיגורציה (במקום ה-0 שהיה קשיח)
+        return std::make_shared<Piece>(GameConfig::INITIAL_TIME_MS, side, it->second, pos);
     }
 
-    // בדיקה האם סוג הכלי מוכר למנוע
+    /**
+     * @brief בדיקה האם סוג הכלי מוכר למנוע.
+     * עונה על עיקרון ה-DRY - אין צורך לתחזק רשימת תווים נפרדת כאן.
+     */
     static bool isKnownType(char type) {
-        return (type == 'K' || type == 'Q' || type == 'R' || type == 'B' || type == 'N' || type == 'P');
+        return GameConfig::TYPE_MAP.find(type) != GameConfig::TYPE_MAP.end();
     }
 };
