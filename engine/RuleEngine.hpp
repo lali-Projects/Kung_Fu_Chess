@@ -59,4 +59,21 @@ public:
 
         return {true, "ok"};
     }
+
+/**
+ * @brief בודק האם מצב הכלי מאפשר לו לבצע קפיצה.
+ * מעביר את האחריות הארכיטקטונית של החוקים למקום הנכון.
+ */
+MoveValidation isValidJump(std::shared_ptr<Piece> piece) const {
+        if (piece->getState() == PieceState::MOVING) {
+            return { false, "piece_is_moving" };
+        }
+        if (piece->getState() == PieceState::AIRBORNE) {
+            return { false, "piece_is_airborne" };
+        }
+        if (piece->getState() == PieceState::CAPTURED) {
+            return { false, "piece_is_captured" };
+        }
+        return { true, "ok" };
+    }
 };

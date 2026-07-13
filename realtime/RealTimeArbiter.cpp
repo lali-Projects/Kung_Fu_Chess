@@ -1,9 +1,19 @@
 #include "RealTimeArbiter.hpp"
 #include "GameEngine.hpp"
+#include "GameConfig.hpp" // הוספנו את זה כדי לקבל את הקבועים
+#include <cmath>
+#include <algorithm>
 
-// מתחיל תנועה חדשה של כלי על הלוח
-void RealTimeArbiter::startMotion(std::shared_ptr<Piece> piece, Position source, Position destination, int startTime, int travelTime) {
-   piece->setState(PieceState::MOVING); 
+// המימוש החדש: הארביטר הוא "המומחה" שמחשב את זמן התנועה
+void RealTimeArbiter::startMotion(std::shared_ptr<Piece> piece, Position source, Position destination, int startTime) {
+    // 1. חישוב זמן התנועה עבר לכאן
+    int rowDiff = std::abs(destination.getRow() - source.getRow());
+    int colDiff = std::abs(destination.getCol() - source.getCol());
+    int distance = std::max(rowDiff, colDiff);
+    int travelTime = distance * GameConfig::DEFAULT_TRAVEL_TIME_MS;
+
+    // 2. עדכון המצב והתחלת התנועה
+    piece->setState(PieceState::MOVING); 
     activeMotion.emplace(piece, source, destination, startTime, travelTime);
 }
 
