@@ -1,35 +1,19 @@
 #pragma once
-#include "IMoveRule.hpp"
+#include <set>
+#include "Position.hpp" // נדרש הגדרה מלאה כיוון שהוא פרמטר של std::set
 
+// Forward declarations למניעת תלויות הדדיות ושיפור זמן הקומפילציה
+class Board;
+class Piece;
 
 /**
- * @brief סורק את הלוח בכיוון (rowStep, colStep) עד למכשול.
- * @param board הלוח הנוכחי.
+ * @brief סורק את הלוח בכיוון (rowStep, colStep) עד למכשול ומכניס את המהלכים החוקיים שנמצאו לקבוצה.
+ * * @param board לוח המשחק הנוכחי.
  * @param piece הכלי המבצע את המהלך.
- * @param rowStep השינוי בשורה בכל צעד.
- * @param colStep השינוי בעמודה בכל צעד.
- * @param legalMoves הקבוצה אליה יוכנסו המהלכים החוקיים.
+ * @param rowStep השינוי בשורה בכל צעד (כיוון אנכי).
+ * @param colStep השינוי בעמודה בכל צעד (כיוון אופקי).
+ * @param legalMoves הקבוצה אליה יוכנסו המהלכים החוקיים שנמצאו.
  */
-inline void addMovesInDirection(const Board& board, const Piece& piece, 
-                                int rowStep, int colStep, 
-                                std::set<Position>& legalMoves) {
-    Position currentPos = piece.getPosition();
-    int nextRow = currentPos.getRow() + rowStep;
-    int nextCol = currentPos.getCol() + colStep;
-
-    while (board.isInsideBoard(Position(nextRow, nextCol))) {
-        Position targetPos(nextRow, nextCol);
-        auto targetPiece = board.getPieceAt(targetPos);
-
-        if (!targetPiece) {
-            legalMoves.insert(targetPos);
-        } else {
-            if (targetPiece->getSide() != piece.getSide()) {
-                legalMoves.insert(targetPos);
-            }
-            break; // עצירה בגלל חסימה
-        }
-        nextRow += rowStep;
-        nextCol += colStep;
-    }
-}
+void addMovesInDirection(const Board& board, const Piece& piece, 
+                         int rowStep, int colStep, 
+                         std::set<Position>& legalMoves);

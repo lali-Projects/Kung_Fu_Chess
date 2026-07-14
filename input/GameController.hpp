@@ -5,6 +5,12 @@
 #include "BoardMapper.hpp"
 #include <optional>
 
+/**
+ * @class GameController
+ * @brief בקר המשחק (Controller).
+ * אחראי על קבלת קלטים מהמשתמש (למשל לחיצות עכבר), תרגומם לקואורדינטות הלוח,
+ * ופנייה למנוע המשחק (GameEngine) לביצוע הלוגיקה והמהלכים.
+ */
 class GameController {
 private:
     Board& board;
@@ -12,56 +18,27 @@ private:
     std::optional<Position> selectedPosition;
 
 public:
-    GameController(Board& b, GameEngine& ge) : board(b), gameEngine(ge) {}
+    /**
+     * @brief בנאי המאתחל את הבקר עם הפניות ללוח ולמנוע המשחק.
+     */
+    GameController(Board& b, GameEngine& ge);
 
-    // להוסיף ל-GameController.hpp בתוך ה-public:
+    /**
+     * @brief מבצע פעולת קפיצה (Jump) עבור כלי בהתבסס על מיקום פיקסלים במסך.
+     * @param pixelX מיקום ה-X בפיקסלים.
+     * @param pixelY מיקום ה-Y בפיקסלים.
+     */
+    void jump(int pixelX, int pixelY);
 
-     void jump(int pixelX, int pixelY) {
-    Position pos = BoardMapper::pixelToPosition(pixelX, pixelY);
-    if (!board.isInsideBoard(pos)) {
-        return;
-    }
-    
-    // קריאה ל-GameEngine לבצע את הלוגיקה
-    MoveResult result = gameEngine.requestJump(pos);
-    
-    if (!result.success) {
-        std::cout << "ERROR " << result.reason << std::endl;
-    }
-     }
-    void click(int pixelX, int pixelY) {
-        // 1. תרגום לפיקסלים (פונקציה פשוטה)
-        Position pos = BoardMapper::pixelToPosition(pixelX, pixelY);
+    /**
+     * @brief מטפל בלחיצה (Click) על המסך - בחירת כלי, החלפת בחירה או ביצוע מהלך.
+     * @param pixelX מיקום ה-X בפיקסלים.
+     * @param pixelY מיקום ה-Y בפיקסלים.
+     */
+    void click(int pixelX, int pixelY);
 
-        if (!board.isInsideBoard(pos)) {
-            return;
-        }
-
-        std::shared_ptr<Piece> clickedPiece = board.getPieceAt(pos);
-
-        // 3. לוגיקת המצבים
-        if (!selectedPosition.has_value()) {
-            if (clickedPiece != nullptr) {
-                selectedPosition = pos;
-            }
-        } 
-        else {
-            std::shared_ptr<Piece> selectedPiece = board.getPieceAt(selectedPosition.value());
-
-            // החלפת בחירה
-            if (clickedPiece != nullptr && selectedPiece != nullptr && 
-                clickedPiece->getSide() == selectedPiece->getSide()) {
-                selectedPosition = pos;
-            } 
-            // ניסיון מהלך
-            else {
-                MoveResult result = gameEngine.requestMove(selectedPosition.value(), pos);
-                clearSelection();
-            }
-        }
-    }
-
-    void clearSelection() {
-        selectedPosition = std::nullopt;
-    }
+    /**
+     * @brief מאפס את הבחירה הנוכחית של המשבצת.
+     */
+    void clearSelection();
 };

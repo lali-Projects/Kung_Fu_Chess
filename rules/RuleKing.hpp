@@ -1,21 +1,24 @@
 #pragma once
 #include "IMoveRule.hpp"
-#include "RuleUtils.hpp"
+#include <set>
 
+// Forward declarations למניעת תלויות הדדיות ושיפור זמן הקומפילציה
+class Board;
+class Piece;
+class Position;
+
+/**
+ * @class RuleKing
+ * @brief מימוש חוקי התנועה של המלך (King).
+ * יורש מ-IMoveRule ומגדיר את הלוגיקה הספציפית למלך, המאפשרת לו לנוע משבצת אחת לכל כיוון (אנכית, אופקית או אלכסונית).
+ */
 class RuleKing : public IMoveRule {
 public:
-    std::set<Position> getLegalDestinations(const Board& board, const Piece& piece) const override {
-        std::set<Position> moves;
-        for (int rowDelta = -1; rowDelta <= 1; ++rowDelta) {
-            for (int colDelta = -1; colDelta <= 1; ++colDelta) {
-                if (rowDelta == 0 && colDelta == 0) continue;
-                Position targetPos(piece.getPosition().getRow() + rowDelta, piece.getPosition().getCol() + colDelta);
-                if (board.isInsideBoard(targetPos)) {
-                    auto target = board.getPieceAt(targetPos);
-                    if (!target || target->getSide() != piece.getSide()) moves.insert(targetPos);
-                }
-            }
-        }
-        return moves;
-    }
+    /**
+     * @brief מחזיר את כל מיקומי היעד החוקיים עבור המלך בהתאם למצב הלוח הנוכחי.
+     * @param board לוח המשחק.
+     * @param piece המלך שעבורו בודקים את המהלכים.
+     * @return std::set<Position> קבוצת המיקומים אליהם המלך רשאי לנוע.
+     */
+    std::set<Position> getLegalDestinations(const Board& board, const Piece& piece) const override;
 };
