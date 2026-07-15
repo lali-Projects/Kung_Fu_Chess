@@ -1,145 +1,144 @@
 #include <iostream>
+#include <filesystem>
 
-#include "Board.hpp"
-#include "PieceEngine.hpp"
-#include "RuleEngine.hpp"
-#include "RealTimeArbiter.hpp"
-#include "GameEngine.hpp"
+#include "TextureManager.hpp"
+#include "GuiConfig.hpp"
 
-#include "SnapshotBuilder.hpp"
 
 int main()
 {
-    //----------------------------------------------------
-    // Reset IDs
-    //----------------------------------------------------
+    std::cout
+        << "==============================\n"
+        << " TEXTURE PATH TEST\n"
+        << "==============================\n\n";
 
-    PieceEngine::resetIdCounter();
 
-    //----------------------------------------------------
-    // Create board
-    //----------------------------------------------------
-
-    Board board(8, 8);
-
-    //----------------------------------------------------
-    // Create pieces
-    //----------------------------------------------------
-
-    auto whiteKing =
-        PieceEngine::createFromToken(
-            "wK",
-            Position(7, 4));
-
-    auto blackKing =
-        PieceEngine::createFromToken(
-            "bK",
-            Position(0, 4));
-
-    auto whitePawn =
-        PieceEngine::createFromToken(
-            "wP",
-            Position(6, 4));
-
-    //----------------------------------------------------
-    // Put pieces on board
-    //----------------------------------------------------
-
-    board.setPieceAt(7, 4, whiteKing);
-    board.setPieceAt(0, 4, blackKing);
-    board.setPieceAt(6, 4, whitePawn);
-
-    //----------------------------------------------------
-    // Create game objects
-    //----------------------------------------------------
-
-    RuleEngine ruleEngine;
-
-    RealTimeArbiter arbiter(board);
-
-    GameEngine engine(
-        board,
-        ruleEngine,
-        arbiter);
-
-    //----------------------------------------------------
-    // Build snapshot
-    //----------------------------------------------------
-
-    GameSnapshot snapshot =
-        SnapshotBuilder::build(engine);
-
-    //----------------------------------------------------
-    // Print snapshot
-    //----------------------------------------------------
-
-    std::cout << "==============================\n";
-    std::cout << " SNAPSHOT TEST\n";
-    std::cout << "==============================\n\n";
+    //----------------------------------
+    // Current working directory
+    //----------------------------------
 
     std::cout
-        << "Current Time : "
-        << snapshot.getCurrentTime()
-        << "\n";
-
-    std::cout
-        << "Game Over   : "
-        << std::boolalpha
-        << snapshot.isGameOver()
-        << "\n";
-
-    std::cout
-        << "Pieces      : "
-        << snapshot.getPieces().size()
+        << "Current directory:\n"
+        << std::filesystem::current_path()
         << "\n\n";
 
-    for (const PieceSnapshot& piece : snapshot.getPieces())
+
+
+    //----------------------------------
+    // Check configured path
+    //----------------------------------
+
+    std::cout
+        << "Board texture path:\n"
+        << GuiConfig::BOARD_TEXTURE_PATH
+        << "\n\n";
+
+
+    bool exists =
+        std::filesystem::exists(
+            GuiConfig::BOARD_TEXTURE_PATH);
+
+
+    std::cout
+        << "File exists: "
+        << exists
+        << "\n\n";
+
+
+
+    if(!exists)
     {
         std::cout
-            << "ID: "
-            << piece.getId()
+            << "ERROR: Board image was not found.\n";
 
-            << "   "
-
-            << piece.toCanonicalString()
-
-            << "   "
-
-            << "Row: "
-            << piece.getPosition().getRow()
-
-            << "   "
-
-            << "Col: "
-            << piece.getPosition().getCol()
-
-            << "   "
-
-            << "State: ";
-
-        switch (piece.getState())
-        {
-            case PieceState::IDLE:
-                std::cout << "IDLE";
-                break;
-
-            case PieceState::MOVING:
-                std::cout << "MOVING";
-                break;
-
-            case PieceState::AIRBORNE:
-                std::cout << "AIRBORNE";
-                break;
-
-            case PieceState::CAPTURED:
-                std::cout << "CAPTURED";
-                break;
-        }
-
-        std::cout << '\n';
+        return 1;
     }
 
-    std::cout << "\nSnapshot build succeeded.\n";
+
+
+    //----------------------------------
+    // TextureManager test
+    //----------------------------------
+
+    TextureManager textureManager;
+
+
+    try
+    {
+        textureManager.loadTexture(
+            "board",
+            GuiConfig::BOARD_TEXTURE_PATH);
+
+
+        std::cout
+            << "[OK] Board texture loaded\n";
+    }
+    catch(const std::exception& e)
+    {
+        std::cout
+            << "[ERROR] Loading failed:\n"
+            << e.what()
+            << "\n";
+
+        return 1;
+    }
+
+
+
+    //----------------------------------
+    // Verify stored texture
+    //----------------------------------
+
+    std::cout
+        << "\nVerification:\n";
+
+
+    std::cout
+        << "Contains board: "
+        << textureManager.contains("board")
+        << "\n";
+
+
+    try
+    {
+        Img& board =
+            textureManager.getTexture("board");
+
+
+        std::cout
+            << "Image empty: "
+            << board.empty()
+            << "\n";
+
+
+        std::cout
+            << "Image width: "
+            << board.width()
+            << "\n";
+
+
+        std::cout
+            << "Image height: "
+            << board.height()
+            << "\n";
+    }
+    catch(const std::exception& e)
+    {
+        std::cout
+            << "Verification failed:\n"
+            << e.what()
+            << "\n";
+
+        return 1;
+    }
+
+
+
+    std::cout
+        << "\n==============================\n"
+        << " TEST PASSED\n"
+        << "==============================\n";
+
 
     return 0;
 }

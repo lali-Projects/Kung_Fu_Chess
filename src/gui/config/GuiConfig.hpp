@@ -2,12 +2,21 @@
 
 #include <string>
 
+
 /**
  * @class GuiConfig
  * @brief מרכז את כל ההגדרות הקבועות של שכבת ה-GUI.
  *
- * כל ההגדרות הן Static כך שניתן לגשת אליהן מכל מקום
- * מבלי ליצור מופע של המחלקה.
+ * מכיל:
+ * - הגדרות חלון
+ * - הגדרות לוח
+ * - הגדרות אנימציה
+ * - נתיבי משאבים
+ *
+ * המחלקה אינה מכירה:
+ * - GameEngine
+ * - Board
+ * - Piece
  */
 class GuiConfig
 {
@@ -25,15 +34,33 @@ public:
 
     static const int FPS;
 
+
     // ------------------------
     // Board
     // ------------------------
 
     static const int BOARD_MARGIN;
 
+
     // ------------------------
     // Animation
     // ------------------------
 
     static const int DEFAULT_ANIMATION_DURATION;
+
+
+    // ------------------------
+    // Resources
+    // ------------------------
+
+    // תיקיית כל המשאבים
+    static const std::string ASSETS_PATH;
+
+
+    // תמונת הלוח
+    static const std::string BOARD_TEXTURE_PATH;
+
+
+    // תיקיית הכלים
+    static const std::string PIECES_PATH;
 };

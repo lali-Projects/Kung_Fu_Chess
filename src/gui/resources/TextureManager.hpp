@@ -3,89 +3,63 @@
 #include <unordered_map>
 #include <string>
 
-#include "Sprite.hpp"
-#include "SpriteKey.hpp"
+#include "Img.hpp"
 
 
 /**
  * @class TextureManager
- * @brief מנהל את כל התמונות של המשחק.
+ * @brief מנהל טעינה ושמירה של תמונות.
  *
- * אחראי על טעינה ושמירה של Sprites.
+ * אחראי:
+ * - טעינה חד פעמית של תמונות.
+ * - שמירתן בזיכרון.
+ * - החזרת תמונה לפי מפתח.
+ *
+ * אינו מכיר:
+ * - משחק
+ * - כלים
+ * - לוח
  */
 class TextureManager
 {
-
 private:
 
-    std::unordered_map<SpriteKey, Sprite> textures;
-
-    std::string basePath;
-
-
-    /**
-     * @brief טוען Sprite מתיקייה מסוימת.
-     */
-    Sprite loadSpriteFromFolder(
-        const std::string& folderPath
-    );
-
-
-    /**
-     * @brief בניית שם תיקיית הכלי.
-     */
-    std::string buildPieceFolder(
-        Side side,
-        PieceType type
-    ) const;
-
-
-    /**
-     * @brief בניית שם תיקיית המצב.
-     */
-    std::string buildStateFolder(
-        PieceState state
-    ) const;
+    std::unordered_map<std::string, Img> textures;
 
 
 public:
 
+    TextureManager() = default;
+
 
     /**
-     * @brief בנאי.
-     *
-     * @param path נתיב לתיקיית pieces.
+     * טעינת תמונה ושמירתה תחת מפתח.
      */
-    explicit TextureManager(
-        const std::string& path
-    );
+    void loadTexture(
+        const std::string& key,
+        const std::string& path);
+
 
 
     /**
-     * @brief טעינת כל התמונות.
+     * קבלת תמונה לפי מפתח.
      */
-    void loadAll();
+    Img& getTexture(
+        const std::string& key);
 
-
-    /**
-     * @brief החזרת Sprite לפי מפתח.
-     */
-    const Sprite& getSprite(
-        const SpriteKey& key
-    ) const;
 
 
     /**
-     * @brief בדיקה האם קיים Sprite.
+     * בדיקה האם קיימת תמונה.
      */
     bool contains(
-        const SpriteKey& key
-    ) const;
+        const std::string& key) const;
+
 
 
     /**
-     * @brief מחיקת כל הטקסטורות.
+     * טעינת תמונת הלוח.
      */
-    void clear();
-
+    void loadBoardTexture(
+        const std::string& path);
 };

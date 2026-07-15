@@ -5,7 +5,7 @@
             "type": "shell",
             "label": "Build with MSVC",
             "command": "cl.exe",
- "args": [
+"args": [
     "/std:c++17",
     "/EHsc",
     "/MD",
@@ -14,6 +14,7 @@
     "/I", "${workspaceFolder}/src/graphics",
     "/I", "${workspaceFolder}/src/gui/window",
     "/I", "${workspaceFolder}/src/gui/resources",
+    "/I", "${workspaceFolder}/src/gui/config",
     "/I", "${workspaceFolder}/src/common",
     "/I", "${workspaceFolder}/src/logic/model",
     "/I", "${workspaceFolder}/src/logic/engine",
@@ -22,13 +23,15 @@
     "/I", "${workspaceFolder}/src/logic/realtime",
     "/I", "${workspaceFolder}/src/gui/snapshot",
 
-    // כל קבצי ה-CPP (כולל התיקונים האחרונים)
+    // כל קבצי ה-CPP (הוספתי את GuiConfig.cpp)
     "${workspaceFolder}/main.cpp",
     "${workspaceFolder}/src/graphics/Img.cpp",
     "${workspaceFolder}/src/gui/window/ImgWindow.cpp",
     "${workspaceFolder}/src/gui/resources/Sprite.cpp",
     "${workspaceFolder}/src/gui/resources/SpriteKey.cpp",
     "${workspaceFolder}/src/gui/resources/TextureManager.cpp",
+    "${workspaceFolder}/src/gui/config/GuiConfig.cpp",
+    "${workspaceFolder}/src/gui/config/Layout.cpp", 
     "${workspaceFolder}/src/gui/snapshot/GameSnapshot.cpp",
     "${workspaceFolder}/src/gui/snapshot/PieceSnapshot.cpp",
     "${workspaceFolder}/src/gui/snapshot/SnapshotBuilder.cpp",
@@ -38,14 +41,14 @@
     "${workspaceFolder}/src/logic/engine/RuleEngine.cpp",
     "${workspaceFolder}/src/logic/model/Board.cpp",
     "${workspaceFolder}/src/logic/realtime/RealTimeArbiter.cpp",
-    "${workspaceFolder}/src/logic/realtime/Jump.cpp", // <--- תוספת ל-Jump
+    "${workspaceFolder}/src/logic/realtime/Jump.cpp",
     "${workspaceFolder}/src/logic/rules/RuleKing.cpp",
     "${workspaceFolder}/src/logic/rules/RuleQueen.cpp",
     "${workspaceFolder}/src/logic/rules/RuleRook.cpp",
     "${workspaceFolder}/src/logic/rules/RuleBishop.cpp",
     "${workspaceFolder}/src/logic/rules/RuleKnight.cpp",
     "${workspaceFolder}/src/logic/rules/RulePawn.cpp",
-    "${workspaceFolder}/src/logic/rules/RuleUtils.cpp", // <--- תוספת ל-Helper של החוקים
+    "${workspaceFolder}/src/logic/rules/RuleUtils.cpp",
 
     // פקודות הלינקר
     "/Fe:app.exe",
