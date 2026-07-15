@@ -13,6 +13,9 @@ private:
     int boardRows;
     int boardCols;
 
+    int boardWidth;
+    int boardHeight;
+
     int cellSize;
 
     int boardOffsetX;
@@ -49,4 +52,7 @@ public:
 
     cv::Rect getCellRect(
         const Position& position) const;
+        void setBoardSize(
+    int width,
+    int height);
 };

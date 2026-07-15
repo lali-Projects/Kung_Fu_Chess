@@ -11,18 +11,16 @@ Layout::Layout(
     windowWidth(windowWidth),
     windowHeight(windowHeight),
     boardRows(boardRows),
-    boardCols(boardCols)
+    boardCols(boardCols),
+    boardWidth(windowWidth),
+    boardHeight(windowHeight),
+    cellSize(0),
+    boardOffsetX(0),
+    boardOffsetY(0)
 {
-    cellSize =
-        std::min(
-            windowWidth / boardCols,
-            windowHeight / boardRows);
-
-    boardOffsetX =
-        (windowWidth - boardCols * cellSize) / 2;
-
-    boardOffsetY =
-        (windowHeight - boardRows * cellSize) / 2;
+    setBoardSize(
+        boardWidth,
+        boardHeight);
 }
 
 int Layout::getWindowWidth() const
@@ -92,4 +90,21 @@ cv::Rect Layout::getCellRect(
         topLeft.y,
         cellSize,
         cellSize);
+}
+void Layout::setBoardSize(
+    int width,
+    int height)
+{
+    boardWidth = width;
+    boardHeight = height;
+
+    cellSize = std::min(
+        boardWidth / boardCols,
+        boardHeight / boardRows);
+
+    boardOffsetX =
+        (windowWidth - boardWidth) / 2;
+
+    boardOffsetY =
+        (windowHeight - boardHeight) / 2;
 }

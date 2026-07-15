@@ -167,4 +167,7 @@ public:
     {
         return img;
     }
+    void resize(
+    int width,
+    int height);
 };

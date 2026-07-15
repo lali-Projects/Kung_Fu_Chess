@@ -433,3 +433,23 @@ bool Img::empty() const
 {
     return img.empty();
 }
+void Img::resize(
+    int width,
+    int height)
+{
+    if(img.empty())
+    {
+        throw std::runtime_error(
+            "Image is empty");
+    }
+
+    cv::resize(
+        img,
+        img,
+        cv::Size(
+            width,
+            height),
+        0,
+        0,
+        cv::INTER_AREA);
+}

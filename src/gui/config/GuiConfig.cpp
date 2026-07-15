@@ -10,11 +10,11 @@ const std::string GuiConfig::WINDOW_TITLE =
 
 
 const int GuiConfig::WINDOW_WIDTH =
-    900;
+    700;
 
 
 const int GuiConfig::WINDOW_HEIGHT =
-    900;
+    700;
 
 
 const int GuiConfig::FPS =

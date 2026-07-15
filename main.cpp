@@ -1,142 +1,215 @@
 #include <iostream>
-#include <filesystem>
+#include <vector>
+
+#include "Img.hpp"
+
+#include "GuiConfig.hpp"
+#include "Layout.hpp"
 
 #include "TextureManager.hpp"
-#include "GuiConfig.hpp"
+
+#include "BoardRenderer.hpp"
+#include "PieceRenderer.hpp"
+
+#include "GameSnapshot.hpp"
+#include "PieceSnapshot.hpp"
+#include "GameRenderer.hpp"
+#include "Window.hpp"
 
 
 int main()
 {
     std::cout
         << "==============================\n"
-        << " TEXTURE PATH TEST\n"
+        << " LAYOUT + PIECE RENDER TEST\n"
         << "==============================\n\n";
 
 
-    //----------------------------------
-    // Current working directory
-    //----------------------------------
+    //---------------------------------
+    // Create Canvas
+    //---------------------------------
 
-    std::cout
-        << "Current directory:\n"
-        << std::filesystem::current_path()
-        << "\n\n";
-
-
-
-    //----------------------------------
-    // Check configured path
-    //----------------------------------
-
-    std::cout
-        << "Board texture path:\n"
-        << GuiConfig::BOARD_TEXTURE_PATH
-        << "\n\n";
+    Img canvas(
+        GuiConfig::WINDOW_WIDTH,
+        GuiConfig::WINDOW_HEIGHT
+    );
 
 
-    bool exists =
-        std::filesystem::exists(
-            GuiConfig::BOARD_TEXTURE_PATH);
+    //---------------------------------
+    // Create Layout
+    //---------------------------------
+
+    Layout layout(
+        GuiConfig::WINDOW_WIDTH,
+        GuiConfig::WINDOW_HEIGHT,
+        8,
+        8
+    );
 
 
-    std::cout
-        << "File exists: "
-        << exists
-        << "\n\n";
-
-
-
-    if(!exists)
-    {
-        std::cout
-            << "ERROR: Board image was not found.\n";
-
-        return 1;
-    }
-
-
-
-    //----------------------------------
-    // TextureManager test
-    //----------------------------------
+    //---------------------------------
+    // Texture Manager
+    //---------------------------------
 
     TextureManager textureManager;
 
 
     try
     {
+        //---------------------------------
+        // Load board first
+        //---------------------------------
+
         textureManager.loadTexture(
             "board",
-            GuiConfig::BOARD_TEXTURE_PATH);
+            GuiConfig::BOARD_TEXTURE_PATH
+        );
 
 
-        std::cout
-            << "[OK] Board texture loaded\n";
-    }
-    catch(const std::exception& e)
-    {
-        std::cout
-            << "[ERROR] Loading failed:\n"
-            << e.what()
-            << "\n";
-
-        return 1;
-    }
-
-
-
-    //----------------------------------
-    // Verify stored texture
-    //----------------------------------
-
-    std::cout
-        << "\nVerification:\n";
-
-
-    std::cout
-        << "Contains board: "
-        << textureManager.contains("board")
-        << "\n";
-
-
-    try
-    {
         Img& board =
             textureManager.getTexture("board");
 
 
-        std::cout
-            << "Image empty: "
-            << board.empty()
-            << "\n";
+        //---------------------------------
+        // Update layout from board size
+        //---------------------------------
+
+        layout.setBoardSize(
+    GuiConfig::WINDOW_WIDTH - 40,
+    GuiConfig::WINDOW_HEIGHT - 40);
 
 
         std::cout
-            << "Image width: "
+            << "Board size : "
             << board.width()
-            << "\n";
+            << " x "
+            << board.height()
+            << std::endl;
 
 
         std::cout
-            << "Image height: "
-            << board.height()
-            << "\n";
+            << "Cell size  : "
+            << layout.getCellSize()
+            << std::endl;
+
+
+        std::cout
+            << "Offset X   : "
+            << layout.getBoardOffsetX()
+            << std::endl;
+
+
+        std::cout
+            << "Offset Y   : "
+            << layout.getBoardOffsetY()
+            << std::endl;
+
+
+
+        //---------------------------------
+        // Load piece AFTER layout update
+        //---------------------------------
+
+        textureManager.loadTexture(
+            "WK_idle",
+            "assets/pieces/WK/states/idle/sprites/1.png",
+            layout.getCellSize(),
+            layout.getCellSize()
+        );
+
+
+        std::cout
+            << "[OK] Textures loaded\n";
+
+
     }
     catch(const std::exception& e)
     {
         std::cout
-            << "Verification failed:\n"
+            << "Texture error:\n"
             << e.what()
-            << "\n";
+            << std::endl;
 
         return 1;
+    }
+
+
+
+    //---------------------------------
+    // Create Renderers
+    //---------------------------------
+GameRenderer renderer(
+    layout,
+    textureManager);
+
+
+
+    //---------------------------------
+    // Create Snapshot
+    //---------------------------------
+
+    std::vector<PieceSnapshot> pieces;
+
+
+    PieceSnapshot king
+    {
+        1,
+        Side::WHITE,
+        PieceType::KING,
+        Position(7,4),
+        PieceState::IDLE
+    };
+
+
+    pieces.push_back(king);
+
+
+
+    GameSnapshot snapshot(
+        pieces,
+        0,
+        false
+    );
+
+
+
+    //---------------------------------
+    // Render
+    //---------------------------------
+
+    try
+    {
+       renderer.render(
+    canvas,
+    snapshot);
+
+
+        cv::imwrite(
+            "render_test.png",
+            canvas.get_mat()
+        );
+
+
+       Window window(
+    GuiConfig::WINDOW_TITLE);
+
+
+window.show(canvas);
+
+    }
+    catch(const std::exception& e)
+    {
+        std::cout
+            << "Render error:\n"
+            << e.what()
+            << std::endl;
     }
 
 
 
     std::cout
         << "\n==============================\n"
-        << " TEST PASSED\n"
+        << " TEST FINISHED\n"
         << "==============================\n";
 
 

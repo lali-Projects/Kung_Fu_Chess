@@ -1,110 +1,80 @@
 #pragma once
 
-#include "PieceTypes.hpp"
-#include <cstddef>
-#include <functional>
+#include <string>
+
+#include "PieceSnapshot.hpp"
 
 
-/**
- * @class SpriteKey
- * @brief מפתח ייחודי לזיהוי Sprite.
- *
- * משמש את TextureManager כדי למצוא
- * את האנימציה המתאימה לפי:
- *
- * - צבע הכלי
- * - סוג הכלי
- * - מצב הכלי
- *
- * לדוגמה:
- *
- * WHITE + PAWN + IDLE
- *
- * מייצג את התמונות:
- *
- * resources/pieces/PW/idle/sprites/
- */
 class SpriteKey
 {
-private:
-
-    Side side;
-    PieceType type;
-    PieceState state;
-
-
 public:
 
-    /**
-     * @brief יצירת מפתח Sprite חדש.
-     */
-    SpriteKey(
-        Side side,
-        PieceType type,
-        PieceState state
-    );
-
-
-    Side getSide() const;
-
-
-    PieceType getType() const;
-
-
-    PieceState getState() const;
-
-
-    /**
-     * @brief השוואה בין שני מפתחות.
-     */
-    bool operator==(
-        const SpriteKey& other
-    ) const;
-};
-
-
-
-/**
- * @brief Hash עבור unordered_map.
- *
- * מאפשר שימוש:
- *
- * unordered_map<SpriteKey, Sprite>
- */
-namespace std
-{
-    template<>
-    struct hash<SpriteKey>
+    static std::string create(
+        const PieceSnapshot& piece)
     {
-        size_t operator()(
-            const SpriteKey& key
-        ) const
+
+        std::string side =
+            piece.side == Side::WHITE
+            ? "W"
+            : "B";
+
+
+        std::string type;
+
+
+        switch(piece.type)
         {
-            size_t value = 17;
+            case PieceType::KING:
+                type="K";
+                break;
 
+            case PieceType::QUEEN:
+                type="Q";
+                break;
 
-            value =
-                value * 31 +
-                static_cast<size_t>(
-                    key.getSide()
-                );
+            case PieceType::ROOK:
+                type="R";
+                break;
 
+            case PieceType::BISHOP:
+                type="B";
+                break;
 
-            value =
-                value * 31 +
-                static_cast<size_t>(
-                    key.getType()
-                );
+            case PieceType::KNIGHT:
+                type="N";
+                break;
 
-
-            value =
-                value * 31 +
-                static_cast<size_t>(
-                    key.getState()
-                );
-
-
-            return value;
+            case PieceType::PAWN:
+                type="P";
+                break;
         }
-    };
-}
+
+
+        return side + type + "_"
+             + stateToString(piece.state);
+    }
+
+
+private:
+
+
+    static std::string stateToString(
+        PieceState state)
+    {
+
+        switch(state)
+        {
+            case PieceState::IDLE:
+                return "idle";
+
+            case PieceState::MOVING:
+                return "moving";
+
+            case PieceState::AIRBORNE:
+                return "jump";
+            
+            default:
+                return "idle";
+        }
+    }
+};

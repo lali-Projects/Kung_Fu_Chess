@@ -1,6 +1,7 @@
 #include "BoardRenderer.hpp"
 
 
+
 BoardRenderer::BoardRenderer(
     const Layout& layout,
     TextureManager& textureManager)
@@ -11,13 +12,20 @@ BoardRenderer::BoardRenderer(
 }
 
 
-void BoardRenderer::draw(Img& canvas)
+
+void BoardRenderer::draw(
+    Img& canvas)
 {
-    Img& boardImage =
+    Img boardTexture =
         textureManager.getTexture("board");
 
 
-    boardImage.draw_on(
+    boardTexture.resize(
+        layout.getBoardWidth(),
+        layout.getBoardHeight());
+
+
+    boardTexture.draw_on(
         canvas,
         layout.getBoardOffsetX(),
         layout.getBoardOffsetY());

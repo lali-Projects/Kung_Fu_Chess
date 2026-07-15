@@ -1,7 +1,9 @@
 #pragma once
 
 #include <vector>
+
 #include "PieceSnapshot.hpp"
+
 
 class GameSnapshot
 {
@@ -9,25 +11,40 @@ private:
 
     std::vector<PieceSnapshot> pieces;
 
-    int currentTimeMs;
+    int currentTime;
 
     bool gameOver;
 
+
 public:
 
-    GameSnapshot();
+    GameSnapshot(
+        const std::vector<PieceSnapshot>& pieces,
+        int time,
+        bool over)
+        :
+        pieces(pieces),
+        currentTime(time),
+        gameOver(over)
+    {
+    }
 
-    void addPiece(const PieceSnapshot& piece);
 
-    const std::vector<PieceSnapshot>& getPieces() const;
 
-    void setCurrentTime(int time);
+    const std::vector<PieceSnapshot>& getPieces() const
+    {
+        return pieces;
+    }
 
-    int getCurrentTime() const;
 
-    void setGameOver(bool value);
+    int getCurrentTime() const
+    {
+        return currentTime;
+    }
 
-    bool isGameOver() const;
 
-    void clear();
+    bool isGameOver() const
+    {
+        return gameOver;
+    }
 };

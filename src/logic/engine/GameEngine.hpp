@@ -6,6 +6,8 @@
 #include <string>
 #include <memory>
 
+class GameSnapshot;
+
 struct MoveResult {
     bool success;
     std::string reason;
@@ -42,4 +44,5 @@ public:
     {
     return isGameOver;
     }
+    GameSnapshot getSnapshot() const;
 };
