@@ -1,0 +1,63 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "Build with MSVC",
+            "command": "cl.exe",
+ "args": [
+    "/std:c++17",
+    "/EHsc",
+    "/MD",
+    // תיקיות ה-Include
+    "/I", "C:/Users/user1/Downloads/opencv/build/include",
+    "/I", "${workspaceFolder}/src/graphics",
+    "/I", "${workspaceFolder}/src/gui/window",
+    "/I", "${workspaceFolder}/src/gui/resources",
+    "/I", "${workspaceFolder}/src/common",
+    "/I", "${workspaceFolder}/src/logic/model",
+    "/I", "${workspaceFolder}/src/logic/engine",
+    "/I", "${workspaceFolder}/src/logic/config",
+    "/I", "${workspaceFolder}/src/logic/rules",
+    "/I", "${workspaceFolder}/src/logic/realtime",
+    "/I", "${workspaceFolder}/src/gui/snapshot",
+
+    // כל קבצי ה-CPP (כולל התיקונים האחרונים)
+    "${workspaceFolder}/main.cpp",
+    "${workspaceFolder}/src/graphics/Img.cpp",
+    "${workspaceFolder}/src/gui/window/ImgWindow.cpp",
+    "${workspaceFolder}/src/gui/resources/Sprite.cpp",
+    "${workspaceFolder}/src/gui/resources/SpriteKey.cpp",
+    "${workspaceFolder}/src/gui/resources/TextureManager.cpp",
+    "${workspaceFolder}/src/gui/snapshot/GameSnapshot.cpp",
+    "${workspaceFolder}/src/gui/snapshot/PieceSnapshot.cpp",
+    "${workspaceFolder}/src/gui/snapshot/SnapshotBuilder.cpp",
+    "${workspaceFolder}/src/logic/config/GameConfig.cpp",
+    "${workspaceFolder}/src/logic/engine/GameEngine.cpp",
+    "${workspaceFolder}/src/logic/engine/PieceEngine.cpp",
+    "${workspaceFolder}/src/logic/engine/RuleEngine.cpp",
+    "${workspaceFolder}/src/logic/model/Board.cpp",
+    "${workspaceFolder}/src/logic/realtime/RealTimeArbiter.cpp",
+    "${workspaceFolder}/src/logic/realtime/Jump.cpp", // <--- תוספת ל-Jump
+    "${workspaceFolder}/src/logic/rules/RuleKing.cpp",
+    "${workspaceFolder}/src/logic/rules/RuleQueen.cpp",
+    "${workspaceFolder}/src/logic/rules/RuleRook.cpp",
+    "${workspaceFolder}/src/logic/rules/RuleBishop.cpp",
+    "${workspaceFolder}/src/logic/rules/RuleKnight.cpp",
+    "${workspaceFolder}/src/logic/rules/RulePawn.cpp",
+    "${workspaceFolder}/src/logic/rules/RuleUtils.cpp", // <--- תוספת ל-Helper של החוקים
+
+    // פקודות הלינקר
+    "/Fe:app.exe",
+    "/link",
+    "/LIBPATH:C:/Users/user1/Downloads/opencv/build/x64/vc16/lib",
+    "opencv_world4120.lib"
+],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$msCompile"]
+        }
+    ]
+}
