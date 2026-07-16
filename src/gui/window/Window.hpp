@@ -10,7 +10,7 @@ class Window
 private:
 
     std::string title;
-
+    bool open;
 
 public:
 

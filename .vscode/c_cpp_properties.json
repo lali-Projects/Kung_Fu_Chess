@@ -2,14 +2,15 @@
     "configurations": [
         {
             "name": "Win32",
-          "includePath": [
-    "${workspaceFolder}/**",
-    "C:/Users/user1/Downloads/opencv/build/include/**",
-    "${workspaceFolder}/src/graphics/**",
-    "${workspaceFolder}/src/gui/window/**",
-    "${workspaceFolder}/src/gui/resources/**",
-    "${workspaceFolder}/src/common/**" 
-],
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:/Users/user1/Downloads/opencv/build/include/**",
+                "${workspaceFolder}/src/graphics/**",
+                "${workspaceFolder}/src/gui/window/**",
+                "${workspaceFolder}/src/gui/resources/**",
+                "${workspaceFolder}/src/common/**",
+                "${workspaceFolder}/src/logic/setup"
+            ],
             "defines": [
                 "_DEBUG",
                 "UNICODE",
@@ -18,7 +19,7 @@
             "windowsSdkVersion": "10.0.22621.0",
             "compilerPath": "cl.exe",
             "cStandard": "c17",
-           "cppStandard": "c++17",
+            "cppStandard": "c++17",
             "intelliSenseMode": "windows-msvc-x64"
         }
     ],

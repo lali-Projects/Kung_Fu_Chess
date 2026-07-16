@@ -59,22 +59,21 @@ private:
 
 
     static std::string stateToString(
-        PieceState state)
+    PieceState state)
+{
+    switch(state)
     {
+        case PieceState::IDLE:
+            return "idle";
 
-        switch(state)
-        {
-            case PieceState::IDLE:
-                return "idle";
+        case PieceState::MOVING:
+            return "move";
 
-            case PieceState::MOVING:
-                return "moving";
+        case PieceState::AIRBORNE:
+            return "jump";
 
-            case PieceState::AIRBORNE:
-                return "jump";
-            
-            default:
-                return "idle";
-        }
+        default:
+            return "idle";
     }
+}
 };

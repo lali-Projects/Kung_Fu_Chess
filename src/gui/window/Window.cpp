@@ -6,7 +6,7 @@
 Window::Window(
     const std::string& title)
     :
-    title(title)
+    title(title),open(true)
 {
 }
 
@@ -17,12 +17,23 @@ void Window::show(
     cv::imshow(
         title,
         image.get_mat());
+int key = cv::waitKey(1);
 
-    cv::waitKey(0);
+if (key == 27)
+{
+    open = false;
+}
+
+double visible = cv::getWindowProperty(title,cv::WND_PROP_VISIBLE);
+
+if (visible < 1)
+{
+    open = false;
+}
 }
 
 
 bool Window::isOpen() const
 {
-    return true;
+    return open;
 }

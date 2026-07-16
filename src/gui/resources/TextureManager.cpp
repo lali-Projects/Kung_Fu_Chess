@@ -1,6 +1,8 @@
 #include "TextureManager.hpp"
 
 #include <stdexcept>
+#include <vector>
+#include "GuiConfig.hpp"
 
 void TextureManager::loadTexture(
     const std::string& key,
@@ -55,4 +57,36 @@ void TextureManager::loadBoardTexture(
     loadTexture(
         "board",
         path);
+}
+
+void TextureManager::loadAllPieceTextures(int cellSize)
+{
+    const std::vector<std::string> pieces =
+    {
+        "WK","WQ","WR","WB","WN","WP",
+        "BK","BQ","BR","BB","BN","BP"
+    };
+
+    const std::vector<std::string> states =
+    {
+        "idle",
+        "move",
+        "jump"
+    };
+
+    for (const auto& piece : pieces)
+    {
+        for (const auto& state : states)
+        {
+            loadTexture(
+                piece + "_" + state,
+                GuiConfig::PIECES_PATH + "/" +
+                piece +
+                "/states/" +
+                state +
+                "/sprites/1.png",
+                cellSize,
+                cellSize);
+        }
+    }
 }

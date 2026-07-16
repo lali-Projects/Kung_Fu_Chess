@@ -40,12 +40,11 @@ public:
         int width,
         int height);
 
-    Img& getTexture(
-        const std::string& key);
+    Img& getTexture(const std::string& key);
 
-    bool contains(
-        const std::string& key) const;
+    bool contains(const std::string& key) const;
 
     void loadBoardTexture(
         const std::string& path);
+    void loadAllPieceTextures(int cellSize);
 };
