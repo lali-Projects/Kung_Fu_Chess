@@ -2,17 +2,10 @@
 
 
 
-GameRenderer::GameRenderer(
-    const Layout& layout,
-    TextureManager& textureManager)
-    :
-    boardRenderer(
-        layout,
-        textureManager),
-
-    pieceRenderer(
-        layout,
-        textureManager)
+GameRenderer::GameRenderer(const Layout& layout, TextureManager& textureManager):
+    boardRenderer(layout,textureManager),
+    pieceRenderer( layout,textureManager),
+    selectionRenderer(layout)
 {
 }
 
@@ -22,23 +15,15 @@ void GameRenderer::render(
     Img& canvas,
     const GameSnapshot& snapshot)
 {
-
     // ניקוי הקנבס לפני ציור חדש
 
     canvas.clear();
 
 
+boardRenderer.draw(canvas);
 
-    // ציור הלוח
+pieceRenderer.draw(canvas,snapshot);
 
-    boardRenderer.draw(
-        canvas);
-
-
-
-    // ציור הכלים
-
-    pieceRenderer.draw(
-        canvas,
-        snapshot);
+selectionRenderer.draw(canvas,snapshot);
+ 
 }

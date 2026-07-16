@@ -3,18 +3,11 @@
 #include <stdexcept>
 
 
-void Sprite::addFrame(
-    const Img& frame
-)
+void Sprite::addFrame( const Img& frame)
 {
     frames.push_back(frame);
 }
-
-
-
-const Img& Sprite::getFrame(
-    std::size_t index
-) const
+const Img& Sprite::getFrame( std::size_t index) const
 {
     if(frames.empty())
     {
@@ -23,10 +16,7 @@ const Img& Sprite::getFrame(
         );
     }
 
-
-    return frames[
-        index % frames.size()
-    ];
+    return frames[index % frames.size()];
 }
 
 

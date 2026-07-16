@@ -44,5 +44,6 @@ public:
     {
     return isGameOver;
     }
+   
     GameSnapshot getSnapshot() const;
 };

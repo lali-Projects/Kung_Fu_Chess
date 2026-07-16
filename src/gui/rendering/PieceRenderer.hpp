@@ -17,7 +17,6 @@ private:
     TextureManager& textureManager;
 
 
-
 public:
 
 

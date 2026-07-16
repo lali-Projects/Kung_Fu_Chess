@@ -1,9 +1,9 @@
 #include "GameLoop.hpp"
 
 
-
 GameLoop::GameLoop(
     GameEngine& engine,
+    GameSnapshotBuilder& snapshotBuilder,
     GameRenderer& renderer,
     Window& window,
     int width,
@@ -11,6 +11,7 @@ GameLoop::GameLoop(
     int fps)
     :
     gameEngine(engine),
+    snapshotBuilder(snapshotBuilder),
     renderer(renderer),
     window(window),
     canvas(width, height),
@@ -25,72 +26,72 @@ void GameLoop::run()
 {
     running = true;
 
+    const int frameTime = 1000 / fps;
 
-    const int frameTime =
-        1000 / fps;
-
-
+    auto previousFrame =
+        std::chrono::steady_clock::now();
 
     while(running && window.isOpen())
     {
-
-        auto start =
+        auto currentFrame =
             std::chrono::steady_clock::now();
 
+        int deltaTime =
+            static_cast<int>(
+                std::chrono::duration_cast<
+                    std::chrono::milliseconds>(
+                        currentFrame - previousFrame)
+                .count());
 
+        previousFrame = currentFrame;
 
         //---------------------------------
-        // Get current game state
+        // Advance game time
+        //---------------------------------
+
+        gameEngine.wait(deltaTime);
+
+        //---------------------------------
+        // Build snapshot
         //---------------------------------
 
         GameSnapshot snapshot =
-            gameEngine.getSnapshot();
-
-
+            snapshotBuilder.build();
 
         //---------------------------------
         // Render
         //---------------------------------
+
         canvas.clear();
 
         renderer.render(
             canvas,
             snapshot);
 
-
-
         //---------------------------------
         // Display
         //---------------------------------
 
-        window.show(
-            canvas);
-
-
+        window.show(canvas);
 
         //---------------------------------
-        // FPS control
+        // FPS limit
         //---------------------------------
 
-        auto end =
+        auto frameEnd =
             std::chrono::steady_clock::now();
 
-
-        auto elapsed =
-            std::chrono::duration_cast<
-                std::chrono::milliseconds>(
-                    end - start)
-                .count();
-
-
+        int elapsed =
+            static_cast<int>(
+                std::chrono::duration_cast<
+                    std::chrono::milliseconds>(
+                        frameEnd - currentFrame)
+                .count());
 
         if(elapsed < frameTime)
         {
-            cv::waitKey(
-                frameTime - elapsed);
+            cv::waitKey(frameTime - elapsed);
         }
-
-
     }
 }
 

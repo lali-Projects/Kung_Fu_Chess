@@ -29,9 +29,7 @@ public:
      *
      * @param frame תמונה להוספה.
      */
-    void addFrame(
-        const Img& frame
-    );
+    void addFrame( const Img& frame );
 
 
     /**
@@ -42,9 +40,7 @@ public:
      *
      * @param index מספר הפריים.
      */
-    const Img& getFrame(
-        std::size_t index
-    ) const;
+    const Img& getFrame(  std::size_t index) const;
 
 
     /**

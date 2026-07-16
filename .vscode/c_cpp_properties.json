@@ -9,7 +9,9 @@
                 "${workspaceFolder}/src/gui/window/**",
                 "${workspaceFolder}/src/gui/resources/**",
                 "${workspaceFolder}/src/common/**",
-                "${workspaceFolder}/src/logic/setup"
+                "${workspaceFolder}/src/logic/setup",
+                "${workspaceFolder}/src/logic/snapshot",
+                "${workspaceFolder}/src/common"
             ],
             "defines": [
                 "_DEBUG",

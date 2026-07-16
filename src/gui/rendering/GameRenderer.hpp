@@ -1,12 +1,13 @@
 #pragma once
 
 #include "Img.hpp"
-#include "GameSnapshot.hpp"
 
+#include "Layout.hpp"
+#include "TextureManager.hpp"
 #include "BoardRenderer.hpp"
+
+#include "SelectionRenderer.hpp"
 #include "PieceRenderer.hpp"
-
-
 class GameRenderer
 {
 
@@ -15,7 +16,8 @@ private:
     BoardRenderer boardRenderer;
 
     PieceRenderer pieceRenderer;
-
+   
+    SelectionRenderer selectionRenderer;
 
 public:
 

@@ -2,6 +2,7 @@
 
 #include "Img.hpp"
 #include <string>
+#include <functional>
 
 
 class Window
@@ -10,7 +11,12 @@ class Window
 private:
 
     std::string title;
+
     bool open;
+
+
+    std::function<void(int,int)> mouseCallback;
+
 
 public:
 
@@ -23,5 +29,19 @@ public:
 
 
     bool isOpen() const;
+
+
+    void setMouseCallback(
+        std::function<void(int,int)> callback);
+
+
+private:
+
+    static void mouseHandler(
+        int event,
+        int x,
+        int y,
+        int flags,
+        void* userdata);
 
 };

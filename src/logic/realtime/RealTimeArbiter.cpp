@@ -10,7 +10,7 @@ void RealTimeArbiter::startMotion(std::shared_ptr<Piece> piece, Position source,
     int colDiff = std::abs(destination.getCol() - source.getCol());
     int distance = std::max(rowDiff, colDiff);
     int travelTime = distance * GameConfig::DEFAULT_TRAVEL_TIME_MS;
-
+std::cout << "startMotion\n";
     // 2. עדכון המצב והתחלת התנועה
     piece->setState(PieceState::MOVING); 
     activeMotion.emplace(piece, source, destination, startTime, travelTime);
@@ -71,6 +71,7 @@ void RealTimeArbiter::executeStandardMove(GameEngine& engine) {
 
     // 3. עדכון מיקום הכלי בלוח
     board.movePiece(activeMotion->source, destination);
+    std::cout << "Board updated\n";
 
     // 4. בדיקת קידום רגלי למלכה
     handlePawnPromotion(movingPiece, destination);

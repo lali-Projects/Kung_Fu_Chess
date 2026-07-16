@@ -28,17 +28,23 @@ public:
      * @param pixelX מיקום ה-X בפיקסלים.
      * @param pixelY מיקום ה-Y בפיקסלים.
      */
-    MoveResult jump(int pixelX, int pixelY);
+    MoveResult jump(const Position& pos);
 
     /**
      * @brief מטפל בלחיצה (Click) על המסך - בחירת כלי, החלפת בחירה או ביצוע מהלך.
      * @param pixelX מיקום ה-X בפיקסלים.
      * @param pixelY מיקום ה-Y בפיקסלים.
      */
-    MoveResult click(int pixelX, int pixelY);
+    MoveResult click(const Position& pos);
 
     /**
      * @brief מאפס את הבחירה הנוכחית של המשבצת.
      */
     void clearSelection();
+
+    /**
+     * @brief מחזיר את המיקום הנבחר כרגע (אם קיים).
+     * @return std::optional<Position> המיקום הנבחר או std::nullopt אם אין בחירה.
+     */
+    const std::optional<Position>& getSelectedPosition() const;
 };

@@ -1,7 +1,5 @@
 #include "GameEngine.hpp"
-#include "PieceSnapshot.hpp"
 #include "GameSnapshot.hpp"
-
 
 MoveResult GameEngine::requestMove(const Position& from, const Position& to) {
     if (isGameOver) return {false, "game_over"};
@@ -29,15 +27,18 @@ MoveResult GameEngine::requestJump(const Position& position) {
     return { true, "ok" };
 }
 
-
 GameSnapshot GameEngine::getSnapshot() const
 {
     std::vector<PieceSnapshot> pieces;
 
 
-    for(int row = 0; row < board.getRows(); row++)
+    for(int row = 0;
+        row < board.getRows();
+        row++)
     {
-        for(int col = 0; col < board.getCols(); col++)
+        for(int col = 0;
+            col < board.getCols();
+            col++)
         {
 
             Position pos(
@@ -47,7 +48,6 @@ GameSnapshot GameEngine::getSnapshot() const
 
             auto piece =
                 board.getPieceAt(pos);
-
 
 
             if(piece)

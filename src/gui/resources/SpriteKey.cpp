@@ -9,14 +9,9 @@ class SpriteKey
 {
 public:
 
-    static std::string create(
-        const PieceSnapshot& piece)
+    static std::string create(const PieceSnapshot& piece)
     {
-
-        std::string side =
-            piece.side == Side::WHITE
-            ? "W"
-            : "B";
+        std::string side = piece.side == Side::WHITE ? "W" : "B";
 
 
         std::string type;

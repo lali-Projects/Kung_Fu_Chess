@@ -4,8 +4,7 @@
 GameController::GameController(Board& b, GameEngine& ge) 
     : board(b), gameEngine(ge), selectedPosition(std::nullopt) {}
 
-MoveResult GameController::jump(int pixelX, int pixelY) {
-    Position pos = BoardMapper::pixelToPosition(pixelX, pixelY);
+MoveResult GameController::jump(const Position& pos) {
     if (!board.isInsideBoard(pos)) {
          return {false, "outsideBoard"};
     }
@@ -19,21 +18,21 @@ MoveResult GameController::jump(int pixelX, int pixelY) {
     return result;
 }
 
-MoveResult GameController::click(int pixelX, int pixelY) {
+MoveResult GameController::click(const Position& pos) {
     // 1. תרגום לפיקסלים (פונקציה פשוטה)
-    Position pos = BoardMapper::pixelToPosition(pixelX, pixelY);
 
     if (!board.isInsideBoard(pos)) {
         return {false, "outsideBoard"};
     }
 
     std::shared_ptr<Piece> clickedPiece = board.getPieceAt(pos);
-
     // 3. לוגיקת המצבים
     if (!selectedPosition.has_value()) {
         if (clickedPiece != nullptr) {
             selectedPosition = pos;
+             return {true, "piece_selected"};
         }
+         return {false, "empty_square"};
     } 
     else {
         std::shared_ptr<Piece> selectedPiece = board.getPieceAt(selectedPosition.value());
@@ -56,4 +55,8 @@ MoveResult GameController::click(int pixelX, int pixelY) {
 
 void GameController::clearSelection() {
     selectedPosition = std::nullopt;
+}
+
+ const std::optional<Position>& GameController::getSelectedPosition() const {
+    return selectedPosition;
 }
