@@ -32,23 +32,14 @@ GameSnapshot GameEngine::getSnapshot() const
     std::vector<PieceSnapshot> pieces;
 
 
-    for(int row = 0;
-        row < board.getRows();
-        row++)
+    for(int row = 0; row < board.getRows(); row++)
     {
-        for(int col = 0;
-            col < board.getCols();
-            col++)
+        for(int col = 0; col < board.getCols(); col++)
         {
 
-            Position pos(
-                row,
-                col);
+            Position pos(row, col);
 
-
-            auto piece =
-                board.getPieceAt(pos);
-
+            auto piece = board.getPieceAt(pos);
 
             if(piece)
             {
@@ -66,8 +57,5 @@ GameSnapshot GameEngine::getSnapshot() const
     }
 
 
-    return GameSnapshot(
-        pieces,
-        currentTimeMs,
-        isGameOver);
+    return GameSnapshot(pieces, currentTimeMs, isGameOver);
 }

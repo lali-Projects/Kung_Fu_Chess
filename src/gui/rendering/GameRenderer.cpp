@@ -11,19 +11,14 @@ GameRenderer::GameRenderer(const Layout& layout, TextureManager& textureManager)
 
 
 
-void GameRenderer::render(
-    Img& canvas,
-    const GameSnapshot& snapshot)
+void GameRenderer::render(Img& canvas, const GameSnapshot& snapshot)
 {
-    // ניקוי הקנבס לפני ציור חדש
-
     canvas.clear();
 
+    boardRenderer.draw(canvas);
 
-boardRenderer.draw(canvas);
+    pieceRenderer.draw(canvas,snapshot);
 
-pieceRenderer.draw(canvas,snapshot);
-
-selectionRenderer.draw(canvas,snapshot);
+    selectionRenderer.draw(canvas,snapshot);
  
 }

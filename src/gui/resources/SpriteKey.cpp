@@ -1,75 +1,20 @@
-#pragma once
-
-#include <string>
-
-#include "PieceSnapshot.hpp"
+#include "SpriteKey.hpp"
 
 
-class SpriteKey
+std::string SpriteKey::create(const PieceSnapshot& piece)
 {
-public:
+    std::string side = (piece.side == Side::WHITE) ? "W" : "B";
 
-    static std::string create(const PieceSnapshot& piece)
+    return side + typeToString(piece.type) + "_" + stateToString(piece.state);
+}
+
+std::string SpriteKey::stateToString(PieceState state)
+{
+    switch(state)
     {
-        std::string side = piece.side == Side::WHITE ? "W" : "B";
-
-
-        std::string type;
-
-
-        switch(piece.type)
-        {
-            case PieceType::KING:
-                type="K";
-                break;
-
-            case PieceType::QUEEN:
-                type="Q";
-                break;
-
-            case PieceType::ROOK:
-                type="R";
-                break;
-
-            case PieceType::BISHOP:
-                type="B";
-                break;
-
-            case PieceType::KNIGHT:
-                type="N";
-                break;
-
-            case PieceType::PAWN:
-                type="P";
-                break;
-        }
-
-
-        return side + type + "_"
-             + stateToString(piece.state);
+        case PieceState::IDLE:     return "idle";
+        case PieceState::MOVING:   return "move";
+        case PieceState::AIRBORNE: return "jump";
+        default:                   return "idle";
     }
-
-
-private:
-
-
-    static std::string stateToString(
-        PieceState state)
-    {
-
-        switch(state)
-        {
-            case PieceState::IDLE:
-                return "idle";
-
-            case PieceState::MOVING:
-                return "moving";
-
-            case PieceState::AIRBORNE:
-                return "jump";
-            
-            default:
-                return "idle";
-        }
-    }
-};
+}

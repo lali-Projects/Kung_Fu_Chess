@@ -63,4 +63,10 @@ public:
 
     // תיקיית הכלים
     static const std::string PIECES_PATH;
+
+    // ------------------------
+    // Timing
+    // ------------------------
+
+    static const int MS_PER_SECOND;
 };

@@ -54,3 +54,9 @@ const std::string GuiConfig::BOARD_TEXTURE_PATH =
 
 const std::string GuiConfig::PIECES_PATH =
     "assets/pieces/";
+
+ // ------------------------
+// Timing
+// ------------------------
+
+const int GuiConfig::MS_PER_SECOND = 1000;

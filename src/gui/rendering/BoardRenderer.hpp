@@ -33,15 +33,10 @@ public:
     /**
      * @brief בנאי.
      */
-    BoardRenderer(
-        const Layout& layout,
-        TextureManager& textureManager);
-
-
-
+    BoardRenderer(const Layout& layout, TextureManager& textureManager);
+    
     /**
      * @brief מצייר את הלוח על Canvas.
      */
-    void draw(
-        Img& canvas);
+    void draw(Img& canvas);
 };

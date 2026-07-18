@@ -14,8 +14,7 @@ void SelectionRenderer::draw( Img& canvas, const GameSnapshot& snapshot) const
         return;
     }
 
-    cv::Rect rect =
-        layout.getCellRect(snapshot.getSelectedPosition().value());
+    cv::Rect rect = layout.getCellRect(snapshot.getSelectedPosition().value());
 
     canvas.draw_rectangle(
         rect.x,

@@ -40,7 +40,7 @@ public:
      *
      * @param index מספר הפריים.
      */
-    const Img& getFrame(  std::size_t index) const;
+    const Img& getFrame( std::size_t index) const;
 
 
     /**

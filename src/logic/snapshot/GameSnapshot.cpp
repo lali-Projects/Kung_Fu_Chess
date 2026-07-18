@@ -15,8 +15,7 @@ selectedPosition(selectedPosition)
 }
 
 
-const std::vector<PieceSnapshot>& 
-GameSnapshot::getPieces() const
+const std::vector<PieceSnapshot>& GameSnapshot::getPieces() const
 {
     return pieces;
 }
@@ -34,15 +33,13 @@ bool GameSnapshot::isGameOver() const
 }
 
 
-const std::optional<Position>&
-GameSnapshot::getSelectedPosition() const
+const std::optional<Position>& GameSnapshot::getSelectedPosition() const
 {
     return selectedPosition;
 }
 
 
-void GameSnapshot::setSelectedPosition(
-    const std::optional<Position>& position)
+void GameSnapshot::setSelectedPosition(const std::optional<Position>& position)
 {
     selectedPosition = position;
 }

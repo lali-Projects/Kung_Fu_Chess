@@ -11,22 +11,12 @@
  *
  * המחלקה אחראית על פעולות בסיסיות של תמונה:
  * טעינה, ציור, כתיבת טקסט ויצירת Canvas.
- *
- * המחלקה אינה מכירה:
- * - משחק
- * - לוח
- * - כלים
- * - GUI
- *
- * היא כלי עזר גרפי כללי.
  */
 class Img
 {
 private:
 
     cv::Mat img;
-
-
 public:
 
     /**
@@ -55,36 +45,19 @@ public:
     /**
      * @brief טעינת תמונה מקובץ.
      */
-    Img& read(
-        const std::string& path,
-        const std::pair<int,int>& size = {},
-        bool keep_aspect = false,
-        int interpolation = cv::INTER_AREA
-    );
+    Img& read(const std::string& path, const std::pair<int,int>& size = {}, bool keep_aspect = false, int interpolation = cv::INTER_AREA);
 
 
     /**
      * @brief ציור תמונה זו על תמונה אחרת.
      */
-    void draw_on(
-        Img& other_img,
-        int x,
-        int y
-    );
+    void draw_on(Img& other_img, int x, int y);
 
 
     /**
      * @brief כתיבת טקסט על התמונה.
      */
-    void put_text(
-        const std::string& txt,
-        int x,
-        int y,
-        double font_size,
-        const cv::Scalar& color =
-            cv::Scalar(255,255,255,255),
-        int thickness = 1
-    );
+    void put_text(const std::string& txt, int x, int y, double font_size, const cv::Scalar& color = cv::Scalar(255,255,255,255),int thickness = 1);
 
 
     /**
@@ -167,7 +140,5 @@ public:
     {
         return img;
     }
-    void resize(
-    int width,
-    int height);
+    void resize(int width, int height);
 };

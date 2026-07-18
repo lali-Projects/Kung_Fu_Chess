@@ -27,10 +27,7 @@ private:
 
 public:
 
-    GameSnapshotBuilder(
-        const GameEngine& engine,
-        const GameController& controller);
-
+    GameSnapshotBuilder(const GameEngine& engine, const GameController& controller);
 
     GameSnapshot build() const;
 };

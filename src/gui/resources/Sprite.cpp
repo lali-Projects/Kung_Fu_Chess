@@ -19,21 +19,15 @@ const Img& Sprite::getFrame( std::size_t index) const
     return frames[index % frames.size()];
 }
 
-
-
 std::size_t Sprite::getFrameCount() const
 {
     return frames.size();
 }
 
-
-
 bool Sprite::empty() const
 {
     return frames.empty();
 }
-
-
 
 void Sprite::clear()
 {

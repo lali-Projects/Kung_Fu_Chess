@@ -1,7 +1,7 @@
-#pragma once
+#pragma once 
 
-#include <opencv2/core.hpp>
-#include "Position.hpp"
+#include <opencv2/core.hpp> 
+#include "Position.hpp" 
 
 /**
  * @brief המחלקה אחראית על ניהול הגיאומטריה של המשחק.
@@ -12,21 +12,22 @@
 class Layout
 {
 private:
-    // הערכים הללו נשמרים כאן כדי להבטיח עקביות בכל חישובי הקואורדינטות.
-    int windowWidth;
-    int windowHeight;
-    int boardRows;
-    int boardCols;
-    int boardWidth;
-    int boardHeight;
-    int cellSize;     // נקבע דינמית כדי למנוע עיוות של המשבצות.
-    int boardOffsetX; // נועד למרכז את הלוח בחלון בצורה אוטומטית.
-    int boardOffsetY;
+ 
+    int windowWidth;    
+    int windowHeight;  
+    int boardRows;      
+    int boardCols;     
+    int boardWidth;     
+    int boardHeight;    
+    int cellSize;       
+    int boardOffsetX;  
+    int boardOffsetY;  
 
 public:
+    // בנאי המחלקה: מאתחל את המימדים הבסיסיים של הלוח והחלון
     Layout(int windowWidth, int windowHeight, int boardRows, int boardCols);
 
-    // Getters: מספקים נתונים גיאומטריים ל-Renderers מבלי לחשוף את הלוגיקה הפנימית.
+   
     int getWindowWidth() const;
     int getWindowHeight() const;
     int getBoardWidth() const;
@@ -36,27 +37,22 @@ public:
     int getBoardOffsetY() const;
 
     /**
-     * @brief הופך לוגיקה למיקום מסך.
-     * הכרחי כדי ששכבת ה-Renderer לא תצטרך לבצע חישובים מורכבים.
+     * @brief הופך מיקום לוגי (שורה/עמודה) למיקום פיקסל בודד במסך.
      */
     cv::Point boardToPixel(const Position& position) const;
 
     /**
-     * @brief הופך קלט עכבר (Pixels) ללוגיקה (Board Position).
-     * מאפשר ל-InputController לעבוד עם הלוח ללא צורך בהבנה של גודל החלון.
+     * @brief הופך מיקום פיקסלים (למשל לחיצת עכבר) למיקום לוגי (שורה/עמודה).
      */
     Position pixelToBoard(int x, int y) const;
 
     /**
-     * @brief מייצר ריבוע תצוגה עבור כלי.
-     * משמש את ה-PieceRenderer לצורך ציור או סימון (Highlight).
+     * @brief מייצר מלבן (Rect) המייצג את התחום הגיאומטרי של משבצת ספציפית.
      */
     cv::Rect getCellRect(const Position& position) const;
 
     /**
-     * @brief עדכון גיאומטריה.
-     * מאפשר ל-Layout להתאים את עצמו דינמית אם גודל החלון משתנה
-     * מבלי לאתחל מחדש את כל המשחק.
+     * @brief מעדכן את מימדי הלוח ומחשב מחדש גדלים ומרכוזים (למשל בעת שינוי גודל חלון).
      */
     void setBoardSize(int width, int height);
 };
