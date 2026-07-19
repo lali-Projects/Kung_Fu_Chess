@@ -5,44 +5,39 @@
 
 /**
  * @class AnimationPlayer
- * @brief מחשב איזה Frame יש להציג עבור אנימציה בזמן נתון.
+ * @brief Computes the correct frame to display for an animation at a given time.
  *
- * אחריות:
- * - חישוב מספר הפריים.
- * - תמיכה באנימציות מחזוריות (Loop).
- * - תמיכה באנימציות חד-פעמיות.
+ * Responsibilities:
+ * - Calculate the frame index based on temporal data.
+ * - Support both looping and one-time animation sequences.
  *
- * אינו אחראי:
- * - טעינת קבצים.
- * - ציור.
- * - שינוי מצב המשחק.
+ * Note: This class is limited to logical calculations and does not perform
+ * actual rendering or resource management.
  */
 class AnimationPlayer
 {
 public:
-
     /**
-     * @brief מחזיר את התמונה שיש להציג.
+     * @brief Returns the image to be displayed.
      *
-     * @param animation האנימציה.
-     * @param animationStartTime זמן תחילת האנימציה.
-     * @param currentTime הזמן הנוכחי במשחק.
+     * @param animation The animation object.
+     * @param animationStartTime The time the animation started.
+     * @param currentTime The current game time.
      */
-    const Img& getCurrentFrame(
-        const Animation& animation,
-        int animationStartTime,
-        int currentTime) const;
-    std::size_t getCurrentFrameIndex(
-        const Animation& animation,
-        int animationStartTime,
-        int currentTime) const;
-private:
+    const Img& getCurrentFrame(const Animation& animation, int animationStartTime, int currentTime) const;
 
     /**
-     * @brief מחשב את אינדקס הפריים.
+     * @brief Returns the current frame index.
+     *
+     * @param animation The animation object.
+     * @param animationStartTime The time the animation started.
+     * @param currentTime The current game time.
      */
-    std::size_t calculateFrameIndex(
-        const Animation& animation,
-        int animationStartTime,
-        int currentTime) const;
+    std::size_t getCurrentFrameIndex(const Animation& animation, int animationStartTime, int currentTime) const;
+
+private:
+    /**
+     * @brief Internal logic to calculate the frame index.
+     */
+    std::size_t calculateFrameIndex(const Animation& animation, int animationStartTime, int currentTime) const;
 };

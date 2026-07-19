@@ -9,190 +9,130 @@
 #include <memory>
 #include <vector>
 
-
 class GameEngine;
 
-
-class RealTimeArbiter
-{
-
+/**
+ * @class RealTimeArbiter
+ * @brief מנהל את כלל האירועים והפעולות בזמן אמת במשחק (תנועה, קפיצה, מנוחה).
+ */
+class RealTimeArbiter {
 private:
-
     Board& board;
 
-
-    // רק Motion אחד יכול להיות פעיל
     std::optional<Motion> activeMotion;
-
-
-    // רק Jump אחד יכול להיות פעיל
     std::optional<Jump> activeJump;
-
-
-    // מספר כלים יכולים לנוח בו-זמנית, ולכן זהו אוסף ולא ערך יחיד
     std::vector<Rest> activeRests;
 
-
-
 private:
-
-
-    void processMotionCompletion(
-        GameEngine& engine);
-
-
+    /** @brief מבצע את ניקוי הלוגיקה בסיום תנועה. */
+    void processMotionCompletion(GameEngine& engine);
+    
+    /** @brief מבצע את ניקוי הלוגיקה בסיום קפיצה. */
     void processJumpCompletion();
-
-
-    void processRestCompletion(
-        const Rest& rest);
-
-
-
-    void handlePawnPromotion(
-        std::shared_ptr<Piece> piece,
-        const Position& pos);
-
-
+    
+    /** @brief מבצע את ניקוי הלוגיקה בסיום מצב מנוחה. */
+    void processRestCompletion(const Rest& rest);
+    
+    /** @brief מבצע לוגיקת קידום חייל (Pawn Promotion) במידה והגיע לקצה הלוח. */
+    void handlePawnPromotion(std::shared_ptr<Piece> piece, const Position& pos);
 
 public:
-
-
+    /** @brief בנאי המאתחל את הארביטר עם הלוח הנוכחי. */
     explicit RealTimeArbiter(Board& board);
-
-
 
     //---------------------------------
     // Motion
     //---------------------------------
-
-    bool startMotion(
-        std::shared_ptr<Piece> piece,
-        Position src,
-        Position dst,
-        int startTime);
-
-
-
-    void handleMotionLogic(
-        int currentTime,
-        GameEngine& engine);
-
-
-
-    void resolveMotion(
-        GameEngine& engine);
-
-
-
-    void executeStandardMove(
-        GameEngine& engine);
-
-
+    
+    /** @brief מתחיל פעולת תנועה (Motion) עבור כלי מסוים. */
+    bool startMotion(std::shared_ptr<Piece> piece, Position src, Position dst, int startTime);
+    
+    /** @brief מעדכן את הלוגיקה של התנועה בהתאם לזמן המשחק הנוכחי. */
+    void handleMotionLogic(int currentTime, GameEngine& engine);
+    
+    /** @brief פותר סופית את מצב התנועה ומעדכן את הלוח. */
+    void resolveMotion(GameEngine& engine);
+    
+    /** @brief מוציא לפועל את תנועת הכלי על הלוח. */
+    void executeStandardMove(GameEngine& engine);
+    
+    /** @brief מסיים ידנית את מצב התנועה. */
+    void finishMotion();
 
     //---------------------------------
     // Jump
     //---------------------------------
-
-
-    bool startJump(
-        std::shared_ptr<Piece> piece,
-        int startTime,
-        int duration);
-
-
-
-    void handleJumpLogic(
-        int currentTime);
-
-
-
-    bool isCollisionWithJump(
-        const Position& pos) const;
-
-
-
-    void handleJumpCollision(
-        std::shared_ptr<Piece> movingPiece);
-
-
+    
+    /** @brief מתחיל פעולת קפיצה (Jump) עבור כלי מסוים. */
+    bool startJump(std::shared_ptr<Piece> piece, int startTime, int duration);
+    
+    /** @brief מעדכן את הלוגיקה של הקפיצה. */
+    void handleJumpLogic(int currentTime);
+    
+    /** @brief בודק האם מיקום מסוים נמצא תחת התנגשות של קפיצה פעילה. */
+    bool isCollisionWithJump(const Position& pos) const;
+    
+    /** @brief מטפל בלוגיקה של התנגשות במהלך ביצוע קפיצה. */
+    void handleJumpCollision(std::shared_ptr<Piece> movingPiece);
 
     //---------------------------------
     // Rest
     //---------------------------------
-
-    // התחלת מנוחה עבור כלי, בעקבות סיום תנועה או קפיצה.
-    // פרטי (private-like) לשימוש פנימי בלבד של הארביטר, אך נחשף כ-public
-    // כדי לאפשר בדיקות יחידה ישירות על מנגנון המנוחה.
- bool startRest(
-    std::shared_ptr<Piece> piece,
-    PieceState restState,
-    PieceState nextState,
-    int startTime);
-
-
-    void handleRestLogic(
-        int currentTime);
-
-
-    bool hasActiveRestFor(
-        int pieceId) const;
-
-
-    int getRestStartTime(
-        int pieceId) const;
-
-
+    
+    /** @brief מתחיל מצב מנוחה (Rest) עבור כלי מסוים. */
+    bool startRest(std::shared_ptr<Piece> piece, PieceState restState, PieceState nextState, int startTime);
+    
+    /** @brief מעדכן את הלוגיקה של מנוחות פעילות. */
+    void handleRestLogic(int currentTime);
+    
+    /** @brief בודק האם קיימת מנוחה פעילה לכלי בעל מזהה מסוים. */
+    bool hasActiveRestFor(int pieceId) const;
+    
+    /** @brief מחזיר את זמן התחלת המנוחה של כלי. */
+    int getRestStartTime(int pieceId) const;
+    
+    /** @brief מחזיר את זמן סיום המנוחה של כלי. */
     int getRestFinishTime(int pieceId) const;
-
 
     //---------------------------------
     // Time
     //---------------------------------
-
-    void advanceTime(
-        int currentTime,
-        GameEngine& engine);
-
-
+    
+    /** @brief מקדם את זמן המשחק ומפעיל את עדכון כלל המנגנונים הפעילים. */
+    void advanceTime(int currentTime, GameEngine& engine);
 
     //---------------------------------
     // Queries
     //---------------------------------
-
+    
+    /** @brief מחזיר האם קיימת תנועה פעילה בלוח. */
     bool hasActiveMotion() const;
-
-
+    
+    /** @brief מחזיר האם קיימת קפיצה פעילה בלוח. */
     bool hasActiveJump() const;
+    
+    /** @brief מחזיר האם קיימת אנימציה פעילה לכלי מסוים. */
+    bool hasActiveAnimation(int pieceId) const;
+    
+    /** @brief מחזיר את זמן התחלת האנימציה של כלי. */
+    int getAnimationStartTime(int pieceId) const;
 
-
-    bool hasActiveAnimation(
-        int pieceId) const;
-
-
-    int getAnimationStartTime(
-        int pieceId) const;
-       void finishMotion();
-
-       //---------------------------------
-// Motion animation queries
-//---------------------------------
-
-bool hasActiveMotionFor(
-    int pieceId) const;
-
-
-Position getMotionStart(
-    int pieceId) const;
-
-
-Position getMotionDestination(
-    int pieceId) const;
-
-
-int getMotionStartTime(
-    int pieceId) const;
-
-
-int getMotionFinishTime(int pieceId) const;
+    //---------------------------------
+    // Motion animation queries
+    //---------------------------------
+    
+    /** @brief מחזיר האם קיימת תנועה פעילה לכלי ספציפי. */
+    bool hasActiveMotionFor(int pieceId) const;
+    
+    /** @brief מחזיר את מיקום ההתחלה של תנועת כלי. */
+    Position getMotionStart(int pieceId) const;
+    
+    /** @brief מחזיר את מיקום היעד של תנועת כלי. */
+    Position getMotionDestination(int pieceId) const;
+    
+    /** @brief מחזיר את זמן התחלת התנועה של כלי. */
+    int getMotionStartTime(int pieceId) const;
+    
+    /** @brief מחזיר את זמן סיום התנועה של כלי. */
+    int getMotionFinishTime(int pieceId) const;
 };

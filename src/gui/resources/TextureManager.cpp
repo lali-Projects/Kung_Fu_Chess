@@ -1,321 +1,125 @@
 #include "TextureManager.hpp"
-
 #include "GuiConfig.hpp"
-
 #include <algorithm>
 #include <stdexcept>
 
-
-//=================================
-// Existing image loading
-//=================================
-
-
-void TextureManager::loadTexture(
-    const std::string& key,
-    const std::string& path)
+void TextureManager::loadTexture(const std::string& key, const std::string& path)
 {
     Img image;
-
     image.read(path);
-
-    textures[key] =
-        std::move(image);
+    textures[key] = std::move(image);
 }
 
-
-
-void TextureManager::loadTexture(
-    const std::string& key,
-    const std::string& path,
-    int width,
-    int height)
+void TextureManager::loadTexture(const std::string& key, const std::string& path, int width, int height)
 {
     Img image;
-
-
-    image.read(
-        path,
-        {width,height},
-        false);
-
-
-    textures[key] =
-        std::move(image);
+    image.read(path, {width, height}, false);
+    textures[key] = std::move(image);
 }
 
-
-
-Img& TextureManager::getTexture(
-    const std::string& key)
+Img& TextureManager::getTexture(const std::string& key)
 {
-
-    auto it =
-        textures.find(key);
-
-
-    if(it == textures.end())
+    auto it = textures.find(key);
+    if (it == textures.end())
     {
-        throw std::runtime_error(
-            "Texture not found: "
-            + key);
+        throw std::runtime_error("Texture not found: " + key);
     }
-
-
     return it->second;
 }
 
-
-
-bool TextureManager::contains(
-    const std::string& key) const
+bool TextureManager::contains(const std::string& key) const
 {
-    return textures.find(key)
-        != textures.end();
+    return textures.find(key) != textures.end();
 }
 
-
-
-void TextureManager::loadBoardTexture(
-    const std::string& path)
+void TextureManager::loadBoardTexture(const std::string& path)
 {
-    loadTexture(
-        "board",
-        path);
+    loadTexture("board", path);
 }
 
-
-//=================================
-// Sprite loading
-//=================================
-
-
-Sprite TextureManager::loadSprite(
-    const std::string& spritesPath,
-    int cellSize)
+Sprite TextureManager::loadSprite(const std::string& spritesPath, int cellSize)
 {
-
     Sprite sprite;
-
-
     std::vector<fs::path> frames;
 
-
-
-    for(auto& file :
-        fs::directory_iterator(spritesPath))
+    for (auto& file : fs::directory_iterator(spritesPath))
     {
-
-        if(file.path().extension()
-            == ".png")
+        if (file.path().extension() == ".png")
         {
-            frames.push_back(
-                file.path());
+            frames.push_back(file.path());
         }
     }
 
+    std::sort(frames.begin(), frames.end());
 
-
-    std::sort(
-        frames.begin(),
-        frames.end());
-
-
-
-    for(auto& framePath : frames)
+    for (auto& framePath : frames)
     {
-
         Img frame;
-
-
-        frame.read(
-            framePath.string(),
-            {
-                cellSize,
-                cellSize
-            },
-            false);
-
-
-
+        frame.read(framePath.string(), {cellSize, cellSize}, false);
         sprite.addFrame(frame);
     }
-
 
     return sprite;
 }
 
-
-//=================================
-// Animation loading
-//=================================
-
-
-Animation TextureManager::loadAnimation(
-    const std::string& animationPath,
-    int cellSize)
+Animation TextureManager::loadAnimation(const std::string& animationPath, int cellSize)
 {
+    std::string jsonPath = animationPath + "/config.json";
+    std::string spritesPath = animationPath + "/sprites";
 
-    std::string jsonPath =
-        animationPath
-        + "/config.json";
+    Sprite sprite = loadSprite(spritesPath, cellSize);
 
-
-    std::string spritesPath =
-        animationPath
-        + "/sprites";
-
-
-
-    Sprite sprite =
-        loadSprite(
-            spritesPath,
-            cellSize);
-
-
-
-    std::ifstream file(
-        jsonPath);
-
-
-
-    if(!file)
+    std::ifstream file(jsonPath);
+    if (!file)
     {
-        throw std::runtime_error(
-            "Cannot open "
-            + jsonPath);
+        throw std::runtime_error("Cannot open " + jsonPath);
     }
 
-
-
     json data;
-
     file >> data;
 
-
-
     Animation animation;
-
-
-
-    animation.setSprite(
-        sprite);
-
-
-
-    animation.setFramesPerSecond(
-        data["graphics"]
-        ["frames_per_sec"]);
-
-
-
-    animation.setLoop(
-        data["graphics"]
-        ["is_loop"]);
-
-
-
-    animation.setSpeed(
-        data["physics"]
-        ["speed_m_per_sec"]);
-
-
-
-    animation.setNextState(
-        data["physics"]
-        ["next_state_when_finished"]);
-
-
+    animation.setSprite(sprite);
+    animation.setFramesPerSecond(data["graphics"]["frames_per_sec"]);
+    animation.setLoop(data["graphics"]["is_loop"]);
+    animation.setSpeed(data["physics"]["speed_m_per_sec"]);
+    animation.setNextState(data["physics"]["next_state_when_finished"]);
 
     return animation;
 }
 
-
-
-//=================================
-// Load all pieces
-//=================================
-
-
-void TextureManager::loadAllPieceAnimations(
-    int cellSize)
+void TextureManager::loadAllPieceAnimations(int cellSize)
 {
-
-    std::vector<std::string> pieces =
-    {
-        "WK","WQ","WR","WB","WN","WP",
-        "BK","BQ","BR","BB","BN","BP"
+    std::vector<std::string> pieces = {
+        "WK", "WQ", "WR", "WB", "WN", "WP",
+        "BK", "BQ", "BR", "BB", "BN", "BP"
     };
 
-
-    std::vector<std::string> states =
-    {
-        "idle",
-        "move",
-        "jump",
-        "long_rest",
-        "short_rest"
+    std::vector<std::string> states = {
+        "idle", "move", "jump", "long_rest", "short_rest"
     };
 
-
-
-    for(auto& piece : pieces)
+    for (auto& piece : pieces)
     {
-
-        for(auto& state : states)
+        for (auto& state : states)
         {
-
-            std::string path =
-                GuiConfig::PIECES_PATH
-                + "/"
-                + piece
-                + "/states/"
-                + state;
-
-
-
-            animations[
-                piece+"_"+state]
-                =
-                loadAnimation(
-                    path,
-                    cellSize);
-
+            std::string path = GuiConfig::PIECES_PATH + "/" + piece + "/states/" + state;
+            animations[piece + "_" + state] = loadAnimation(path, cellSize);
         }
     }
 }
 
-
-
-//=================================
-// Animation access
-//=================================
-
-
-Animation& TextureManager::getAnimation(
-    const std::string& key)
+Animation& TextureManager::getAnimation(const std::string& key)
 {
-
-    auto it =
-        animations.find(key);
-
-
-    if(it == animations.end())
+    auto it = animations.find(key);
+    if (it == animations.end())
     {
-        throw std::runtime_error(
-            "Animation not found: "
-            + key);
+        throw std::runtime_error("Animation not found: " + key);
     }
-
-
     return it->second;
 }
 
-
-
-bool TextureManager::containsAnimation(
-    const std::string& key) const
+bool TextureManager::containsAnimation(const std::string& key) const
 {
-    return animations.find(key)
-        != animations.end();
+    return animations.find(key) != animations.end();
 }
