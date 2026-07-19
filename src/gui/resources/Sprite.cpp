@@ -9,14 +9,7 @@ void Sprite::addFrame( const Img& frame)
 }
 const Img& Sprite::getFrame( std::size_t index) const
 {
-    if(frames.empty())
-    {
-        throw std::runtime_error(
-            "Cannot get frame from empty sprite"
-        );
-    }
-
-    return frames[index % frames.size()];
+    return frames.at(index);
 }
 
 std::size_t Sprite::getFrameCount() const

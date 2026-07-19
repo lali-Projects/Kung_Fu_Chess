@@ -51,7 +51,7 @@ public:
     /**
      * @brief ציור תמונה זו על תמונה אחרת.
      */
-    void draw_on(Img& other_img, int x, int y);
+    void draw_on(Img& other_img, int x, int y) const;
 
 
     /**

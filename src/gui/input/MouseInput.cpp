@@ -8,8 +8,6 @@ controller(controller), layout(layout)
 {
 }
 
-
-
 void MouseInput::click(int x, int y)
 {
     Position position = layout.pixelToBoard(x, y);

@@ -46,4 +46,7 @@ public:
     }
    
     GameSnapshot getSnapshot() const;
+
+    int getAnimationStartTime(
+    int pieceId) const;
 };

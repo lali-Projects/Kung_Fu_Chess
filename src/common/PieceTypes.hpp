@@ -24,7 +24,9 @@ enum class PieceState
     IDLE,
     MOVING,
     CAPTURED,
-    AIRBORNE
+    AIRBORNE,
+    SHORT_REST,
+    LONG_REST
 };
 
 inline std::string typeToString(PieceType type) {

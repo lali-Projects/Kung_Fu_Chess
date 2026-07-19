@@ -20,7 +20,6 @@
 #include "Window.hpp"
 #include "GameLoop.hpp"
 
-
 int main()
 {
     std::cout
@@ -28,33 +27,28 @@ int main()
         << " KUNG FU CHESS GUI TEST\n"
         << "==============================\n\n";
 
-
     //---------------------------------
     // Logic
     //---------------------------------
 
-    Board board(
-        8,
-        8);
+    Board board(8, 8);
 
-
-    BoardInitializer::setupInitialPosition(
-        board);
-
+    BoardInitializer::setupInitialPosition(board);
 
     RuleEngine ruleEngine;
 
-
-    RealTimeArbiter arbiter(
-        board);
-
+    RealTimeArbiter arbiter(board);
 
     GameEngine engine(
         board,
         ruleEngine,
         arbiter);
 
-  Layout layout(
+    //---------------------------------
+    // Layout
+    //---------------------------------
+
+    Layout layout(
         GuiConfig::WINDOW_WIDTH,
         GuiConfig::WINDOW_HEIGHT,
         8,
@@ -68,42 +62,37 @@ int main()
         board,
         engine);
 
-
-MouseInput mouseInput(controller, layout);
-
-
+    MouseInput mouseInput(
+        controller,
+        layout);
 
     //---------------------------------
-    // Snapshot Builder
+    // Snapshot
     //---------------------------------
 
     GameSnapshotBuilder snapshotBuilder(
         engine,
         controller);
 
-
-
     //---------------------------------
     // GUI
     //---------------------------------
 
-
-
     TextureManager textureManager;
-
 
     try
     {
         textureManager.loadBoardTexture(
             GuiConfig::BOARD_TEXTURE_PATH);
 
-
-        textureManager.loadAllPieceTextures(
+        //
+        // במקום loadAllPieceTextures(...)
+        //
+        textureManager.loadAllPieceAnimations(
             layout.getCellSize());
 
-
         std::cout
-            << "[OK] All textures loaded\n";
+            << "[OK] All animations loaded\n";
     }
     catch(const std::exception& e)
     {
@@ -114,61 +103,41 @@ MouseInput mouseInput(controller, layout);
         return 1;
     }
 
-
-
     GameRenderer renderer(
         layout,
         textureManager);
 
-
-
     Window window(
         GuiConfig::WINDOW_TITLE);
 
-
-
     //---------------------------------
-    // Mouse connection
+    // Mouse
     //---------------------------------
 
     window.setMouseCallback(
         [&](int x, int y)
         {
-            std::cout
-                << "Mouse click: "
-                << x
-                << ", "
-                << y
-                << std::endl;
-
-
-            mouseInput.click(
-                x,
-                y);
+            mouseInput.click(x, y);
         });
-
-
 
     //---------------------------------
     // Game Loop
     //---------------------------------
 
     GameLoop loop(
-    engine,
-    snapshotBuilder,
-    renderer,
-    window,
-    GuiConfig::WINDOW_WIDTH,
-    GuiConfig::WINDOW_HEIGHT,
-    GuiConfig::FPS);
-
+        engine,
+        snapshotBuilder,
+        renderer,
+        window,
+        GuiConfig::WINDOW_WIDTH,
+        GuiConfig::WINDOW_HEIGHT,
+        GuiConfig::FPS);
 
     //---------------------------------
     // Run
     //---------------------------------
 
     loop.run();
-
 
     return 0;
 }

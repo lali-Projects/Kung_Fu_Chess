@@ -1,6 +1,7 @@
 #include "GameSnapshot.hpp"
 
 
+
 GameSnapshot::GameSnapshot(
     const std::vector<PieceSnapshot>& pieces,
     int currentTimeMs,
@@ -15,10 +16,31 @@ selectedPosition(selectedPosition)
 }
 
 
-const std::vector<PieceSnapshot>& GameSnapshot::getPieces() const
+
+//---------------------------------
+// Pieces
+//---------------------------------
+
+
+const std::vector<PieceSnapshot>& 
+GameSnapshot::getPieces() const
 {
     return pieces;
 }
+
+
+
+std::vector<PieceSnapshot>& 
+GameSnapshot::getMutablePieces()
+{
+    return pieces;
+}
+
+
+
+//---------------------------------
+// Time
+//---------------------------------
 
 
 int GameSnapshot::getCurrentTime() const
@@ -27,19 +49,34 @@ int GameSnapshot::getCurrentTime() const
 }
 
 
+
+//---------------------------------
+// Game state
+//---------------------------------
+
+
 bool GameSnapshot::isGameOver() const
 {
     return gameOver;
 }
 
 
-const std::optional<Position>& GameSnapshot::getSelectedPosition() const
+
+//---------------------------------
+// Selection
+//---------------------------------
+
+
+const std::optional<Position>& 
+GameSnapshot::getSelectedPosition() const
 {
     return selectedPosition;
 }
 
 
-void GameSnapshot::setSelectedPosition(const std::optional<Position>& position)
+
+void GameSnapshot::setSelectedPosition(
+    const std::optional<Position>& position)
 {
     selectedPosition = position;
 }

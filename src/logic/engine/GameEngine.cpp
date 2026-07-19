@@ -36,26 +36,102 @@ GameSnapshot GameEngine::getSnapshot() const
     {
         for(int col = 0; col < board.getCols(); col++)
         {
-
             Position pos(row, col);
 
-            auto piece = board.getPieceAt(pos);
 
-            if(piece)
-            {
-                pieces.push_back(
-                    PieceSnapshot
-                    {
-                        piece->getId(),
-                        piece->getSide(),
-                        piece->getType(),
-                        piece->getPosition(),
-                        piece->getState()
-                    });
-            }
+            auto piece =
+                board.getPieceAt(pos);
+
+
+            if(!piece)
+                continue;
+
+
+
+            int id =
+                piece->getId();
+
+
+
+            bool hasMotion =
+                realTimeArbiter.hasActiveMotionFor(id);
+
+
+
+            bool hasAnimation =
+                realTimeArbiter.hasActiveAnimation(id);
+
+
+
+           PieceSnapshot snapshot
+{
+    id,
+
+    piece->getSide(),
+
+    piece->getType(),
+
+    piece->getPosition(),
+
+    piece->getState(),
+
+
+    // Animation
+    realTimeArbiter.getAnimationStartTime(id),
+
+    hasAnimation,
+
+
+    // Motion
+    hasMotion,
+
+
+    hasMotion
+    ?
+    realTimeArbiter.getMotionStart(id)
+    :
+    piece->getPosition(),
+
+
+    hasMotion
+    ?
+    realTimeArbiter.getMotionDestination(id)
+    :
+    piece->getPosition(),
+
+
+    hasMotion
+    ?
+    realTimeArbiter.getMotionStartTime(id)
+    :
+    0,
+
+
+    hasMotion
+    ?
+    realTimeArbiter.getMotionFinishTime(id)
+    :
+    0
+};
+
+            pieces.push_back(snapshot);
         }
     }
 
 
-    return GameSnapshot(pieces, currentTimeMs, isGameOver);
+
+    return GameSnapshot(
+        pieces,
+        currentTimeMs,
+        isGameOver);
+
+    return GameSnapshot(
+        pieces,
+        currentTimeMs,
+        isGameOver);
+}
+
+int GameEngine::getAnimationStartTime(int pieceId) const
+{
+    return realTimeArbiter.getAnimationStartTime(pieceId);
 }

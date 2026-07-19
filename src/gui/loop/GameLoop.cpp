@@ -20,7 +20,7 @@ void GameLoop::run()
         previousFrame = currentFrame;
 
         gameEngine.wait(deltaTime);
-
+        
         GameSnapshot snapshot = snapshotBuilder.build();
 
         renderer.render(canvas, snapshot);

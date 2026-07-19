@@ -1,33 +1,159 @@
 #pragma once
+
 #include "Board.hpp"
 #include "Motion.hpp"
 #include "Jump.hpp"
+
 #include <optional>
 #include <memory>
 
+
 class GameEngine;
 
-class RealTimeArbiter {
+
+class RealTimeArbiter
+{
+
 private:
+
     Board& board;
+
+
+    // רק Motion אחד יכול להיות פעיל
     std::optional<Motion> activeMotion;
+
+
+    // רק Jump אחד יכול להיות פעיל
     std::optional<Jump> activeJump;
 
-    void processMotionCompletion(GameEngine& engine);
-    void handlePawnPromotion(std::shared_ptr<Piece> piece, const Position& pos);
+
+
+private:
+
+
+    void processMotionCompletion(
+        GameEngine& engine);
+
+
     void processJumpCompletion();
 
-public:
-    RealTimeArbiter(Board& b) : board(b) {}
 
-    void startMotion(std::shared_ptr<Piece> piece, Position src, Position dst, int startTime);    
-    void advanceTime(int currentTime, GameEngine& engine);
+
+    void handlePawnPromotion(
+        std::shared_ptr<Piece> piece,
+        const Position& pos);
+
+
+
+public:
+
+
+    explicit RealTimeArbiter(Board& board);
+
+
+
+    //---------------------------------
+    // Motion
+    //---------------------------------
+
+    bool startMotion(
+        std::shared_ptr<Piece> piece,
+        Position src,
+        Position dst,
+        int startTime);
+
+
+
+    void handleMotionLogic(
+        int currentTime,
+        GameEngine& engine);
+
+
+
+    void resolveMotion(
+        GameEngine& engine);
+
+
+
+    void executeStandardMove(
+        GameEngine& engine);
+
+
+
+    //---------------------------------
+    // Jump
+    //---------------------------------
+
+
+    bool startJump(
+        std::shared_ptr<Piece> piece,
+        int startTime,
+        int duration);
+
+
+
+    void handleJumpLogic(
+        int currentTime);
+
+
+
+    bool isCollisionWithJump(
+        const Position& pos) const;
+
+
+
+    void handleJumpCollision(
+        std::shared_ptr<Piece> movingPiece);
+
+
+
+    //---------------------------------
+    // Time
+    //---------------------------------
+
+    void advanceTime(
+        int currentTime,
+        GameEngine& engine);
+
+
+
+    //---------------------------------
+    // Queries
+    //---------------------------------
+
     bool hasActiveMotion() const;
-    void startJump(std::shared_ptr<Piece> piece, int startTime, int jumpDuration);
-    void handleMotionLogic(int currentTime, GameEngine& engine);
-    void handleJumpLogic(int currentTime);
-    void resolveMotion(GameEngine& engine);
-    bool isCollisionWithJump(const Position& pos) const;
-    void executeStandardMove(GameEngine& engine);
-    void handleJumpCollision(std::shared_ptr<Piece> movingPiece);
+
+
+    bool hasActiveJump() const;
+
+
+    bool hasActiveAnimation(
+        int pieceId) const;
+
+
+    int getAnimationStartTime(
+        int pieceId) const;
+       void finishMotion();
+
+       //---------------------------------
+// Motion animation queries
+//---------------------------------
+
+bool hasActiveMotionFor(
+    int pieceId) const;
+
+
+Position getMotionStart(
+    int pieceId) const;
+
+
+Position getMotionDestination(
+    int pieceId) const;
+
+
+int getMotionStartTime(
+    int pieceId) const;
+
+
+int getMotionFinishTime(int pieceId) const;
 };

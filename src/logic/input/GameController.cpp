@@ -18,39 +18,86 @@ MoveResult GameController::jump(const Position& pos) {
     return result;
 }
 
-MoveResult GameController::click(const Position& pos) {
-    // 1. תרגום לפיקסלים (פונקציה פשוטה)
+MoveResult GameController::click(const Position& pos)
+{
+    if(!board.isInsideBoard(pos))
+        return {false,"outsideBoard"};
 
-    if (!board.isInsideBoard(pos)) {
-        return {false, "outsideBoard"};
+
+    auto clickedPiece =
+        board.getPieceAt(pos);
+
+
+
+    // אין בחירה קיימת
+    if(!selectedPosition.has_value())
+    {
+        if(clickedPiece)
+        {
+            selectedPosition = pos;
+
+            return {
+                true,
+                "piece_selected"
+            };
+        }
+
+        return {
+            false,
+            "empty_square"
+        };
     }
 
-    std::shared_ptr<Piece> clickedPiece = board.getPieceAt(pos);
-    // 3. לוגיקת המצבים
-    if (!selectedPosition.has_value()) {
-        if (clickedPiece != nullptr) {
-            selectedPosition = pos;
-             return {true, "piece_selected"};
-        }
-         return {false, "empty_square"};
-    } 
-    else {
-        std::shared_ptr<Piece> selectedPiece = board.getPieceAt(selectedPosition.value());
 
-        // החלפת בחירה
-        if (clickedPiece != nullptr && selectedPiece != nullptr && 
-            clickedPiece->getSide() == selectedPiece->getSide()) {
-            selectedPosition = pos;
-            return  {true, "change_selection"};;
-        } 
-        // ניסיון מהלך
-        else {
-            MoveResult result = gameEngine.requestMove(selectedPosition.value(), pos);
-            clearSelection();
-            return result;
-        }
+
+    auto selectedPiece =
+        board.getPieceAt(
+            selectedPosition.value());
+
+
+
+    // לחיצה כפולה על אותו כלי
+    if(clickedPiece &&
+       selectedPiece &&
+       pos == selectedPosition.value())
+    {
+        MoveResult result =
+            gameEngine.requestJump(pos);
+
+        clearSelection();
+
+        return result;
     }
-     return {false, "no"};
+
+
+
+    // בחירה מחדש של כלי מאותו צד
+    if(clickedPiece &&
+       selectedPiece &&
+       clickedPiece->getSide()
+       ==
+       selectedPiece->getSide())
+    {
+        selectedPosition = pos;
+
+        return {
+            true,
+            "change_selection"
+        };
+    }
+
+
+
+    // ניסיון תנועה רגילה
+    MoveResult result =
+        gameEngine.requestMove(
+            selectedPosition.value(),
+            pos);
+
+
+    clearSelection();
+
+    return result;
 }
 
 void GameController::clearSelection() {

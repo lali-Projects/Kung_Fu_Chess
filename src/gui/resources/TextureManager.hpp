@@ -2,54 +2,145 @@
 
 #include <unordered_map>
 #include <string>
+#include <vector>
+#include <filesystem>
+#include <fstream>
+
+#include <nlohmann/json.hpp>
+
 #include "Img.hpp"
+#include "Animation.hpp"
+#include "Sprite.hpp"
+
+
+using json = nlohmann::json;
+namespace fs = std::filesystem;
+
 
 /**
  * @class TextureManager
- * @brief מנהל מחסן נתונים של תמונות (Resource Cache).
- * 
- * מחלקה זו אחראית על:
- * - קריאת קבצי תמונה ממערכת הקבצים.
- * - שמירת התמונות בזיכרון (Caching) למניעת קריאות חוזרות לדיסק.
- * - מתן גישה לאובייקטי תמונה לפי מפתח ייחודי.
+ *
+ * @brief מנהל כל משאבי התצוגה של המשחק.
+ *
+ * אחריות:
+ * - טעינת תמונות סטטיות.
+ * - טעינת אנימציות.
+ * - שמירת משאבים בזיכרון.
+ *
+ * אינו אחראי:
+ * - ציור.
+ * - בחירת פריים.
+ * - ניהול זמן.
  */
 class TextureManager
 {
+
 private:
-    // מיפוי בין מפתח טקסטואלי לאובייקט תמונה בזיכרון
-    std::unordered_map<std::string, Img> textures;
+
+    //---------------------------------
+    // Static textures
+    //---------------------------------
+
+    std::unordered_map<
+        std::string,
+        Img> textures;
+
+
+
+    //---------------------------------
+    // Animations
+    //---------------------------------
+
+    std::unordered_map<
+        std::string,
+        Animation> animations;
+
+
+
+private:
+
+
+    /**
+     * @brief טוען Sprite מתוך תיקיית sprites.
+     *
+     * כל PNG בתיקייה הופך ל־Frame.
+     */
+    Sprite loadSprite(
+        const std::string& spritesPath,
+        int cellSize);
+
+
+
+    /**
+     * @brief קורא config.json
+     * ויוצר Animation.
+     */
+    Animation loadAnimation(
+        const std::string& animationPath,
+        int cellSize);
+
+
 
 public:
+
+
     TextureManager() = default;
 
-    /**
-     * @brief טוען תמונה ושומר אותה תחת המפתח שסופק.
-     */
-    void loadTexture(const std::string& key, const std::string& path);
+
+
+    //---------------------------------
+    // Images
+    //---------------------------------
+
+
+    void loadTexture(
+        const std::string& key,
+        const std::string& path);
+
+
+
+    void loadTexture(
+        const std::string& key,
+        const std::string& path,
+        int width,
+        int height);
+
+
+
+    Img& getTexture(
+        const std::string& key);
+
+
+
+    bool contains(
+        const std::string& key) const;
+
+
+
+    void loadBoardTexture(
+        const std::string& path);
+
+
+
+    //---------------------------------
+    // Animations
+    //---------------------------------
+
 
     /**
-     * @brief טוען תמונה עם הגדרת מידות (Width, Height) ושומר אותה.
+     * @brief טוען את כל אנימציות הכלים.
      */
-    void loadTexture(const std::string& key, const std::string& path, int width, int height);
+    void loadAllPieceAnimations(
+        int cellSize);
 
-    /**
-     * @brief מחזיר הפניה לתמונה שנמצאת בזיכרון. 
-     * זורק שגיאה אם המפתח לא נמצא.
-     */
-    Img& getTexture(const std::string& key);
 
-    /**
-     * @brief בודק האם המפתח קיים בתוך מאגר הנתונים.
-     */
-    bool contains(const std::string& key) const;
 
-    /**
-     * @brief טעינה ספציפית למשאב תצוגה ראשי.
-     */
-    void loadBoardTexture(const std::string& path);
+    Animation& getAnimation(
+        const std::string& key);
 
-    /**
-     * @brief טעינה מרוכזת של אוסף משאבים לפי גודל קבוע.
-     */
-    void loadAllPieceTextures(int cellSize);
+
+
+    bool containsAnimation(
+        const std::string& key) const;
+
 };

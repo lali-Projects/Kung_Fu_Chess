@@ -44,7 +44,7 @@ Img& Img::read(const std::string& path, const std::pair<int,int>& size, bool kee
     return *this;
 }
 
-void Img::draw_on(Img& other_img, int x, int y) {
+ void Img::draw_on(Img& other_img, int x, int y) const{
     if(img.empty() || other_img.img.empty()) {
         throw std::runtime_error("Both images must contain data");
     }
