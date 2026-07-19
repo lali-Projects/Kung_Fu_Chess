@@ -12,9 +12,11 @@ std::string SpriteKey::stateToString(PieceState state)
 {
     switch(state)
     {
-        case PieceState::IDLE:     return "idle";
-        case PieceState::MOVING:   return "move";
-        case PieceState::AIRBORNE: return "jump";
-        default:                   return "idle";
+        case PieceState::IDLE:        return "idle";
+        case PieceState::MOVING:      return "move";
+        case PieceState::AIRBORNE:    return "jump";
+        case PieceState::LONG_REST:   return "long_rest";
+        case PieceState::SHORT_REST:  return "short_rest";
+        default:                      return "idle";
     }
 }

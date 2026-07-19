@@ -13,6 +13,11 @@ public:
     static int DEFAULT_TRAVEL_TIME_MS;
     static int INITIAL_TIME_MS;
 
+    // משכי מנוחה (Rest) לאחר פעולות בזמן אמת.
+    // אלו קבועי משחק (gameplay), נפרדים במתכוון ממשכי האנימציה שב-JSON.
+    static int LONG_REST_DURATION_MS;   // מנוחה לאחר תנועה רגילה (Motion)
+    static int SHORT_REST_DURATION_MS;  // מנוחה לאחר קפיצה (Jump)
+
     // הגדרות תווים ופורמט (כעת כמשתנים רגילים)
     static char EMPTY_CELL;
     static char SIDE_WHITE;
@@ -20,4 +25,5 @@ public:
 
     // מפת הכלים (כעת כמשתנה רגיל שניתן לעדכן בזמן ריצה)
     static std::unordered_map<char, PieceType> TYPE_MAP;
+
 };

@@ -252,7 +252,9 @@ void TextureManager::loadAllPieceAnimations(
     {
         "idle",
         "move",
-        "jump"
+        "jump",
+        "long_rest",
+        "short_rest"
     };
 
 

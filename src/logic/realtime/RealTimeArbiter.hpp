@@ -3,9 +3,11 @@
 #include "Board.hpp"
 #include "Motion.hpp"
 #include "Jump.hpp"
+#include "Rest.hpp"
 
 #include <optional>
 #include <memory>
+#include <vector>
 
 
 class GameEngine;
@@ -27,6 +29,10 @@ private:
     std::optional<Jump> activeJump;
 
 
+    // מספר כלים יכולים לנוח בו-זמנית, ולכן זהו אוסף ולא ערך יחיד
+    std::vector<Rest> activeRests;
+
+
 
 private:
 
@@ -36,6 +42,10 @@ private:
 
 
     void processJumpCompletion();
+
+
+    void processRestCompletion(
+        const Rest& rest);
 
 
 
@@ -105,6 +115,35 @@ public:
     void handleJumpCollision(
         std::shared_ptr<Piece> movingPiece);
 
+
+
+    //---------------------------------
+    // Rest
+    //---------------------------------
+
+    // התחלת מנוחה עבור כלי, בעקבות סיום תנועה או קפיצה.
+    // פרטי (private-like) לשימוש פנימי בלבד של הארביטר, אך נחשף כ-public
+    // כדי לאפשר בדיקות יחידה ישירות על מנגנון המנוחה.
+ bool startRest(
+    std::shared_ptr<Piece> piece,
+    PieceState restState,
+    PieceState nextState,
+    int startTime);
+
+
+    void handleRestLogic(
+        int currentTime);
+
+
+    bool hasActiveRestFor(
+        int pieceId) const;
+
+
+    int getRestStartTime(
+        int pieceId) const;
+
+
+    int getRestFinishTime(int pieceId) const;
 
 
     //---------------------------------

@@ -29,6 +29,14 @@ MoveValidation RuleEngine::isValidMove(const Position& to, const Position& from,
         return {false, "empty_source"};
     }
 
+    // 2.5 כלי שנח (לאחר תנועה או קפיצה) אינו יכול לבצע פעולה נוספת
+    if (sourcePiece->getState() == PieceState::LONG_REST) {
+        return {false, "piece_is_resting"};
+    }
+    if (sourcePiece->getState() == PieceState::SHORT_REST) {
+        return {false, "piece_is_resting"};
+    }
+
     // 3. בדיקת "אש ידידותית" - מניעת תנועה למשבצת שבה נמצא כלי מאותו צבע
     auto destinationPiece = grid.getPieceAt(to);
     if (destinationPiece && sourcePiece->getSide() == destinationPiece->getSide()) {
@@ -57,6 +65,12 @@ MoveValidation RuleEngine::isValidJump(std::shared_ptr<Piece> piece) const {
     }
     if (piece->getState() == PieceState::CAPTURED) {
         return { false, "piece_is_captured" };
+    }
+    if (piece->getState() == PieceState::LONG_REST) {
+        return { false, "piece_is_resting" };
+    }
+    if (piece->getState() == PieceState::SHORT_REST) {
+        return { false, "piece_is_resting" };
     }
     return { true, "ok" };
 }

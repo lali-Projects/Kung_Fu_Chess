@@ -29,6 +29,7 @@ MoveResult GameEngine::requestJump(const Position& position) {
 
 GameSnapshot GameEngine::getSnapshot() const
 {
+   
     std::vector<PieceSnapshot> pieces;
 
 
@@ -117,13 +118,6 @@ GameSnapshot GameEngine::getSnapshot() const
             pieces.push_back(snapshot);
         }
     }
-
-
-
-    return GameSnapshot(
-        pieces,
-        currentTimeMs,
-        isGameOver);
 
     return GameSnapshot(
         pieces,

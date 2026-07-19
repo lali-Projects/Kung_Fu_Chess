@@ -2,7 +2,7 @@
 
 #include "GameEngine.hpp"
 #include "GameConfig.hpp"
-
+#include <iostream>
 #include <cmath>
 #include <algorithm>
 
@@ -42,6 +42,13 @@ bool RealTimeArbiter::startMotion(
 
     // כלי קופץ לא יכול לזוז
     if(piece->getState() == PieceState::AIRBORNE)
+        return false;
+
+
+    // כלי שנח (LONG_REST / SHORT_REST) לא יכול לזוז
+    if(piece->getState() == PieceState::LONG_REST
+        ||
+       piece->getState() == PieceState::SHORT_REST)
         return false;
 
 
@@ -124,6 +131,15 @@ bool RealTimeArbiter::startJump(
     }
 
 
+    // כלי שנח (LONG_REST / SHORT_REST) לא יכול לקפוץ
+    if(piece->getState() == PieceState::LONG_REST
+        ||
+       piece->getState() == PieceState::SHORT_REST)
+    {
+        return false;
+    }
+
+
 
     piece->setState(
         PieceState::AIRBORNE);
@@ -162,6 +178,11 @@ void RealTimeArbiter::advanceTime(
     handleJumpLogic(
         currentTime);
 
+
+
+    handleRestLogic(
+        currentTime);
+
 }
 
 
@@ -193,6 +214,8 @@ void RealTimeArbiter::handleMotionLogic(
 }
 void RealTimeArbiter::finishMotion()
 {
+
+   
     if(!activeMotion.has_value())
         return;
 
@@ -200,14 +223,34 @@ void RealTimeArbiter::finishMotion()
     auto piece =
         activeMotion->movingPiece;
 
+std::cout
+<< "finishMotion piece id="
+<< piece->getId()
+<< " state before="
+<< static_cast<int>(piece->getState())
+<< std::endl;
+    if(!piece)
+        return;
 
-    if(piece)
+
+
+    if(piece->getState()
+        ==
+       PieceState::MOVING)
     {
-        piece->setState(
-            PieceState::IDLE);
+
+        startRest(
+            piece,
+            PieceState::LONG_REST,
+            PieceState::IDLE,
+            activeMotion->finishTime
+        );
+std::cout
+<< "LONG_REST STARTED for piece "
+<< piece->getId()
+<< std::endl;
     }
 }
-
 
 
 //================================================
@@ -320,8 +363,9 @@ void RealTimeArbiter::executeStandardMove(
 
 
 
-    movingPiece->setState(
-        PieceState::IDLE);
+    // הערה: מצב הכלי לאחר תנועה מוצלחת (LONG_REST) נקבע ריכוזית
+    // ב-finishMotion(), לאחר שהקריאה הזו מסתיימת. כך יש נקודת אחריות
+    // אחת בלבד לקביעת מצב הכלי בסיום תנועה.
 
 
 
@@ -387,30 +431,29 @@ void RealTimeArbiter::handleJumpCollision(
 
 void RealTimeArbiter::processJumpCompletion()
 {
-
-
     if(!activeJump)
         return;
-
 
 
     auto piece =
         activeJump->getPiece();
 
 
-
-    if(piece)
-    {
-        piece->setState(
-            PieceState::IDLE);
-    }
-
+  if(piece)
+{
+    startRest(
+        piece,
+        PieceState::SHORT_REST,
+        PieceState::IDLE,
+        activeJump->getStartTime()
+        +
+        activeJump->getDuration()
+    );
+}
 
 
     activeJump.reset();
-
 }
-
 
 
 //================================================
@@ -500,6 +543,10 @@ bool RealTimeArbiter::hasActiveAnimation(
     }
 
 
+    if(hasActiveRestFor(pieceId))
+        return true;
+
+
 
     return false;
 }
@@ -536,6 +583,12 @@ int RealTimeArbiter::getAnimationStartTime(
             return activeJump->getStartTime();
         }
 
+    }
+
+
+    if(hasActiveRestFor(pieceId))
+    {
+        return getRestStartTime(pieceId);
     }
 
 
@@ -611,3 +664,209 @@ int RealTimeArbiter::getMotionFinishTime(
 
     return 0;
 }
+
+
+
+//================================================
+// Rest start
+//================================================
+
+
+bool RealTimeArbiter::startRest(
+    std::shared_ptr<Piece> piece,
+    PieceState restState,
+    PieceState nextState,
+    int startTime)
+{
+    if(!piece)
+        return false;
+
+
+    int duration =
+        (restState == PieceState::LONG_REST)
+        ?
+        GameConfig::LONG_REST_DURATION_MS
+        :
+        GameConfig::SHORT_REST_DURATION_MS;
+
+   std::cout
+<< "startRest:"
+<< " piece="
+<< piece->getId()
+<< " state="
+<< static_cast<int>(restState)
+<< " duration="
+<< duration
+<< " start="
+<< startTime
+<< std::endl;
+    piece->setState(restState);
+
+
+    activeRests.emplace_back(
+        piece,
+        restState,
+        nextState,
+        startTime,
+        duration);
+
+
+    return true;
+}
+
+
+
+//================================================
+// Rest logic
+//================================================
+
+
+void RealTimeArbiter::handleRestLogic(
+    int currentTime)
+{
+  
+    for(auto it =
+        activeRests.begin();
+
+        it != activeRests.end();)
+
+    {
+
+std::cout 
+<< "REST CHECK piece="
+<< it->getPiece()->getId()
+<< " start="
+<< it->getStartTime()
+<< " duration="
+<< it->getDuration()
+<< " current="
+<< currentTime
+<< std::endl;
+        if(it->hasFinished(currentTime))
+        {
+
+            std::cout
+<< "REST FINISHED piece="
+<< it->getPiece()->getId()
+<< " current="
+<< currentTime
+<< std::endl;
+            processRestCompletion(
+                *it);
+
+
+
+            it =
+            activeRests.erase(it);
+
+        }
+
+        else
+        {
+            ++it;
+        }
+
+    }
+
+}
+
+
+
+//================================================
+// Rest finish
+//================================================
+
+
+void RealTimeArbiter::processRestCompletion(
+    const Rest& rest)
+{
+    auto piece =
+        rest.getPiece();
+
+
+    if(!piece)
+        return;
+
+std::cout
+<< "Rest completed piece="
+<< piece->getId()
+<< " old state="
+<< static_cast<int>(piece->getState())
+<< std::endl;
+    piece->setState(
+        rest.getNextState());
+
+}
+
+//================================================
+// Rest queries
+//================================================
+
+
+bool RealTimeArbiter::hasActiveRestFor(
+    int pieceId) const
+{
+
+    for(const auto& rest : activeRests)
+    {
+
+        if(rest.getPiece()
+            &&
+           rest.getPiece()->getId() == pieceId)
+        {
+            return true;
+        }
+
+    }
+
+
+    return false;
+
+}
+
+
+int RealTimeArbiter::getRestStartTime(
+    int pieceId) const
+{
+
+    for(const auto& rest : activeRests)
+    {
+
+        if(rest.getPiece()
+            &&
+           rest.getPiece()->getId() == pieceId)
+        {
+            return rest.getStartTime();
+        }
+
+    }
+
+
+    return 0;
+
+}
+
+
+int RealTimeArbiter::getRestFinishTime(
+    int pieceId) const
+{
+
+    for(const auto& rest : activeRests)
+    {
+
+        if(rest.getPiece()
+            &&
+           rest.getPiece()->getId() == pieceId)
+        {
+            return rest.getStartTime()
+                + rest.getDuration();
+        }
+
+    }
+
+
+    return 0;
+
+}
+
+
