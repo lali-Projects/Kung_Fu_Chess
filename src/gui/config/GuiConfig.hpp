@@ -69,4 +69,6 @@ public:
     // ------------------------
 
     static const int MS_PER_SECOND;
+
+    static const int ESCAPE_KEY;
 };

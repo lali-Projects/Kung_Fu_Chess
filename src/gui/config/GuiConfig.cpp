@@ -20,7 +20,8 @@ const int GuiConfig::WINDOW_HEIGHT =
 const int GuiConfig::FPS =
     60;
 
-
+const int GuiConfig::ESCAPE_KEY =
+    27;
 
 // ------------------------
 // Board

@@ -1,5 +1,6 @@
 #include "Window.hpp"
 #include <opencv2/highgui.hpp>
+#include "GuiConfig.hpp"
 
 Window::Window(const std::string& title)
 : title(title), open(true) {
@@ -14,7 +15,7 @@ void Window::show(const Img& image) {
 
     int key = cv::waitKey(1);
 
-    if(key == 27) {
+    if(key ==  GuiConfig::ESCAPE_KEY) {
         open = false;
     }
 
