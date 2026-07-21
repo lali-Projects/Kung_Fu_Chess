@@ -1,5 +1,6 @@
 #include "AnimationPlayer.hpp"
 #include <algorithm>
+#include "GuiConfig.hpp"
 
 const Img& AnimationPlayer::getCurrentFrame(const Animation& animation, int animationStartTime, int currentTime) const
 {
@@ -33,7 +34,7 @@ std::size_t AnimationPlayer::calculateFrameIndex(const Animation& animation, int
     }
 
     // חישוב משך הזמן של פריים בודד (במילי-שניות)
-    int millisecondsPerFrame = 1000 / fps;
+    int millisecondsPerFrame = GuiConfig::MS_PER_SECOND / fps;
     if (millisecondsPerFrame <= 0)
     {
         millisecondsPerFrame = 1;
