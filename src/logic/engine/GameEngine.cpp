@@ -1,93 +1,186 @@
 #include "GameEngine.hpp"
 #include "GameSnapshot.hpp"
 
-MoveResult GameEngine::requestMove(const Position& from, const Position& to) 
+GameEngine::GameEngine(Board& b, RuleEngine& rules, RealTimeArbiter& arbiter)
+: board(b),
+  ruleEngine(rules),
+  realTimeArbiter(arbiter),
+  currentTimeMs(GameConfig::INITIAL_TIME_MS),
+  isGameOver(false)
 {
-    if (isGameOver) 
+}
+
+//================================================
+// Request Move
+//================================================
+MoveResult GameEngine::requestMove(const Position& from, const Position& to)
+{
+    if(isGameOver)
     {
-        return {false, "game_over"};
+        return {
+            false,
+            "game_over"
+        };
     }
-    
-    if (realTimeArbiter.hasActiveMotion()) 
+
+    if(realTimeArbiter.hasActiveMotion())
     {
-        return {false, "MOTION_IN_PROGRESS"};
+        return {
+            false,
+            "MOTION_IN_PROGRESS"
+        };
     }
 
     MoveValidation validation = ruleEngine.isValidMove(to, from, board);
-    if (!validation.is_valid) 
+
+    if(!validation.is_valid)
     {
-        return {false, validation.reason};
+        return {
+            false,
+            validation.reason
+        };
     }
 
-    
-    realTimeArbiter.startMotion(board.getPieceAt(from), from, to, currentTimeMs);
-    
-    return {true, "ok"};
+    auto piece = board.getPieceAt(from);
+
+    realTimeArbiter.startMotion(piece, from, to, currentTimeMs);
+
+    return {
+        true,
+        "ok"
+    };
 }
 
-MoveResult GameEngine::requestJump(const Position& position) 
+//================================================
+// Request Jump
+//================================================
+MoveResult GameEngine::requestJump(const Position& position)
 {
-    if (isGameOver) 
+    if(isGameOver)
     {
-        return {false, "game_over"};
+        return {
+            false,
+            "game_over"
+        };
     }
 
-    std::shared_ptr<Piece> selectedPiece = board.getPieceAt(position);
-    if (selectedPiece == nullptr) 
+    auto piece = board.getPieceAt(position);
+
+    if(!piece)
     {
-        return {false, "empty_source"};
+        return {
+            false,
+            "empty_source"
+        };
     }
 
-    MoveValidation validation = ruleEngine.isValidJump(selectedPiece);
-    if (!validation.is_valid) 
+    MoveValidation validation = ruleEngine.isValidJump(piece);
+
+    if(!validation.is_valid)
     {
-        return {false, validation.reason};
+        return {
+            false,
+            validation.reason
+        };
     }
 
-    realTimeArbiter.startJump(selectedPiece, currentTimeMs, GameConfig::DEFAULT_TRAVEL_TIME_MS);
-    return {true, "ok"};
+    realTimeArbiter.startJump(piece, currentTimeMs, GameConfig::DEFAULT_TRAVEL_TIME_MS);
+
+    return {
+        true,
+        "ok"
+    };
 }
 
+
+void GameEngine::handleMoveExecutionResult(const MoveExecutionResult& result)
+{
+   
+    if(result.wasCapture && result.capturedPiece)
+    {
+        if(gameOverHandler.isGameOver(*result.capturedPiece))
+        {
+            signalGameOver();
+        }
+    }
+
+   
+    if(result.movingPiece)
+    {
+        promotionHandler.handlePromotion(*result.movingPiece, board);
+    }
+}
+
+//================================================
+// Time
+//================================================
+void GameEngine::wait(int milliseconds)
+{
+    currentTimeMs += milliseconds;
+
+    realTimeArbiter.advanceTime(currentTimeMs, *this);
+}
+
+//================================================
+// State
+//================================================
+void GameEngine::signalGameOver()
+{
+    isGameOver = true;
+}
+
+bool GameEngine::gameOver() const
+{
+    return isGameOver;
+}
+
+const Board& GameEngine::getBoard() const
+{
+    return board;
+}
+
+int GameEngine::getCurrentTime() const
+{
+    return currentTimeMs;
+}
+
+//================================================
+// Snapshot
+//================================================
 GameSnapshot GameEngine::getSnapshot() const
 {
     std::vector<PieceSnapshot> pieces;
 
-    for (int row = 0; row < board.getRows(); row++)
+    for(int row = 0; row < board.getRows(); row++)
     {
-        for (int col = 0; col < board.getCols(); col++)
+        for(int col = 0; col < board.getCols(); col++)
         {
             Position pos(row, col);
+
             auto piece = board.getPieceAt(pos);
 
-            if (!piece)
-            {
+            if(!piece)
                 continue;
-            }
 
-            int id = piece->getId();
-            bool hasMotion = realTimeArbiter.hasActiveMotionFor(id);
-            bool hasAnimation = realTimeArbiter.hasActiveAnimation(id);
+            bool hasMotion = realTimeArbiter.hasActiveMotionFor(piece);
 
-            PieceSnapshot snapshot{
-                id,
+            bool hasAnimation = realTimeArbiter.hasActiveAnimation(piece);
+
+            pieces.push_back(
+            {
+                piece->getId(),
                 piece->getSide(),
                 piece->getType(),
                 piece->getPosition(),
                 piece->getState(),
-                
-                // Animation
-                realTimeArbiter.getAnimationStartTime(id),
+                realTimeArbiter.getAnimationStartTime(piece),
                 hasAnimation,
-                
-                // Motion
                 hasMotion,
-                hasMotion ? realTimeArbiter.getMotionStart(id) : piece->getPosition(),
-                hasMotion ? realTimeArbiter.getMotionDestination(id) : piece->getPosition(),
-                hasMotion ? realTimeArbiter.getMotionStartTime(id) : 0,
-                hasMotion ? realTimeArbiter.getMotionFinishTime(id) : 0
-            };
-
-            pieces.push_back(snapshot);
+                hasMotion ? realTimeArbiter.getMotionStart(piece) : piece->getPosition(),
+                hasMotion ? realTimeArbiter.getMotionDestination(piece) : piece->getPosition(),
+                hasMotion ? realTimeArbiter.getMotionStartTime(piece) : 0,
+                hasMotion ? realTimeArbiter.getMotionFinishTime(piece) : 0
+            });
         }
     }
 
@@ -96,5 +189,31 @@ GameSnapshot GameEngine::getSnapshot() const
 
 int GameEngine::getAnimationStartTime(int pieceId) const
 {
-    return realTimeArbiter.getAnimationStartTime(pieceId);
+    auto piece = getPieceById(pieceId);
+
+    if(!piece)
+    {
+        return 0;
+    }
+
+    return realTimeArbiter.getAnimationStartTime(piece);
+}
+
+std::shared_ptr<Piece> GameEngine::getPieceById(int pieceId) const
+{
+    for(int row = 0; row < board.getRows(); row++)
+    {
+        for(int col = 0; col < board.getCols(); col++)
+        {
+            auto piece =
+                board.getPieceAt(Position(row, col));
+
+            if(piece && piece->getId() == pieceId)
+            {
+                return piece;
+            }
+        }
+    }
+
+    return nullptr;
 }

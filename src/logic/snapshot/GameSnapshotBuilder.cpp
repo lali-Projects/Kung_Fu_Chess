@@ -38,9 +38,8 @@ GameSnapshot GameSnapshotBuilder::build() const
         << " state="
         << static_cast<int>(piece.state)
         << std::endl;
-        piece.animationStartTime =
-            gameEngine.getAnimationStartTime(
-                piece.id);
+        piece.animationStartTime = gameEngine.getAnimationStartTime(piece.id);
+                
 
     }
 

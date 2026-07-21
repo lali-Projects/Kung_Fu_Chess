@@ -1,103 +1,79 @@
 #pragma once
+
+#include <string>
+#include <memory>
+
 #include "Board.hpp"
 #include "RuleEngine.hpp"
 #include "GameConfig.hpp"
 #include "RealTimeArbiter.hpp"
-#include <string>
-#include <memory>
+
+#include "GameOverHandler.hpp"
+#include "PromotionHandler.hpp"
+
 
 class GameSnapshot;
 
 /**
  * @struct MoveResult
- * @brief Encapsulates the result of a move request.
+ * @brief Result of requesting a move.
  */
-struct MoveResult {
-    bool success;       ///< Indicates if the move was successful.
-    std::string reason; ///< Explanation if the move failed.
+struct MoveResult
+{
+    bool success;
+    std::string reason;
 };
 
-/**
- * @class GameEngine
- * @brief The core engine managing the game logic, state, and rules.
- */
-class GameEngine {
+class GameEngine
+{
 private:
-    Board& board;                     
-    RuleEngine& ruleEngine;            
-    RealTimeArbiter& realTimeArbiter; 
-    int currentTimeMs;                
-    bool isGameOver;             
+    Board& board;
+    RuleEngine& ruleEngine;
+    RealTimeArbiter& realTimeArbiter;
+    GameOverHandler gameOverHandler;
+    PromotionHandler promotionHandler;
 
+    int currentTimeMs;
+    bool isGameOver;
+
+   std::shared_ptr<Piece> getPieceById(int pieceId) const;
 public:
-    /**
-     * @brief Constructs a new GameEngine object.
-     */
-    GameEngine(Board& board, RuleEngine& ruleEngine, RealTimeArbiter& arbiter)
-        : board(board), ruleEngine(ruleEngine), realTimeArbiter(arbiter),
-          currentTimeMs(GameConfig::INITIAL_TIME_MS), isGameOver(false) {}
+    GameEngine(Board& board, RuleEngine& ruleEngine, RealTimeArbiter& arbiter);
 
-    /**
-     * @brief Gets the game board.
-     * @return Const reference to the board.
-     */
-    const Board& getBoard() const { return board; }
-
-    /**
-     * @brief Gets the current elapsed time.
-     * @return Current time in milliseconds.
-     */
-    int getCurrentTime() const { return currentTimeMs; }
-    
-    /**
-     * @brief Requests a standard move.
-     * @param from Source position.
-     * @param to Target position.
-     * @return The result of the move request.
-     */
+    //---------------------------------
+    // Requests
+    //---------------------------------
     MoveResult requestMove(const Position& from, const Position& to);
 
-    /**
-     * @brief Requests a jump move.
-     * @param position Source position.
-     * @return The result of the jump request.
-     */
     MoveResult requestJump(const Position& position);
 
-    /**
-     * @brief Advances the game time and notifies the arbiter.
-     * @param milliseconds Time increment in milliseconds.
-     */
-    void wait(int milliseconds) {
-        currentTimeMs += milliseconds;
-        realTimeArbiter.advanceTime(currentTimeMs, *this);
-    }
+    //---------------------------------
+    // Time
+    //---------------------------------
+    void wait(int milliseconds);
 
-    /**
-     * @brief Sets the game state to over.
-     */
-    void signalGameOver() {
-        isGameOver = true;
-    }
+    //---------------------------------
+    // Execution Result
+    //---------------------------------
+    void handleMoveExecutionResult(const MoveExecutionResult& result);
 
-    /**
-     * @brief Checks if the game has ended.
-     * @return True if game is over, false otherwise.
-     */
-    bool gameOver() const {
-        return isGameOver;
-    }
-   
-    /**
-     * @brief Generates a snapshot of the current game state.
-     * @return A GameSnapshot object representing the current state.
-     */
+    //---------------------------------
+    // Game State
+    //---------------------------------
+    void signalGameOver();
+
+    bool gameOver() const;
+
+    //---------------------------------
+    // Access
+    //---------------------------------
+    const Board& getBoard() const;
+
+    int getCurrentTime() const;
+
+    //---------------------------------
+    // Snapshot
+    //---------------------------------
     GameSnapshot getSnapshot() const;
 
-    /**
-     * @brief Retrieves the animation start time for a specific piece.
-     * @param pieceId The ID of the piece.
-     * @return The start time in milliseconds.
-     */
-    int getAnimationStartTime(int pieceId) const;
-};
+int getAnimationStartTime(int pieceId) const;};
