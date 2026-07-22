@@ -60,8 +60,8 @@ public:
 
 private:
     // פונקציות עזר שמבצעות את הניתוב בפועל
-    void executeClick(int x, int y) { controller.click(x, y); }
+    void executeClick(int x, int y) { controller.click(Position(x, y)); }
     void executeWait(int ms) { gameEngine.wait(ms); }
     void executePrint() { BoardPrinter::print(board, output); }
-    void executeJump(int x, int y) { controller.jump(x, y); }
+    void executeJump(int x, int y) { controller.jump(Position(x, y)); }
 };

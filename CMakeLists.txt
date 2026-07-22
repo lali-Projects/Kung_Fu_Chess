@@ -63,9 +63,22 @@ add_executable(app
     src/logic/engine/MotionManager.cpp
     src/logic/engine/GameOverHandler.cpp
     src/logic/engine/PromotionHandler.cpp
-    # קבצים חדשים מתיקיית server/Logging:
+    
+    # קבצים מתיקיית server/Logging:
     src/server/Logging/AsyncLogger.cpp
     src/server/Logging/LogFormatter.cpp
+    
+    # קבצים חדשים מתיקיית server/core:
+    src/server/core/GameSession.cpp
+    src/server/core/PlayerSession.cpp
+    src/server/core/commands/ClickCommand.cpp
+    src/server/core/commands/CommandHandler.cpp
+    
+    # קבצים חדשים מתיקיית server/infrastructure:
+    src/server/infrastructure/config/Config.cpp
+    src/server/infrastructure/config/ConfigLoader.cpp
+    src/server/infrastructure/events/EventBus.cpp
+    src/server/infrastructure/taskScheduler/TaskScheduler.cpp
 )
 
 target_include_directories(app PRIVATE
@@ -86,8 +99,19 @@ target_include_directories(app PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/input"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/logic/input"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/animation"
-    # התיקייה החדשה של Logging:
+    
+    # התיקייה של Logging:
     "${CMAKE_CURRENT_SOURCE_DIR}/src/server/Logging"
+    
+    # תיקיות חדשות תחת server/core:
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/server/core"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/server/core/commands"
+    
+    # תיקיות חדשות תחת server/infrastructure:
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/server/infrastructure/config"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/server/infrastructure/events"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/server/infrastructure/taskScheduler"
+    
     ${OpenCV_INCLUDE_DIRS}
 )
 

@@ -199,38 +199,208 @@
 // }
 
 #include <iostream>
-#include <vector>
-#include <thread>
-#include <string>
-#include "AsyncLogger.hpp"
+#include <memory>
+
+
+#include "GameSession.hpp"
+#include "CommandHandler.hpp"
+#include "ClickCommand.hpp"
+
+#include "EventBus.hpp"
+
+
+// Game logic
+#include "Board.hpp"
+#include "RuleEngine.hpp"
+#include "RealTimeArbiter.hpp"
+#include "GameEngine.hpp"
+#include "GameController.hpp"
+
+
 
 int main()
 {
-    AsyncLogger logger("server.log");
+    std::cout
+        << "===== Server Flow Test ====="
+        << std::endl;
 
-    std::vector<std::thread> workers;
 
-    for (int i = 0; i < 10; ++i)
-    {
-        workers.emplace_back([&logger, i]()
+
+    /*
+        1.
+        Infrastructure
+    */
+
+    EventBus eventBus;
+
+
+
+    /*
+        2.
+        Create game logic components
+
+
+        Dependency order:
+
+        Board
+          |
+          +--> RuleEngine
+          |
+          +--> RealTimeArbiter
+                    |
+                    v
+              GameEngine
+    */
+
+
+    Board board(
+        8,
+        8);
+
+
+
+    RuleEngine ruleEngine;
+
+
+
+    RealTimeArbiter arbiter(
+        board);
+
+
+
+    GameEngine engine(
+        board,
+        ruleEngine,
+        arbiter);
+
+
+
+    /*
+        Controller is the only gateway
+        into the game logic.
+
+        Server does NOT access
+        GameEngine directly.
+    */
+
+    auto controller =
+        std::make_unique<GameController>(
+            board,
+            engine);
+
+
+
+    /*
+        3.
+        Create game session
+
+        GameSession knows only:
+
+        GameController
+        EventBus
+
+    */
+
+    GameSession session(
+        "game_001",
+        std::move(controller),
+        eventBus);
+
+
+
+    /*
+        4.
+        Create command handler
+    */
+
+    CommandHandler handler(
+        session);
+
+
+
+    /*
+        5.
+        Simulate client command
+
+
+        In a real server:
+
+        Network JSON
+
         {
-            for (int j = 0; j < 100; ++j)
-            {
-                logger.log(
-                    LogLevel::Info,
-                    "Thread " + std::to_string(i));
-            }
-        });
-    }
-
-    // חובה לבצע join לכל השרשורים לפני סיום התוכנית
-    for (auto& worker : workers)
-    {
-        if (worker.joinable())
-        {
-            worker.join();
+            row:3,
+            col:3
         }
-    }
+
+        becomes:
+
+        Position(3,3)
+
+        then:
+
+        ClickCommand
+    */
+
+
+    Position clickedPosition(
+        3,
+        3);
+
+
+
+    ClickCommand command(
+        clickedPosition);
+
+
+
+    /*
+        6.
+        Execute server flow:
+
+        ClickCommand
+              |
+              v
+        CommandHandler
+              |
+              v
+        GameSession
+              |
+              v
+        GameController
+              |
+              v
+        GameEngine
+    */
+
+
+    MoveResult result =
+        handler.handle(command);
+
+
+
+    /*
+        7.
+        Display result
+    */
+
+    std::cout
+        << "Result: "
+        << (result.success ? "SUCCESS" : "FAILED")
+        << std::endl;
+
+
+    std::cout
+        << "Reason: "
+        << result.reason
+        << std::endl;
+
+
+
+    std::cout
+        << "===== Finished ====="
+        << std::endl;
+
+
 
     return 0;
 }
