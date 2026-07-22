@@ -22,6 +22,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
 add_executable(app
     main.cpp
+    
+    # קובץ מתיקיית application:
+    src/application/Application.cpp
+
+    # GUI ו-Logic:
     src/gui/graphics/Img.cpp
     src/gui/window/ImgWindow.cpp
     src/gui/window/Window.cpp
@@ -64,24 +69,33 @@ add_executable(app
     src/logic/engine/GameOverHandler.cpp
     src/logic/engine/PromotionHandler.cpp
     
+    # קובץ חדש - Server:
+    src/server/Server.cpp
+
     # קבצים מתיקיית server/Logging:
     src/server/Logging/AsyncLogger.cpp
     src/server/Logging/LogFormatter.cpp
     
-    # קבצים חדשים מתיקיית server/core:
+    # קבצים מתיקיית server/core:
     src/server/core/GameSession.cpp
     src/server/core/PlayerSession.cpp
     src/server/core/commands/ClickCommand.cpp
     src/server/core/commands/CommandHandler.cpp
+    src/server/core/commands/CommandParser.cpp
     
-    # קבצים חדשים מתיקיית server/infrastructure:
+    # קבצים מתיקיית server/infrastructure:
     src/server/infrastructure/config/Config.cpp
     src/server/infrastructure/config/ConfigLoader.cpp
     src/server/infrastructure/events/EventBus.cpp
     src/server/infrastructure/taskScheduler/TaskScheduler.cpp
+
+    # קובץ מתיקיית server/network:
+    src/server/network/ConnectionHandler.cpp
 )
 
 target_include_directories(app PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/application"
+
     "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/graphics"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/window"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/resources"
@@ -95,22 +109,22 @@ target_include_directories(app PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/src/logic/realtime"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/logic/snapshot"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/logic/setup"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/logic/io"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/loop"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/input"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/logic/input"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/animation"
     
-    # התיקייה של Logging:
+    # תיקיות שרת:
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/server"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/server/Logging"
-    
-    # תיקיות חדשות תחת server/core:
     "${CMAKE_CURRENT_SOURCE_DIR}/src/server/core"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/server/core/commands"
-    
-    # תיקיות חדשות תחת server/infrastructure:
     "${CMAKE_CURRENT_SOURCE_DIR}/src/server/infrastructure/config"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/server/infrastructure/events"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/server/infrastructure/taskScheduler"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/server/network"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/server/protocol"
     
     ${OpenCV_INCLUDE_DIRS}
 )

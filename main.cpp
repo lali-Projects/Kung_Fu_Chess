@@ -1,7 +1,7 @@
-// #include <iostream>
+//  #include <iostream>
 // #include <exception>
 
-// // Logic
+
 // #include "Board.hpp"
 // #include "BoardInitializer.hpp"
 
@@ -9,14 +9,11 @@
 // #include "RealTimeArbiter.hpp"
 // #include "GameEngine.hpp"
 
-// // Input
 // #include "GameController.hpp"
 // #include "MouseInput.hpp"
 
-// // Snapshot
 // #include "GameSnapshotBuilder.hpp"
 
-// // GUI
 // #include "GuiConfig.hpp"
 // #include "Layout.hpp"
 
@@ -25,60 +22,37 @@
 // #include "Window.hpp"
 // #include "GameLoop.hpp"
 
+
+
 // int main()
 // {
 //     try
 //     {
-//         std::cout
-//             << "==============================\n"
-//             << " KUNG FU CHESS GUI TEST\n"
-//             << "==============================\n\n";
-
-//         //---------------------------------
-//         // Board
-//         //---------------------------------
-
 //         Board board(
 //             8,
 //             8);
 
+
 //         BoardInitializer::setupInitialPosition(
 //             board);
 
-//         //---------------------------------
-//         // Rules
-//         //---------------------------------
+
 
 //         RuleEngine ruleEngine;
 
-//         //---------------------------------
-//         // Real Time System
-//         //---------------------------------
-//         //
-//         // אחראי על:
-//         // - Motion
-//         // - Jump
-//         // - Rest
-//         // - זמן אמת
-//         //
-//         // MoveExecutor מנוהל פנימית
-//         //
+
 
 //         RealTimeArbiter arbiter(
 //             board);
 
-//         //---------------------------------
-//         // Game Engine
-//         //---------------------------------
+
 
 //         GameEngine engine(
 //             board,
 //             ruleEngine,
 //             arbiter);
 
-//         //---------------------------------
-//         // Layout
-//         //---------------------------------
+
 
 //         Layout layout(
 //             GuiConfig::WINDOW_WIDTH,
@@ -86,71 +60,48 @@
 //             8,
 //             8);
 
-//         //---------------------------------
-//         // Controller
-//         //---------------------------------
+
 
 //         GameController controller(
 //             board,
 //             engine);
 
+
+
 //         MouseInput mouseInput(
 //             controller,
 //             layout);
 
-//         //---------------------------------
-//         // Snapshot Builder
-//         //---------------------------------
+
 
 //         GameSnapshotBuilder snapshotBuilder(
 //             engine,
 //             controller);
 
-//         //---------------------------------
-//         // Texture Loading
-//         //---------------------------------
+
 
 //         TextureManager textureManager;
 
-//         try
-//         {
-//             textureManager.loadBoardTexture(
-//                 GuiConfig::BOARD_TEXTURE_PATH);
 
-//             textureManager.loadAllPieceAnimations(
-//                 layout.getCellSize());
+//         textureManager.loadBoardTexture(
+//             GuiConfig::BOARD_TEXTURE_PATH);
 
-//             std::cout
-//                 << "[OK] Textures and animations loaded\n";
-//         }
-//         catch(const std::exception& e)
-//         {
-//             std::cerr
-//                 << "[ERROR] Texture loading failed: "
-//                 << e.what()
-//                 << std::endl;
 
-//             return 1;
-//         }
+//         textureManager.loadAllPieceAnimations(
+//             layout.getCellSize());
 
-//         //---------------------------------
-//         // Renderer
-//         //---------------------------------
+
 
 //         GameRenderer renderer(
 //             layout,
 //             textureManager);
 
-//         //---------------------------------
-//         // Window
-//         //---------------------------------
+
 
 //         Window window(
 //             GuiConfig::WINDOW_TITLE);
 
-//         //---------------------------------
-//         // Mouse Events
-//         //---------------------------------
+
 
 //         window.setMouseCallback(
 //             [&](int x, int y)
@@ -160,9 +111,7 @@
 //                     y);
 //             });
 
-//         //---------------------------------
-//         // Game Loop
-//         //---------------------------------
+
 
 //         GameLoop loop(
 //             engine,
@@ -173,48 +122,35 @@
 //             GuiConfig::WINDOW_HEIGHT,
 //             GuiConfig::FPS);
 
-//         //---------------------------------
-//         // Run
-//         //---------------------------------
+
 
 //         loop.run();
+
 
 //         return 0;
 //     }
 //     catch(const std::exception& e)
 //     {
 //         std::cerr
-//             << "[FATAL ERROR] Unhandled exception in main: "
+//             << "[FATAL ERROR] "
 //             << e.what()
 //             << std::endl;
+
 //         return 1;
 //     }
 //     catch(...)
 //     {
 //         std::cerr
-//             << "[FATAL ERROR] Unknown exception occurred"
+//             << "[FATAL ERROR] Unknown exception"
 //             << std::endl;
+
 //         return 1;
 //     }
 // }
 
 #include <iostream>
-#include <memory>
 
-
-#include "GameSession.hpp"
-#include "CommandHandler.hpp"
-#include "ClickCommand.hpp"
-
-#include "EventBus.hpp"
-
-
-// Game logic
-#include "Board.hpp"
-#include "RuleEngine.hpp"
-#include "RealTimeArbiter.hpp"
-#include "GameEngine.hpp"
-#include "GameController.hpp"
+#include "Application.hpp"
 
 
 
@@ -226,178 +162,96 @@ int main()
 
 
 
-    /*
-        1.
-        Infrastructure
-    */
-
-    EventBus eventBus;
+    Application app;
 
 
 
-    /*
-        2.
-        Create game logic components
-
-
-        Dependency order:
-
-        Board
-          |
-          +--> RuleEngine
-          |
-          +--> RealTimeArbiter
-                    |
-                    v
-              GameEngine
-    */
-
-
-    Board board(
-        8,
-        8);
-
-
-
-    RuleEngine ruleEngine;
-
-
-
-    RealTimeArbiter arbiter(
-        board);
-
-
-
-    GameEngine engine(
-        board,
-        ruleEngine,
-        arbiter);
+    app.start();
 
 
 
     /*
-        Controller is the only gateway
-        into the game logic.
+        First command:
 
-        Server does NOT access
-        GameEngine directly.
+        Select white pawn
+
+        Initial position:
+
+        (6,0)
     */
 
-    auto controller =
-        std::make_unique<GameController>(
-            board,
-            engine);
+    MoveResult selectResult =
+        app.sendCommand(
+            "CLICK 6 0");
 
 
 
-    /*
-        3.
-        Create game session
+    std::cout
+        << "\nSelection:"
+        << std::endl;
 
-        GameSession knows only:
-
-        GameController
-        EventBus
-
-    */
-
-    GameSession session(
-        "game_001",
-        std::move(controller),
-        eventBus);
-
-
-
-    /*
-        4.
-        Create command handler
-    */
-
-    CommandHandler handler(
-        session);
-
-
-
-    /*
-        5.
-        Simulate client command
-
-
-        In a real server:
-
-        Network JSON
-
-        {
-            row:3,
-            col:3
-        }
-
-        becomes:
-
-        Position(3,3)
-
-        then:
-
-        ClickCommand
-    */
-
-
-    Position clickedPosition(
-        3,
-        3);
-
-
-
-    ClickCommand command(
-        clickedPosition);
-
-
-
-    /*
-        6.
-        Execute server flow:
-
-        ClickCommand
-              |
-              v
-        CommandHandler
-              |
-              v
-        GameSession
-              |
-              v
-        GameController
-              |
-              v
-        GameEngine
-    */
-
-
-    MoveResult result =
-        handler.handle(command);
-
-
-
-    /*
-        7.
-        Display result
-    */
 
     std::cout
         << "Result: "
-        << (result.success ? "SUCCESS" : "FAILED")
+        << (selectResult.success
+                ? "SUCCESS"
+                : "FAILED")
         << std::endl;
 
 
     std::cout
         << "Reason: "
-        << result.reason
+        << selectResult.reason
         << std::endl;
 
 
 
+    /*
+        Second command:
+
+        Move pawn
+
+        From:
+
+        (6,0)
+
+        To:
+
+        (5,0)
+    */
+
+    MoveResult moveResult =
+        app.sendCommand(
+            "CLICK 5 0");
+
+
+
     std::cout
-        << "===== Finished ====="
+        << "\nMove:"
+        << std::endl;
+
+
+    std::cout
+        << "Result: "
+        << (moveResult.success
+                ? "SUCCESS"
+                : "FAILED")
+        << std::endl;
+
+
+    std::cout
+        << "Reason: "
+        << moveResult.reason
+        << std::endl;
+
+
+
+    app.stop();
+
+
+
+    std::cout
+        << "\n===== Finished ====="
         << std::endl;
 
 
