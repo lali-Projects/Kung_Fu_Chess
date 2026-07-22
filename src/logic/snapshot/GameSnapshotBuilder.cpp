@@ -32,15 +32,8 @@ GameSnapshot GameSnapshotBuilder::build() const
 
     for(auto& piece : pieces)
     {
-        std::cout
-        << "SNAPSHOT BUILDER piece="
-        << piece.id
-        << " state="
-        << static_cast<int>(piece.state)
-        << std::endl;
         piece.animationStartTime = gameEngine.getAnimationStartTime(piece.id);
                 
-
     }
 
 
@@ -52,8 +45,5 @@ GameSnapshot GameSnapshotBuilder::build() const
     snapshot.setSelectedPosition(
         controller.getSelectedPosition());
 
-
-std::cout << "SNAPSHOT BUILD FINISHED"
-          << std::endl;
     return snapshot;
 }

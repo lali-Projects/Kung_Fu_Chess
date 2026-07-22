@@ -20,14 +20,7 @@ duration(duration)
 
 bool Rest::hasFinished(int currentTime) const
 {
-    std::cout
-    << "HAS FINISHED CHECK current="
-    << currentTime
-    << " end="
-    << startTime + duration
-    << std::endl;
-
-
+   
     return currentTime >= startTime + duration;
 }
 
