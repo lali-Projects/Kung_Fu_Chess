@@ -63,6 +63,9 @@ add_executable(app
     src/logic/engine/MotionManager.cpp
     src/logic/engine/GameOverHandler.cpp
     src/logic/engine/PromotionHandler.cpp
+    # קבצים חדשים מתיקיית server/Logging:
+    src/server/Logging/AsyncLogger.cpp
+    src/server/Logging/LogFormatter.cpp
 )
 
 target_include_directories(app PRIVATE
@@ -83,6 +86,8 @@ target_include_directories(app PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/input"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/logic/input"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/animation"
+    # התיקייה החדשה של Logging:
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/server/Logging"
     ${OpenCV_INCLUDE_DIRS}
 )
 
