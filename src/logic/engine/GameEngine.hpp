@@ -10,19 +10,11 @@
 
 #include "GameOverHandler.hpp"
 #include "PromotionHandler.hpp"
+#include "MoveResult.hpp"
 
 
 class GameSnapshot;
 
-/**
- * @struct MoveResult
- * @brief Result of requesting a move.
- */
-struct MoveResult
-{
-    bool success;
-    std::string reason;
-};
 
 class GameEngine
 {

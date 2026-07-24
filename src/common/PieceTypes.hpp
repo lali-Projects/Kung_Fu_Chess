@@ -4,7 +4,8 @@
 enum class Side
 {
     WHITE,
-    BLACK
+    BLACK,
+    OBSERVER
 };
 
 

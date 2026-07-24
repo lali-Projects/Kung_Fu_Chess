@@ -1,5 +1,14 @@
 #include "Server.hpp"
 
+
+#include "CommandHandler.hpp"
+#include "ConnectionManager.hpp"
+
+#include "GameSession.hpp"
+
+#include "EventBus.hpp"
+#include "GameStateChangedEvent.hpp"
+
 #include <iostream>
 
 
@@ -9,12 +18,50 @@
 //================================================
 
 Server::Server(
-    CommandParser& commandParser,
-    CommandHandler& commandHandler)
+    CommandHandler& commandHandler,
+    GameSession& session,
+    EventBus& eventBus)
 :
-m_commandParser(commandParser),
-m_commandHandler(commandHandler)
+m_commandHandler(commandHandler),
+m_session(session),
+m_eventBus(eventBus)
 {
+
+    m_connectionManager =
+        std::make_unique<ConnectionManager>(
+            m_commandHandler,
+            m_session);
+
+
+
+    /*
+        Server observes game state changes.
+
+        Flow:
+
+        GameSession
+             |
+             v
+        EventBus
+             |
+             v
+        Server
+             |
+             v
+        ConnectionManager
+             |
+             v
+        Clients
+    */
+
+    m_eventBus.subscribe<GameStateChangedEvent>(
+        [this]
+        (
+            std::shared_ptr<GameStateChangedEvent> event
+        )
+        {
+            onGameStateChanged(event);
+        });
 }
 
 
@@ -31,11 +78,12 @@ Server::~Server()
 
 
 //================================================
-// Start Server
+// Start
 //================================================
 
 void Server::start()
 {
+
     if(m_running)
     {
         return;
@@ -53,11 +101,12 @@ void Server::start()
 
 
 //================================================
-// Stop Server
+// Stop
 //================================================
 
 void Server::stop()
 {
+
     if(!m_running)
     {
         return;
@@ -86,68 +135,38 @@ bool Server::isRunning() const
 
 
 //================================================
-// Handle Client Message
+// Get Connection Manager
 //================================================
 
-MoveResult Server::handle(
-    const std::string& message)
+ConnectionManager&
+Server::getConnectionManager()
 {
-    if(!m_running)
+    return *m_connectionManager;
+}
+
+
+
+//================================================
+// Game State Changed
+//================================================
+
+void Server::onGameStateChanged(
+    std::shared_ptr<Event> event)
+{
+
+    if(!event)
     {
-        return
-        {
-            false,
-            "server_not_running"
-        };
+        return;
     }
 
 
 
-    /*
-        Raw client message:
-
-        Example:
-
-        CLICK 6 0
-
-
-        Server does not understand
-        the command.
-
-        It only performs:
-
-        Text
-          |
-          v
-        CommandParser
-          |
-          v
-        Command
-          |
-          v
-        CommandHandler
-    */
+    auto snapshotEvent =
+        std::static_pointer_cast<GameStateChangedEvent>(
+            event);
 
 
 
-    auto command =
-        m_commandParser.parse(
-            message);
-
-
-
-    if(!command.has_value())
-    {
-        return
-        {
-            false,
-            "invalid_command"
-        };
-    }
-
-
-
-    return
-        m_commandHandler.handle(
-            command.value());
+    m_connectionManager->broadcastSnapshot(
+        snapshotEvent->getSnapshot());
 }

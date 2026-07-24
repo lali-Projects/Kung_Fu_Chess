@@ -12,8 +12,7 @@ enum class PacketType
     CREATE_ROOM,
     JOIN_ROOM,
 
-    MOVE,
-    JUMP,
+    CLICK,
 
     HEARTBEAT,
 

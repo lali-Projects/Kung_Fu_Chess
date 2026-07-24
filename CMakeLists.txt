@@ -20,112 +20,24 @@ find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
-add_executable(app
-    main.cpp
-    
-    # קובץ מתיקיית application:
-    src/application/Application.cpp
+# 1. איסוף אוטומטי של כל קובצי ה-cpp בתוך src וכל תת-התיקיות
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.cpp")
 
-    # GUI ו-Logic:
-    src/gui/graphics/Img.cpp
-    src/gui/window/ImgWindow.cpp
-    src/gui/window/Window.cpp
-    src/gui/resources/Sprite.cpp
-    src/gui/resources/SpriteKey.cpp
-    src/gui/resources/TextureManager.cpp
-    src/gui/config/GuiConfig.cpp
-    src/gui/config/Layout.cpp
-    src/gui/rendering/BoardRenderer.cpp
-    src/gui/rendering/PieceRenderer.cpp
-    src/gui/rendering/GameRenderer.cpp
-    src/logic/snapshot/GameSnapshot.cpp
-    src/logic/config/GameConfig.cpp
-    src/logic/engine/GameEngine.cpp
-    src/logic/engine/PieceEngine.cpp
-    src/logic/engine/RuleEngine.cpp
-    src/logic/model/Board.cpp
-    src/logic/realtime/RealTimeArbiter.cpp
-    src/logic/realtime/Jump.cpp
-    src/logic/rules/RuleKing.cpp
-    src/logic/rules/RuleQueen.cpp
-    src/logic/rules/RuleRook.cpp
-    src/logic/rules/RuleBishop.cpp
-    src/logic/rules/RuleKnight.cpp
-    src/logic/rules/RulePawn.cpp
-    src/logic/rules/RuleUtils.cpp
-    src/gui/loop/GameLoop.cpp
-    src/logic/setup/BoardInitializer.cpp
-    src/logic/input/GameController.cpp
-    src/gui/Input/MouseInput.cpp
-    src/logic/snapshot/GameSnapshotBuilder.cpp
-    src/gui/rendering/SelectionRenderer.cpp
-    src/gui/resources/Animation.cpp
-    src/gui/animation/AnimationPlayer.cpp
-    src/logic/realtime/Rest.cpp
-    src/logic/engine/MoveExecutor.cpp
-    src/logic/engine/JumpManager.cpp
-    src/logic/engine/RestManager.cpp
-    src/logic/engine/MotionManager.cpp
-    src/logic/engine/GameOverHandler.cpp
-    src/logic/engine/PromotionHandler.cpp
-    
-    # קובץ חדש - Server:
-    src/server/Server.cpp
+# יצירת ה-Executable עם main.cpp וכל קובצי המקור שנמצאו
+add_executable(app main.cpp ${SOURCES})
 
-    # קבצים מתיקיית server/Logging:
-    src/server/Logging/AsyncLogger.cpp
-    src/server/Logging/LogFormatter.cpp
-    
-    # קבצים מתיקיית server/core:
-    src/server/core/GameSession.cpp
-    src/server/core/PlayerSession.cpp
-    src/server/core/commands/ClickCommand.cpp
-    src/server/core/commands/CommandHandler.cpp
-    src/server/core/commands/CommandParser.cpp
-    
-    # קבצים מתיקיית server/infrastructure:
-    src/server/infrastructure/config/Config.cpp
-    src/server/infrastructure/config/ConfigLoader.cpp
-    src/server/infrastructure/events/EventBus.cpp
-    src/server/infrastructure/taskScheduler/TaskScheduler.cpp
-
-    # קובץ מתיקיית server/network:
-    src/server/network/ConnectionHandler.cpp
-)
+# 2. איסוף אוטומטי של כל תת-התיקיות בתוך src המכילות קובצי hpp / h
+file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS "src/*.hpp" "src/*.h")
+set(SRC_INCLUDE_DIRS "")
+foreach(HEADER_FILE ${HEADERS})
+    get_filename_component(HEADER_DIR ${HEADER_FILE} DIRECTORY)
+    list(APPEND SRC_INCLUDE_DIRS ${HEADER_DIR})
+endforeach()
+list(REMOVE_DUPLICATES SRC_INCLUDE_DIRS)
 
 target_include_directories(app PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/application"
-
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/graphics"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/window"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/resources"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/config"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/rendering"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/common"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/logic/model"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/logic/engine"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/logic/config"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/logic/rules"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/logic/realtime"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/logic/snapshot"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/logic/setup"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/logic/io"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/loop"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/input"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/logic/input"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/gui/animation"
-    
-    # תיקיות שרת:
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/server"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/server/Logging"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/server/core"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/server/core/commands"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/server/infrastructure/config"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/server/infrastructure/events"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/server/infrastructure/taskScheduler"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/server/network"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/server/protocol"
-    
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    ${SRC_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
 )
 

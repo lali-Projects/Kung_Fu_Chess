@@ -4,7 +4,36 @@
 #include <iostream>
 
 
+#include "EventBus.hpp"
+
+
+#include "Board.hpp"
 #include "BoardInitializer.hpp"
+
+
+#include "RuleEngine.hpp"
+#include "RealTimeArbiter.hpp"
+#include "GameEngine.hpp"
+#include "GameController.hpp"
+
+
+#include "GameSnapshotBuilder.hpp"
+
+
+#include "GameSession.hpp"
+#include "SessionManager.hpp"
+
+
+#include "CommandHandler.hpp"
+
+
+#include "ProtocolParser.hpp"
+
+
+#include "Server.hpp"
+
+#include "ConnectionManager.hpp"
+#include "ClientConnection.hpp"
 
 
 
@@ -31,24 +60,24 @@ Application::~Application()
 
 
 //================================================
-// Initialize System
+// Initialize
 //================================================
 
 void Application::initialize()
 {
 
-    /*
-        Infrastructure
-    */
+    //---------------------------------
+    // Infrastructure
+    //---------------------------------
 
     m_eventBus =
         std::make_unique<EventBus>();
 
 
 
-    /*
-        Board
-    */
+    //---------------------------------
+    // Board
+    //---------------------------------
 
     m_board =
         std::make_unique<Board>(
@@ -62,9 +91,9 @@ void Application::initialize()
 
 
 
-    /*
-        Core Logic
-    */
+    //---------------------------------
+    // Core
+    //---------------------------------
 
     m_ruleEngine =
         std::make_unique<RuleEngine>();
@@ -85,12 +114,6 @@ void Application::initialize()
 
 
 
-    /*
-        Controller
-
-        Only gateway into game logic.
-    */
-
     m_controller =
         std::make_unique<GameController>(
             *m_board,
@@ -98,41 +121,72 @@ void Application::initialize()
 
 
 
-    /*
-        Session
-    */
+    //---------------------------------
+    // Snapshot
+    //---------------------------------
+
+    m_snapshotBuilder =
+        std::make_unique<GameSnapshotBuilder>(
+            *m_engine,
+            *m_controller);
+
+
+
+    //---------------------------------
+    // Session
+    //---------------------------------
 
     m_session =
         std::make_unique<GameSession>(
             "game_001",
             std::move(m_controller),
+            std::move(m_snapshotBuilder),
             *m_eventBus);
 
 
 
-    /*
-        Command Layer
-    */
+    //---------------------------------
+    // Session Manager
+    //---------------------------------
 
-    m_commandParser =
-        std::make_unique<CommandParser>();
+    m_sessionManager =
+        std::make_unique<SessionManager>();
 
 
+
+    m_sessionManager->addSession(
+        std::move(m_session));
+
+
+
+    //---------------------------------
+    // Commands
+    //---------------------------------
 
     m_commandHandler =
         std::make_unique<CommandHandler>(
-            *m_session);
+            *m_sessionManager);
 
 
 
-    /*
-        Server
-    */
+    //---------------------------------
+    // Protocol
+    //---------------------------------
 
-    m_server =
-        std::make_unique<Server>(
-            *m_commandParser,
-            *m_commandHandler);
+    m_protocolParser =
+        std::make_unique<ProtocolParser>();
+
+
+
+    //---------------------------------
+    // Server
+    //---------------------------------
+m_server =
+    std::make_unique<Server>(
+        *m_commandHandler,
+        m_sessionManager->getSession(),
+        *m_eventBus);
+
 }
 
 
@@ -143,16 +197,20 @@ void Application::initialize()
 
 void Application::start()
 {
+
     if(m_running)
     {
         return;
     }
 
 
+
     m_running = true;
 
 
+
     m_server->start();
+
 
 
     std::cout
@@ -168,16 +226,20 @@ void Application::start()
 
 void Application::stop()
 {
+
     if(!m_running)
     {
         return;
     }
 
 
+
     m_server->stop();
 
 
+
     m_running = false;
+
 
 
     std::cout
@@ -206,6 +268,62 @@ MoveResult Application::sendCommand(
 
 
 
-    return m_server->handle(
+    /*
+        Test client simulation.
+
+        Same path as a real client:
+
+        Application
+             |
+             v
+        ConnectionManager
+             |
+             v
+        ClientConnection
+             |
+             v
+        ConnectionHandler
+    */
+
+
+    ConnectionManager& manager =
+        m_server->getConnectionManager();
+
+
+
+    int id =
+        manager.addConnection();
+
+
+
+    ClientConnection* client =
+        manager.getConnection(id);
+
+
+
+    if(client == nullptr)
+    {
+        return
+        {
+            false,
+            "client_creation_failed"
+        };
+    }
+
+
+
+    return client->send(
         message);
+}
+
+
+
+//================================================
+// Get Server
+//================================================
+
+Server&
+Application::getServer()
+{
+    return *m_server;
 }

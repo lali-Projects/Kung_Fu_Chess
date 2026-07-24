@@ -1,55 +1,45 @@
 #include "ConnectionHandler.hpp"
 
 
+#include "CommandParser.hpp"
+#include "CommandHandler.hpp"
+#include "PlayerSession.hpp"
+#include "ClickCommand.hpp"
+
+
+
 //================================================
 // Constructor
 //================================================
 
 ConnectionHandler::ConnectionHandler(
-    CommandHandler& commandHandler)
+    CommandHandler& commandHandler,
+    PlayerSession& player)
     :
-    m_commandHandler(commandHandler)
+    m_commandHandler(commandHandler),
+    m_player(player)
 {
 }
 
 
 
 //================================================
-// Receive Message
+// Receive
 //================================================
 
 MoveResult ConnectionHandler::receive(
     const std::string& message)
 {
-    /*
-        Example input:
-
-        "CLICK 3 4"
-
-
-        Step 1:
-        Parse message
-
-        Step 2:
-        Create ClickCommand
-
-        Step 3:
-        Execute command
-    */
-
 
     auto command =
         m_parser.parse(message);
 
 
 
-    /*
-        Parsing failed.
-    */
-
     if(!command.has_value())
     {
-        return {
+        return
+        {
             false,
             "invalid_command"
         };
@@ -57,13 +47,7 @@ MoveResult ConnectionHandler::receive(
 
 
 
-    /*
-        Forward command.
-
-        ConnectionHandler does not know
-        what CLICK means.
-    */
-
     return m_commandHandler.handle(
+        m_player,
         command.value());
 }

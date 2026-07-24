@@ -1,23 +1,27 @@
 #pragma once
 
 
-#include <string>
+#include <memory>
 
 
-#include "CommandParser.hpp"
-#include "CommandHandler.hpp"
+class CommandHandler;
+class ConnectionManager;
+class GameSession;
+class EventBus;
+class Event;
 
 
 
 /**
- * @brief Main server entry point.
+ * @brief Application server facade.
  *
  * Responsibilities:
  *
- *  - Manage server lifecycle.
- *  - Receive raw client messages.
- *  - Parse commands.
- *  - Forward commands to CommandHandler.
+ *  - Start server.
+ *  - Stop server.
+ *  - Own ConnectionManager.
+ *  - Listen for game state events.
+ *  - Forward snapshots to ConnectionManager.
  *
  *
  * Does NOT know:
@@ -25,103 +29,81 @@
  *  - Game rules.
  *  - Board.
  *  - GameEngine.
- *  - Player logic.
- *  - Command execution details.
+ *  - ClientConnection objects.
  */
 class Server
 {
+
 public:
 
-    /**
-     * @brief Creates server.
-     *
-     * @param commandParser
-     *        Converts raw text into commands.
-     *
-     * @param commandHandler
-     *        Executes parsed commands.
-     */
+
     Server(
-        CommandParser& commandParser,
-        CommandHandler& commandHandler);
+        CommandHandler& commandHandler,
+        GameSession& session,
+        EventBus& eventBus);
 
 
 
-    /**
-     * @brief Stops server automatically.
-     */
     ~Server();
 
 
 
-    Server(const Server&) = delete;
-    Server& operator=(const Server&) = delete;
+    Server(
+        const Server&) = delete;
+
+
+    Server& operator=(
+        const Server&) = delete;
 
 
 
-    /**
-     * @brief Starts server runtime.
-     */
+public:
+
+
     void start();
 
 
-
-    /**
-     * @brief Stops server runtime.
-     */
     void stop();
 
 
-
-    /**
-     * @brief Checks server state.
-     */
     bool isRunning() const;
 
 
 
-    /**
-     * @brief Handles raw client message.
-     *
-     * Example:
-     *
-     * "CLICK 6 0"
-     *
-     * Flow:
-     *
-     * Message
-     *    |
-     *    v
-     * CommandParser
-     *    |
-     *    v
-     * CommandHandler
-     */
-    MoveResult handle(
-        const std::string& message);
+    ConnectionManager&
+    getConnectionManager();
 
 
 
 private:
 
-    /*
-        Converts text commands
-        into command objects.
-    */
-    CommandParser& m_commandParser;
+
+    /**
+     * @brief Receives game state changes.
+     */
+    void onGameStateChanged(
+        std::shared_ptr<Event> event);
 
 
 
-    /*
-        Executes commands
-        against the game session.
-    */
+private:
+
+
     CommandHandler& m_commandHandler;
 
 
+    GameSession& m_session;
 
-    /*
-        Server runtime state.
-    */
+
+    EventBus& m_eventBus;
+
+
+
+    std::unique_ptr<ConnectionManager>
+        m_connectionManager;
+
+
+
     bool m_running{false};
+
 };

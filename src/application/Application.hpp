@@ -5,56 +5,101 @@
 #include <string>
 
 
+#include "MoveResult.hpp"
 
 
 
-#include "EventBus.hpp"
+class EventBus;
 
 
-#include "Board.hpp"
-#include "RuleEngine.hpp"
-#include "RealTimeArbiter.hpp"
-#include "GameEngine.hpp"
-#include "GameController.hpp"
+class Board;
+class RuleEngine;
+class RealTimeArbiter;
+class GameEngine;
+class GameController;
 
 
-#include "GameSession.hpp"
-
-#include "CommandParser.hpp"
-#include "CommandHandler.hpp"
-
-#include "Server.hpp"
+class GameSnapshotBuilder;
 
 
+class GameSession;
+class SessionManager;
 
+
+class CommandHandler;
+
+
+class ProtocolParser;
+
+
+class Server;
+
+
+
+/**
+ * @brief Composition root of the application.
+ *
+ * Creates all objects and connects dependencies.
+ *
+ * Responsibilities:
+ *
+ *  - Object creation.
+ *  - Dependency injection.
+ *  - Application lifecycle.
+ *
+ *
+ * Does NOT know:
+ *
+ *  - Network protocol details.
+ *  - Game rules.
+ *  - Command execution logic.
+ */
 class Application
 {
 public:
 
+
     Application();
+
 
     ~Application();
 
 
 
-    Application(const Application&) = delete;
-    Application& operator=(const Application&) = delete;
+    Application(
+        const Application&) = delete;
 
+
+    Application& operator=(
+        const Application&) = delete;
+
+
+
+public:
 
 
     void start();
+
 
 
     void stop();
 
 
 
+    /**
+     * @brief Test entry point.
+     */
     MoveResult sendCommand(
         const std::string& message);
 
 
 
+    Server& getServer();
+
+
+
 private:
+
 
     void initialize();
 
@@ -63,58 +108,86 @@ private:
 private:
 
 
-    /*
-        Infrastructure
-    */
+    //---------------------------------
+    // Infrastructure
+    //---------------------------------
 
-    std::unique_ptr<EventBus> m_eventBus;
-
-
-
-    /*
-        Core
-    */
-
-    std::unique_ptr<Board> m_board;
-
-
-    std::unique_ptr<RuleEngine> m_ruleEngine;
-
-
-    std::unique_ptr<RealTimeArbiter> m_arbiter;
-
-
-    std::unique_ptr<GameEngine> m_engine;
-
-
-    std::unique_ptr<GameController> m_controller;
+    std::unique_ptr<EventBus>
+        m_eventBus;
 
 
 
-    /*
-        Game Layer
-    */
+    //---------------------------------
+    // Game Core
+    //---------------------------------
 
-    std::unique_ptr<GameSession> m_session;
-
-
-
-    /*
-        Server Command Layer
-    */
-
-    std::unique_ptr<CommandParser> m_commandParser;
+    std::unique_ptr<Board>
+        m_board;
 
 
-    std::unique_ptr<CommandHandler> m_commandHandler;
+    std::unique_ptr<RuleEngine>
+        m_ruleEngine;
+
+
+    std::unique_ptr<RealTimeArbiter>
+        m_arbiter;
+
+
+    std::unique_ptr<GameEngine>
+        m_engine;
+
+
+    std::unique_ptr<GameController>
+        m_controller;
 
 
 
-    /*
-        Server Runtime
-    */
+    //---------------------------------
+    // Snapshot
+    //---------------------------------
 
-    std::unique_ptr<Server> m_server;
+    std::unique_ptr<GameSnapshotBuilder>
+        m_snapshotBuilder;
+
+
+
+    //---------------------------------
+    // Session Layer
+    //---------------------------------
+
+    std::unique_ptr<GameSession>
+        m_session;
+
+
+    std::unique_ptr<SessionManager>
+        m_sessionManager;
+
+
+
+    //---------------------------------
+    // Command Layer
+    //---------------------------------
+
+    std::unique_ptr<CommandHandler>
+        m_commandHandler;
+
+
+
+    //---------------------------------
+    // Protocol
+    //---------------------------------
+
+    std::unique_ptr<ProtocolParser>
+        m_protocolParser;
+
+
+
+    //---------------------------------
+    // Server
+    //---------------------------------
+
+    std::unique_ptr<Server>
+        m_server;
 
 
 

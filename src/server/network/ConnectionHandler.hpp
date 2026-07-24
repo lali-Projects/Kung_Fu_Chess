@@ -1,65 +1,43 @@
 #pragma once
 
+
 #include <string>
 
+#include "MoveResult.hpp"
 #include "CommandParser.hpp"
-#include "CommandHandler.hpp"
+
+
+
+class CommandHandler;
+class PlayerSession;
 
 
 /**
- * @brief Handles communication with one client connection.
- *
- * This is an abstraction layer between:
- *
- * External communication
- *          |
- *          v
- * ConnectionHandler
- *          |
- *          v
- * Command system
- *          |
- *          v
- * Game logic
- *
+ * @brief Handles messages from one client.
  *
  * Responsibilities:
  *
- *  - Receive raw client messages.
- *  - Parse commands.
- *  - Forward commands to CommandHandler.
- *
+ *  - Parse raw messages.
+ *  - Attach player identity.
+ *  - Forward command.
  *
  * Does NOT know:
  *
- *  - GameEngine.
- *  - Board.
  *  - Game rules.
- *  - MOVE/JUMP logic.
+ *  - Board.
+ *  - GameEngine.
  */
 class ConnectionHandler
 {
 public:
 
-    /**
-     * @brief Creates a connection handler.
-     *
-     * @param commandHandler Responsible for executing commands.
-     */
-    explicit ConnectionHandler(
-        CommandHandler& commandHandler);
+
+    ConnectionHandler(
+        CommandHandler& commandHandler,
+        PlayerSession& player);
 
 
 
-    /**
-     * @brief Processes incoming client message.
-     *
-     * Example:
-     *
-     * "CLICK 3 4"
-     *
-     * @return Result from game logic.
-     */
     MoveResult receive(
         const std::string& message);
 
@@ -67,15 +45,12 @@ public:
 
 private:
 
-    /**
-     * @brief Parses client messages.
-     */
+
     CommandParser m_parser;
 
 
-
-    /**
-     * @brief Executes parsed commands.
-     */
     CommandHandler& m_commandHandler;
+
+
+    PlayerSession& m_player;
 };

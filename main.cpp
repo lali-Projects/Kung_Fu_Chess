@@ -7,7 +7,7 @@
 
 // #include "RuleEngine.hpp"
 // #include "RealTimeArbiter.hpp"
-// #include "GameEngine.hpp"
+ #include "GameEngine.hpp"
 
 // #include "GameController.hpp"
 // #include "MouseInput.hpp"
@@ -147,112 +147,243 @@
 //         return 1;
 //     }
 // }
-
 #include <iostream>
 
+
 #include "Application.hpp"
+#include "PlayerSession.hpp"
+#include "Server.hpp"
+#include "ConnectionManager.hpp"
+#include "ClientConnection.hpp"
+
+#include "GameSnapshot.hpp"
 
 
 
 int main()
 {
-    std::cout
-        << "===== Server Flow Test ====="
-        << std::endl;
-
-
 
     Application app;
-
 
 
     app.start();
 
 
 
-    /*
-        First command:
+    Server& server =
+        app.getServer();
 
-        Select white pawn
 
-        Initial position:
 
-        (6,0)
-    */
+    ConnectionManager& manager =
+        server.getConnectionManager();
 
-    MoveResult selectResult =
-        app.sendCommand(
+
+
+    //---------------------------------
+    // Create clients
+    //---------------------------------
+
+    int player1Id =
+        manager.addConnection();
+
+
+    int player2Id =
+        manager.addConnection();
+
+
+    int observerId =
+        manager.addConnection();
+
+
+
+    ClientConnection* player1 =
+        manager.getConnection(
+            player1Id);
+
+
+
+    ClientConnection* player2 =
+        manager.getConnection(
+            player2Id);
+
+
+
+    ClientConnection* observer =
+        manager.getConnection(
+            observerId);
+
+
+
+    if(!player1 ||
+       !player2 ||
+       !observer)
+    {
+        std::cout
+            << "Client creation failed"
+            << std::endl;
+
+        return 1;
+    }
+
+
+
+    //---------------------------------
+    // Check roles
+    //---------------------------------
+
+    std::cout
+        << "Player1 side = "
+        << static_cast<int>(
+            player1->getPlayerSession().getSide())
+        << std::endl;
+
+
+
+    std::cout
+        << "Player2 side = "
+        << static_cast<int>(
+            player2->getPlayerSession().getSide())
+        << std::endl;
+
+
+
+    std::cout
+        << "Observer side = "
+        << static_cast<int>(
+            observer->getPlayerSession().getSide())
+        << std::endl;
+
+
+
+    //---------------------------------
+    // Connections
+    //---------------------------------
+
+    std::cout
+        << "Connections = "
+        << manager.size()
+        << std::endl;
+
+
+
+    //---------------------------------
+    // Player 1 move
+    //---------------------------------
+
+    MoveResult select =
+        player1->send(
             "CLICK 6 0");
 
 
 
     std::cout
-        << "\nSelection:"
-        << std::endl;
-
-
-    std::cout
-        << "Result: "
-        << (selectResult.success
-                ? "SUCCESS"
-                : "FAILED")
-        << std::endl;
-
-
-    std::cout
-        << "Reason: "
-        << selectResult.reason
+        << "Player1 select : "
+        << select.reason
         << std::endl;
 
 
 
-    /*
-        Second command:
-
-        Move pawn
-
-        From:
-
-        (6,0)
-
-        To:
-
-        (5,0)
-    */
-
-    MoveResult moveResult =
-        app.sendCommand(
+    MoveResult move =
+        player1->send(
             "CLICK 5 0");
 
 
 
     std::cout
-        << "\nMove:"
+        << "Player1 move   : "
+        << move.reason
         << std::endl;
+
+
+
+    //---------------------------------
+    // Check snapshots
+    //---------------------------------
+
+    std::cout
+        << "\nSnapshot delivery test"
+        << std::endl;
+
+
+
+    bool p1Snapshot =
+        player1->getLastSnapshot()
+        .has_value();
+
+
+
+    bool p2Snapshot =
+        player2->getLastSnapshot()
+        .has_value();
+
+
+
+    bool observerSnapshot =
+        observer->getLastSnapshot()
+        .has_value();
+
 
 
     std::cout
-        << "Result: "
-        << (moveResult.success
-                ? "SUCCESS"
-                : "FAILED")
+        << "Player1 snapshot : "
+        << (p1Snapshot ? "received" : "missing")
         << std::endl;
+
 
 
     std::cout
-        << "Reason: "
-        << moveResult.reason
+        << "Player2 snapshot : "
+        << (p2Snapshot ? "received" : "missing")
         << std::endl;
 
 
+
+    std::cout
+        << "Observer snapshot : "
+        << (observerSnapshot ? "received" : "missing")
+        << std::endl;
+
+
+
+    //---------------------------------
+    // Observer cannot play
+    //---------------------------------
+
+    MoveResult observerMove =
+        observer->send(
+            "CLICK 1 0");
+
+
+
+    std::cout
+        << "Observer action : "
+        << observerMove.reason
+        << std::endl;
+
+
+
+    //---------------------------------
+    // Remove connection
+    //---------------------------------
+
+    manager.removeConnection(
+        observerId);
+
+
+
+    std::cout
+        << "Connections after remove = "
+        << manager.size()
+        << std::endl;
+
+
+
+    //---------------------------------
+    // Stop
+    //---------------------------------
 
     app.stop();
-
-
-
-    std::cout
-        << "\n===== Finished ====="
-        << std::endl;
 
 
 
