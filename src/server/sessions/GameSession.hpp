@@ -5,8 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "GameController.hpp"
-#include "GameSnapshotBuilder.hpp"
+
 #include "MoveResult.hpp"
 #include "PieceTypes.hpp"
 
@@ -40,6 +39,7 @@ class ClickCommand;
  */
 class GameSession
 {
+
 public:
 
 
@@ -48,12 +48,19 @@ public:
         std::unique_ptr<GameController> controller,
         std::unique_ptr<GameSnapshotBuilder> snapshotBuilder,
         EventBus& eventBus);
-
+    ~GameSession();
 
 
 public:
 
 
+    /**
+     * @brief Adds connected player.
+     *
+     * First player  -> WHITE
+     * Second player -> BLACK
+     * Others       -> OBSERVER
+     */
     bool addPlayer(
         std::shared_ptr<PlayerSession> player);
 
@@ -88,31 +95,23 @@ private:
 
 
 
-    /*
-        Game control layer.
-    */
     std::unique_ptr<GameController>
         m_controller;
 
 
 
-    /*
-        Creates immutable game snapshots.
-    */
     std::unique_ptr<GameSnapshotBuilder>
         m_snapshotBuilder;
 
 
 
-    /*
-        Publishes game events.
-    */
     EventBus& m_eventBus;
 
 
 
     std::shared_ptr<PlayerSession>
         m_whitePlayer;
+
 
 
     std::shared_ptr<PlayerSession>
@@ -123,4 +122,5 @@ private:
     std::vector<
         std::shared_ptr<PlayerSession>>
         m_observers;
+
 };

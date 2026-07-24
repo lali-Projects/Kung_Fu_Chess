@@ -2,6 +2,10 @@
 
 
 #include <memory>
+#include <string>
+
+
+#include "MoveResult.hpp"
 
 
 class CommandHandler;
@@ -9,6 +13,7 @@ class ConnectionManager;
 class GameSession;
 class EventBus;
 class Event;
+class INetworkServer;
 
 
 
@@ -20,8 +25,8 @@ class Event;
  *  - Start server.
  *  - Stop server.
  *  - Own ConnectionManager.
- *  - Listen for game state events.
- *  - Forward snapshots to ConnectionManager.
+ *  - Handle network input.
+ *  - Broadcast game messages.
  *
  *
  * Does NOT know:
@@ -29,7 +34,7 @@ class Event;
  *  - Game rules.
  *  - Board.
  *  - GameEngine.
- *  - ClientConnection objects.
+ *  - Network implementation.
  */
 class Server
 {
@@ -40,7 +45,8 @@ public:
     Server(
         CommandHandler& commandHandler,
         GameSession& session,
-        EventBus& eventBus);
+        EventBus& eventBus,
+        std::unique_ptr<INetworkServer> networkServer);
 
 
 
@@ -75,12 +81,21 @@ public:
 
 
 
+    /**
+     * @brief Local testing only.
+     *
+     * Simulates a client command.
+     *
+     * Same path as real network.
+     */
+    MoveResult simulateClientCommand(
+        const std::string& message);
+
+
+
 private:
 
 
-    /**
-     * @brief Receives game state changes.
-     */
     void onGameStateChanged(
         std::shared_ptr<Event> event);
 
@@ -101,6 +116,11 @@ private:
 
     std::unique_ptr<ConnectionManager>
         m_connectionManager;
+
+
+
+    std::unique_ptr<INetworkServer>
+        m_networkServer;
 
 
 

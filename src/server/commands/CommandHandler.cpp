@@ -1,6 +1,13 @@
 #include "CommandHandler.hpp"
 
 
+#include "ClickCommand.hpp"
+
+#include "SessionManager.hpp"
+#include "GameSession.hpp"
+#include "PlayerSession.hpp"
+
+
 
 //================================================
 // Constructor
@@ -25,13 +32,21 @@ MoveResult CommandHandler::handle(
 {
 
     /*
-        CommandHandler only forwards
-        the command to the active session.
+        CommandHandler is only a dispatcher.
 
-        It does not know:
-        - Board
-        - Rules
-        - GameEngine
+        Responsibility:
+
+            ClickCommand
+                  |
+                  v
+            GameSession
+
+
+        It does not:
+            - parse input
+            - validate chess rules
+            - modify board
+            - execute movement
     */
 
 

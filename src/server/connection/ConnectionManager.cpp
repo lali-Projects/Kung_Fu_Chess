@@ -3,6 +3,8 @@
 
 #include "ClientConnection.hpp"
 #include "CommandHandler.hpp"
+#include "GameSession.hpp"
+#include "PlayerSession.hpp"
 
 
 
@@ -14,19 +16,18 @@ ConnectionManager::ConnectionManager(
     CommandHandler& commandHandler,
     GameSession& session)
 :
-m_commandHandler(commandHandler),
-m_session(session)
+m_session(session),
+m_commandHandler(commandHandler)
 {
 }
+
 
 
 //================================================
 // Destructor
 //================================================
 
-ConnectionManager::~ConnectionManager()
-{
-}
+ConnectionManager::~ConnectionManager() = default;
 
 
 
@@ -36,7 +37,10 @@ ConnectionManager::~ConnectionManager()
 
 int ConnectionManager::addConnection()
 {
-    int id = m_nextId++;
+
+    int id =
+        m_nextId++;
+
 
 
     auto connection =
@@ -46,6 +50,9 @@ int ConnectionManager::addConnection()
 
 
 
+    /*
+        Register player in game session.
+    */
     m_session.addPlayer(
         connection->getPlayer());
 
@@ -81,8 +88,8 @@ void ConnectionManager::removeConnection(
 
 
 
-    m_connections.erase(iterator);
-
+    m_connections.erase(
+        iterator);
 }
 
 
@@ -109,16 +116,29 @@ ConnectionManager::getConnection(
 
 
     return iterator->second.get();
-
 }
 
 
 
 //================================================
-// Broadcast Snapshot
+// Broadcast
 //================================================
 
+void ConnectionManager::broadcast(
+    const NetworkMessage& message)
+{
 
+    for(auto& [id, connection] :
+        m_connections)
+    {
+
+        if(connection)
+        {
+            connection->deliverMessage(
+                message);
+        }
+    }
+}
 
 
 
@@ -129,16 +149,4 @@ ConnectionManager::getConnection(
 size_t ConnectionManager::size() const
 {
     return m_connections.size();
-}
-
-void ConnectionManager::broadcastSnapshot(
-    const GameSnapshot& snapshot)
-{
-    for(auto& [id, connection] : m_connections)
-    {
-        if(connection)
-        {
-            connection->deliverSnapshot(snapshot);
-        }
-    }
 }

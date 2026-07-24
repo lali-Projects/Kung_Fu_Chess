@@ -151,20 +151,36 @@
 
 
 #include "Application.hpp"
-#include "PlayerSession.hpp"
+
 #include "Server.hpp"
 #include "ConnectionManager.hpp"
 #include "ClientConnection.hpp"
 
-#include "GameSnapshot.hpp"
+#include "NetworkMessage.hpp"
 
 
 
 int main()
 {
 
+    std::cout
+        << "============================\n"
+        << " Server Integration Test\n"
+        << "============================\n\n";
+
+
+
+    //---------------------------------
+    // Create application
+    //---------------------------------
+
     Application app;
 
+
+
+    //---------------------------------
+    // Start server
+    //---------------------------------
 
     app.start();
 
@@ -184,11 +200,11 @@ int main()
     // Create clients
     //---------------------------------
 
-    int player1Id =
+    int whiteId =
         manager.addConnection();
 
 
-    int player2Id =
+    int blackId =
         manager.addConnection();
 
 
@@ -197,16 +213,14 @@ int main()
 
 
 
-    ClientConnection* player1 =
+    ClientConnection* white =
         manager.getConnection(
-            player1Id);
+            whiteId);
 
 
-
-    ClientConnection* player2 =
+    ClientConnection* black =
         manager.getConnection(
-            player2Id);
-
+            blackId);
 
 
     ClientConnection* observer =
@@ -215,156 +229,137 @@ int main()
 
 
 
-    if(!player1 ||
-       !player2 ||
+    if(!white ||
+       !black ||
        !observer)
     {
         std::cout
-            << "Client creation failed"
-            << std::endl;
+            << "Client creation failed\n";
 
         return 1;
     }
 
 
 
-    //---------------------------------
-    // Check roles
-    //---------------------------------
-
     std::cout
-        << "Player1 side = "
-        << static_cast<int>(
-            player1->getPlayerSession().getSide())
-        << std::endl;
-
-
-
-    std::cout
-        << "Player2 side = "
-        << static_cast<int>(
-            player2->getPlayerSession().getSide())
-        << std::endl;
-
-
-
-    std::cout
-        << "Observer side = "
-        << static_cast<int>(
-            observer->getPlayerSession().getSide())
-        << std::endl;
+        << "Clients created\n\n";
 
 
 
     //---------------------------------
-    // Connections
+    // Test incoming command path
     //---------------------------------
 
     std::cout
-        << "Connections = "
-        << manager.size()
-        << std::endl;
+        << "Command Test\n"
+        << "-------------\n";
 
 
 
-    //---------------------------------
-    // Player 1 move
-    //---------------------------------
-
-    MoveResult select =
-        player1->send(
-            "CLICK 6 0");
+    NetworkMessage select(
+        MessageType::COMMAND,
+        "CLICK 6 0");
 
 
 
-    std::cout
-        << "Player1 select : "
-        << select.reason
-        << std::endl;
-
-
-
-    MoveResult move =
-        player1->send(
-            "CLICK 5 0");
+    MoveResult result =
+        white->send(
+            select);
 
 
 
     std::cout
-        << "Player1 move   : "
-        << move.reason
+        << "White select : "
+        << result.reason
         << std::endl;
 
 
 
-    //---------------------------------
-    // Check snapshots
-    //---------------------------------
-
-    std::cout
-        << "\nSnapshot delivery test"
-        << std::endl;
+    NetworkMessage move(
+        MessageType::COMMAND,
+        "CLICK 5 0");
 
 
 
-    bool p1Snapshot =
-        player1->getLastSnapshot()
-        .has_value();
-
-
-
-    bool p2Snapshot =
-        player2->getLastSnapshot()
-        .has_value();
-
-
-
-    bool observerSnapshot =
-        observer->getLastSnapshot()
-        .has_value();
+    result =
+        white->send(
+            move);
 
 
 
     std::cout
-        << "Player1 snapshot : "
-        << (p1Snapshot ? "received" : "missing")
+        << "White move   : "
+        << result.reason
         << std::endl;
+
+
+
+    NetworkMessage invalid(
+        MessageType::COMMAND,
+        "HELLO");
+
+
+
+    result =
+        black->send(
+            invalid);
 
 
 
     std::cout
-        << "Player2 snapshot : "
-        << (p2Snapshot ? "received" : "missing")
+        << "Black invalid: "
+        << result.reason
         << std::endl;
 
 
+
+
+    //---------------------------------
+    // Test outgoing message path
+    //---------------------------------
 
     std::cout
-        << "Observer snapshot : "
-        << (observerSnapshot ? "received" : "missing")
-        << std::endl;
+        << "\nBroadcast Test\n"
+        << "--------------\n";
+
+
+
+    NetworkMessage testBroadcast(
+        MessageType::GAME_STATE,
+        "{ \"test\" : \"snapshot\" }");
+
+
+
+    manager.broadcast(
+        testBroadcast);
+
+
+
+    if(white->getLastMessage())
+    {
+        std::cout
+            << "White received message\n";
+    }
+
+
+    if(black->getLastMessage())
+    {
+        std::cout
+            << "Black received message\n";
+    }
+
+
+    if(observer->getLastMessage())
+    {
+        std::cout
+            << "Observer received message\n";
+    }
+
 
 
 
     //---------------------------------
-    // Observer cannot play
-    //---------------------------------
-
-    MoveResult observerMove =
-        observer->send(
-            "CLICK 1 0");
-
-
-
-    std::cout
-        << "Observer action : "
-        << observerMove.reason
-        << std::endl;
-
-
-
-    //---------------------------------
-    // Remove connection
+    // Remove observer
     //---------------------------------
 
     manager.removeConnection(
@@ -373,9 +368,15 @@ int main()
 
 
     std::cout
-        << "Connections after remove = "
+        << "\nObserver removed\n";
+
+
+
+    std::cout
+        << "Active clients: "
         << manager.size()
         << std::endl;
+
 
 
 
@@ -384,6 +385,13 @@ int main()
     //---------------------------------
 
     app.stop();
+
+
+
+    std::cout
+        << "\n============================\n"
+        << " Test Finished\n"
+        << "============================\n";
 
 
 

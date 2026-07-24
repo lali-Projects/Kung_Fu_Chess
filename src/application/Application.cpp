@@ -6,34 +6,28 @@
 
 #include "EventBus.hpp"
 
-
 #include "Board.hpp"
 #include "BoardInitializer.hpp"
-
 
 #include "RuleEngine.hpp"
 #include "RealTimeArbiter.hpp"
 #include "GameEngine.hpp"
 #include "GameController.hpp"
 
-
 #include "GameSnapshotBuilder.hpp"
-
 
 #include "GameSession.hpp"
 #include "SessionManager.hpp"
 
-
 #include "CommandHandler.hpp"
-
 
 #include "ProtocolParser.hpp"
 
-
 #include "Server.hpp"
 
-#include "ConnectionManager.hpp"
-#include "ClientConnection.hpp"
+
+#include "INetworkServer.hpp"
+#include "LocalNetworkServer.hpp"
 
 
 
@@ -92,7 +86,7 @@ void Application::initialize()
 
 
     //---------------------------------
-    // Core
+    // Game Core
     //---------------------------------
 
     m_ruleEngine =
@@ -153,7 +147,6 @@ void Application::initialize()
         std::make_unique<SessionManager>();
 
 
-
     m_sessionManager->addSession(
         std::move(m_session));
 
@@ -179,13 +172,41 @@ void Application::initialize()
 
 
     //---------------------------------
+    // Network
+    //---------------------------------
+
+    /*
+        Current:
+
+            LocalNetworkServer
+
+
+        Future:
+
+            WebSocketServer
+
+
+        Application is the only place
+        that decides which implementation
+        exists.
+    */
+
+
+    auto networkServer =
+        std::make_unique<LocalNetworkServer>();
+
+
+
+    //---------------------------------
     // Server
     //---------------------------------
-m_server =
-    std::make_unique<Server>(
-        *m_commandHandler,
-        m_sessionManager->getSession(),
-        *m_eventBus);
+
+    m_server =
+        std::make_unique<Server>(
+            *m_commandHandler,
+            m_sessionManager->getSession(),
+            *m_eventBus,
+            std::move(networkServer));
 
 }
 
@@ -205,11 +226,11 @@ void Application::start()
 
 
 
-    m_running = true;
-
-
-
     m_server->start();
+
+
+
+    m_running = true;
 
 
 
@@ -268,51 +289,7 @@ MoveResult Application::sendCommand(
 
 
 
-    /*
-        Test client simulation.
-
-        Same path as a real client:
-
-        Application
-             |
-             v
-        ConnectionManager
-             |
-             v
-        ClientConnection
-             |
-             v
-        ConnectionHandler
-    */
-
-
-    ConnectionManager& manager =
-        m_server->getConnectionManager();
-
-
-
-    int id =
-        manager.addConnection();
-
-
-
-    ClientConnection* client =
-        manager.getConnection(id);
-
-
-
-    if(client == nullptr)
-    {
-        return
-        {
-            false,
-            "client_creation_failed"
-        };
-    }
-
-
-
-    return client->send(
+    return m_server->simulateClientCommand(
         message);
 }
 

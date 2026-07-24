@@ -1,13 +1,24 @@
 #include "Server.hpp"
 
 
-#include "CommandHandler.hpp"
+#include "INetworkServer.hpp"
 #include "ConnectionManager.hpp"
 
+#include "CommandHandler.hpp"
 #include "GameSession.hpp"
+
+#include "ClientConnection.hpp"
+
 
 #include "EventBus.hpp"
 #include "GameStateChangedEvent.hpp"
+
+
+#include "SnapshotSerializer.hpp"
+
+
+#include "NetworkMessage.hpp"
+
 
 #include <iostream>
 
@@ -20,12 +31,15 @@
 Server::Server(
     CommandHandler& commandHandler,
     GameSession& session,
-    EventBus& eventBus)
+    EventBus& eventBus,
+    std::unique_ptr<INetworkServer> networkServer)
 :
 m_commandHandler(commandHandler),
 m_session(session),
-m_eventBus(eventBus)
+m_eventBus(eventBus),
+m_networkServer(std::move(networkServer))
 {
+
 
     m_connectionManager =
         std::make_unique<ConnectionManager>(
@@ -34,25 +48,36 @@ m_eventBus(eventBus)
 
 
 
-    /*
-        Server observes game state changes.
+    if(m_networkServer)
+    {
 
-        Flow:
+        m_networkServer->setMessageCallback(
+            [this]
+            (
+                int connectionId,
+                const NetworkMessage& message
+            )
+            {
 
-        GameSession
-             |
-             v
-        EventBus
-             |
-             v
-        Server
-             |
-             v
-        ConnectionManager
-             |
-             v
-        Clients
-    */
+                ClientConnection* client =
+                    m_connectionManager
+                        ->getConnection(connectionId);
+
+
+
+                if(!client)
+                {
+                    return;
+                }
+
+
+
+                client->receiveNetworkMessage(
+                    message);
+            });
+    }
+
+
 
     m_eventBus.subscribe<GameStateChangedEvent>(
         [this]
@@ -90,7 +115,16 @@ void Server::start()
     }
 
 
+
+    if(m_networkServer)
+    {
+        m_networkServer->start();
+    }
+
+
+
     m_running = true;
+
 
 
     std::cout
@@ -113,7 +147,16 @@ void Server::stop()
     }
 
 
+
+    if(m_networkServer)
+    {
+        m_networkServer->stop();
+    }
+
+
+
     m_running = false;
+
 
 
     std::cout
@@ -147,6 +190,47 @@ Server::getConnectionManager()
 
 
 //================================================
+// Simulate Client Command
+//================================================
+
+MoveResult Server::simulateClientCommand(
+    const std::string& message)
+{
+
+    int id =
+        m_connectionManager->addConnection();
+
+
+
+    ClientConnection* client =
+        m_connectionManager->getConnection(id);
+
+
+
+    if(!client)
+    {
+        return
+        {
+            false,
+            "client_creation_failed"
+        };
+    }
+
+
+
+    NetworkMessage networkMessage(
+        MessageType::COMMAND,
+        message);
+
+
+
+    return client->send(
+        networkMessage);
+}
+
+
+
+//================================================
 // Game State Changed
 //================================================
 
@@ -167,6 +251,12 @@ void Server::onGameStateChanged(
 
 
 
-    m_connectionManager->broadcastSnapshot(
-        snapshotEvent->getSnapshot());
+    NetworkMessage message =
+        SnapshotSerializer::serialize(
+            snapshotEvent->getSnapshot());
+
+
+
+    m_connectionManager->broadcast(
+        message);
 }

@@ -1,10 +1,9 @@
 #include "ConnectionHandler.hpp"
 
 
-#include "CommandParser.hpp"
 #include "CommandHandler.hpp"
 #include "PlayerSession.hpp"
-#include "ClickCommand.hpp"
+
 
 
 
@@ -15,11 +14,12 @@
 ConnectionHandler::ConnectionHandler(
     CommandHandler& commandHandler,
     PlayerSession& player)
-    :
-    m_commandHandler(commandHandler),
-    m_player(player)
+:
+m_commandHandler(commandHandler),
+m_player(player)
 {
 }
+
 
 
 
@@ -50,4 +50,5 @@ MoveResult ConnectionHandler::receive(
     return m_commandHandler.handle(
         m_player,
         command.value());
+
 }

@@ -5,6 +5,8 @@
 #include "CommandHandler.hpp"
 #include "PlayerSession.hpp"
 
+#include <utility>
+
 
 
 //================================================
@@ -37,18 +39,31 @@ m_id(id)
 // Destructor
 //================================================
 
-ClientConnection::~ClientConnection()
+ClientConnection::~ClientConnection() = default;
+
+
+
+
+//================================================
+// Send
+//================================================
+
+MoveResult ClientConnection::send(
+    const NetworkMessage& message)
 {
+    return receiveNetworkMessage(
+        message);
 }
 
 
 
+
 //================================================
-// Send Command
+// Receive Network Message
 //================================================
 
-MoveResult ClientConnection::send(
-    const std::string& message)
+MoveResult ClientConnection::receiveNetworkMessage(
+    const NetworkMessage& message)
 {
 
     if(!m_handler)
@@ -63,44 +78,53 @@ MoveResult ClientConnection::send(
 
 
     return m_handler->receive(
+        message.getPayload());
+
+}
+
+
+
+
+//================================================
+// Deliver Message
+//================================================
+
+void ClientConnection::deliverMessage(
+    const NetworkMessage& message)
+{
+    sendMessageToClient(
         message);
 }
 
 
 
+
 //================================================
-// Deliver Snapshot
+// Store Outgoing Message
 //================================================
 
-void ClientConnection::deliverSnapshot(
-    const GameSnapshot& snapshot)
+void ClientConnection::sendMessageToClient(
+    const NetworkMessage& message)
 {
 
-    /*
-        Snapshot represents immutable
-        game information.
-
-        A client receives a copy.
-
-        No game logic exists here.
-    */
-
-    m_lastSnapshot =
-        snapshot;
+    m_lastMessage =
+        message;
 
 }
 
 
 
+
 //================================================
-// Get Last Snapshot
+// Get Last Message
 //================================================
 
-const std::optional<GameSnapshot>&
-ClientConnection::getLastSnapshot() const
+const std::optional<NetworkMessage>&
+ClientConnection::getLastMessage() const
 {
-    return m_lastSnapshot;
+    return m_lastMessage;
 }
+
 
 
 
@@ -115,6 +139,7 @@ int ClientConnection::getId() const
 
 
 
+
 //================================================
 // Get Player
 //================================================
@@ -124,6 +149,16 @@ ClientConnection::getPlayer()
 {
     return m_player;
 }
+
+
+
+
+std::shared_ptr<const PlayerSession>
+ClientConnection::getPlayer() const
+{
+    return m_player;
+}
+
 
 
 

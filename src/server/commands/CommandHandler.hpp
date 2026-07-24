@@ -1,41 +1,44 @@
 #pragma once
 
 
-#include "ClickCommand.hpp"
-#include "GameSession.hpp"
-#include "SessionManager.hpp"
-#include "PlayerSession.hpp"
+#include "MoveResult.hpp"
+
+
+
+class ClickCommand;
+
+class SessionManager;
+class PlayerSession;
+class GameSession;
 
 
 
 /**
- * @brief Handles commands received from players.
+ * @brief Dispatches validated commands to the game session.
+ *
  *
  * Responsibilities:
  *
- *  - Receive parsed commands.
+ *  - Receive validated commands.
+ *  - Keep player context.
  *  - Forward commands to GameSession.
- *  - Pass player identity.
  *
  *
  * Does NOT know:
  *
- *  - GameEngine.
+ *  - NetworkMessage.
+ *  - JSON.
+ *  - WebSocket.
+ *  - Protocol parsing.
+ *  - Game rules.
  *  - Board.
- *  - Rules.
- *  - Network.
+ *  - GameEngine.
  */
 class CommandHandler
 {
 public:
 
 
-    /**
-     * @brief Creates command handler.
-     *
-     * @param sessionManager
-     *        Provides active game session.
-     */
     explicit CommandHandler(
         SessionManager& sessionManager);
 
@@ -45,13 +48,10 @@ public:
 
 
     /**
-     * @brief Handles player click.
+     * @brief Handles a click command.
      *
-     * @param player
-     *        Player sending command.
-     *
-     * @param command
-     *        Parsed click command.
+     * The command is already parsed
+     * and structurally valid.
      */
     MoveResult handle(
         PlayerSession& player,
@@ -62,9 +62,5 @@ public:
 private:
 
 
-    /*
-        Provides access
-        to active game.
-    */
     SessionManager& m_sessionManager;
 };

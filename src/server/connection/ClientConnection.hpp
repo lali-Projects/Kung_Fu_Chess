@@ -2,12 +2,11 @@
 
 
 #include <memory>
-#include <string>
 #include <optional>
 
 
+#include "NetworkMessage.hpp"
 #include "MoveResult.hpp"
-#include "GameSnapshot.hpp"
 
 
 
@@ -17,15 +16,16 @@ class PlayerSession;
 
 
 
+
 /**
  * @brief Represents one connected client.
  *
  * Responsibilities:
  *
  *  - Own player identity.
- *  - Receive commands from client.
- *  - Forward commands through ConnectionHandler.
- *  - Receive game snapshots from server.
+ *  - Receive network messages.
+ *  - Forward commands.
+ *  - Deliver outgoing messages.
  *
  *
  * Does NOT know:
@@ -33,7 +33,9 @@ class PlayerSession;
  *  - GameEngine.
  *  - Board.
  *  - Rules.
- *  - GameSession.
+ *  - Snapshots.
+ *  - Serialization.
+ *  - Network implementation.
  */
 class ClientConnection
 {
@@ -41,15 +43,6 @@ class ClientConnection
 public:
 
 
-    /**
-     * @brief Creates client connection.
-     *
-     * @param id
-     *        Unique connection identifier.
-     *
-     * @param commandHandler
-     *        Command execution layer.
-     */
     ClientConnection(
         int id,
         CommandHandler& commandHandler);
@@ -64,120 +57,103 @@ public:
         const ClientConnection&) = delete;
 
 
+
     ClientConnection& operator=(
         const ClientConnection&) = delete;
+
 
 
 
 public:
 
 
-    /**
-     * @brief Receives command from client.
-     *
-     * Flow:
-     *
-     * Client
-     *   |
-     *   v
-     * ConnectionHandler
-     *   |
-     *   v
-     * CommandHandler
-     */
     MoveResult send(
-        const std::string& message);
+        const NetworkMessage& message);
 
 
 
-    /**
-     * @brief Receives updated game state.
-     *
-     * Called by Server broadcast.
-     *
-     * ClientConnection only stores
-     * the information.
-     *
-     * It does not process game logic.
-     */
-    void deliverSnapshot(
-        const GameSnapshot& snapshot);
+    MoveResult receiveNetworkMessage(
+        const NetworkMessage& message);
+
 
 
 
     /**
-     * @brief Returns last received snapshot.
+     * @brief Delivers outgoing message.
      *
-     * Used by:
+     * Current:
+     * Stores locally.
      *
-     * - Tests.
-     * - Future network layer.
-     * - GUI client simulation.
+     * Future:
+     * WebSocket transport.
      */
-    const std::optional<GameSnapshot>&
-    getLastSnapshot() const;
+    void deliverMessage(
+        const NetworkMessage& message);
 
 
 
-    /**
-     * @brief Returns connection id.
-     */
+
+    const std::optional<NetworkMessage>&
+    getLastMessage() const;
+
+
+
+
     int getId() const;
 
 
 
-    /**
-     * @brief Returns player identity.
-     *
-     * Shared with GameSession.
-     */
+
     std::shared_ptr<PlayerSession>
     getPlayer();
 
 
 
-    /**
-     * @brief Returns player reference.
-     */
+    std::shared_ptr<const PlayerSession>
+    getPlayer() const;
+
+
+
+
     PlayerSession&
     getPlayerSession();
+
 
 
 
 private:
 
 
-    //---------------------------------
-    // Connection identity
-    //---------------------------------
+    void sendMessageToClient(
+        const NetworkMessage& message);
+
+
+
+
+private:
+
 
     int m_id;
 
 
-
-    //---------------------------------
-    // Player identity
-    //---------------------------------
 
     std::shared_ptr<PlayerSession>
         m_player;
 
 
 
-    //---------------------------------
-    // Command communication
-    //---------------------------------
-
     std::unique_ptr<ConnectionHandler>
         m_handler;
 
 
 
-    //---------------------------------
-    // Last received game state
-    //---------------------------------
+    /*
+        Testing storage only.
 
-    std::optional<GameSnapshot>
-        m_lastSnapshot;
+        Future:
+        replaced by WebSocket transport.
+    */
+    std::optional<NetworkMessage>
+        m_lastMessage;
 
 };

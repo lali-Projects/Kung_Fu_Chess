@@ -1,16 +1,12 @@
 #pragma once
 
-
 #include <memory>
 #include <string>
-
 
 #include "MoveResult.hpp"
 
 
-
 class EventBus;
-
 
 class Board;
 class RuleEngine;
@@ -18,21 +14,18 @@ class RealTimeArbiter;
 class GameEngine;
 class GameController;
 
-
 class GameSnapshotBuilder;
-
 
 class GameSession;
 class SessionManager;
 
-
 class CommandHandler;
-
 
 class ProtocolParser;
 
-
 class Server;
+
+class INetworkServer;
 
 
 
@@ -50,20 +43,18 @@ class Server;
  *
  * Does NOT know:
  *
- *  - Network protocol details.
- *  - Game rules.
- *  - Command execution logic.
+ *  - Game rules execution.
+ *  - Client connections.
+ *  - Network behavior.
  */
 class Application
 {
-public:
 
+public:
 
     Application();
 
-
     ~Application();
-
 
 
     Application(
@@ -77,18 +68,13 @@ public:
 
 public:
 
-
     void start();
-
 
 
     void stop();
 
 
 
-    /**
-     * @brief Test entry point.
-     */
     MoveResult sendCommand(
         const std::string& message);
 
@@ -100,7 +86,6 @@ public:
 
 private:
 
-
     void initialize();
 
 
@@ -108,18 +93,10 @@ private:
 private:
 
 
-    //---------------------------------
-    // Infrastructure
-    //---------------------------------
-
     std::unique_ptr<EventBus>
         m_eventBus;
 
 
-
-    //---------------------------------
-    // Game Core
-    //---------------------------------
 
     std::unique_ptr<Board>
         m_board;
@@ -142,18 +119,10 @@ private:
 
 
 
-    //---------------------------------
-    // Snapshot
-    //---------------------------------
-
     std::unique_ptr<GameSnapshotBuilder>
         m_snapshotBuilder;
 
 
-
-    //---------------------------------
-    // Session Layer
-    //---------------------------------
 
     std::unique_ptr<GameSession>
         m_session;
@@ -164,27 +133,15 @@ private:
 
 
 
-    //---------------------------------
-    // Command Layer
-    //---------------------------------
-
     std::unique_ptr<CommandHandler>
         m_commandHandler;
 
 
 
-    //---------------------------------
-    // Protocol
-    //---------------------------------
-
     std::unique_ptr<ProtocolParser>
         m_protocolParser;
 
 
-
-    //---------------------------------
-    // Server
-    //---------------------------------
 
     std::unique_ptr<Server>
         m_server;
@@ -192,4 +149,5 @@ private:
 
 
     bool m_running{false};
+
 };

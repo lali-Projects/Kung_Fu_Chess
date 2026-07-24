@@ -5,13 +5,14 @@
 #include <memory>
 
 
-#include "GameSnapshot.hpp"
+#include "NetworkMessage.hpp"
 
 
 
 class ClientConnection;
 class CommandHandler;
 class GameSession;
+
 
 
 /**
@@ -22,7 +23,7 @@ class GameSession;
  *  - Create client connections.
  *  - Store active connections.
  *  - Remove disconnected clients.
- *  - Broadcast snapshots.
+ *  - Broadcast network messages.
  *
  *
  * Does NOT know:
@@ -30,7 +31,8 @@ class GameSession;
  *  - Game rules.
  *  - Board.
  *  - GameEngine.
- *  - GameSession.
+ *  - GameSnapshot.
+ *  - Serialization.
  */
 class ConnectionManager
 {
@@ -39,8 +41,8 @@ public:
 
 
     explicit ConnectionManager(
-    CommandHandler& commandHandler,
-    GameSession& session);
+        CommandHandler& commandHandler,
+        GameSession& session);
 
 
 
@@ -61,14 +63,14 @@ public:
 
 
     /**
-     * @brief Creates new client.
+     * @brief Creates new client connection.
      */
     int addConnection();
 
 
 
     /**
-     * @brief Removes client.
+     * @brief Removes client connection.
      */
     void removeConnection(
         int id);
@@ -76,7 +78,7 @@ public:
 
 
     /**
-     * @brief Finds client.
+     * @brief Finds client connection.
      */
     ClientConnection* getConnection(
         int id);
@@ -84,17 +86,18 @@ public:
 
 
     /**
-     * @brief Sends snapshot to all clients.
+     * @brief Sends message to all clients.
      */
-    void broadcastSnapshot(
-        const GameSnapshot& snapshot);
+    void broadcast(
+        const NetworkMessage& message);
 
 
 
     /**
-     * @brief Number of clients.
+     * @brief Number of active clients.
      */
     size_t size() const;
+
 
 
 private:
@@ -102,8 +105,22 @@ private:
 
     int m_nextId{1};
 
-GameSession& m_session;
 
+
+    /*
+        Provides access to
+        active game session.
+
+        Used only for player registration.
+    */
+    GameSession& m_session;
+
+
+
+    /*
+        Dispatches commands
+        received from clients.
+    */
     CommandHandler& m_commandHandler;
 
 

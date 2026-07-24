@@ -1,5 +1,6 @@
 #include "GameSession.hpp"
 
+
 #include "GameController.hpp"
 #include "GameSnapshotBuilder.hpp"
 #include "GameStateChangedEvent.hpp"
@@ -7,7 +8,8 @@
 #include "PlayerSession.hpp"
 #include "ClickCommand.hpp"
 #include "EventBus.hpp"
-
+#include "GameController.hpp"
+#include "GameSnapshotBuilder.hpp"
 
 
 //================================================
@@ -19,14 +21,14 @@ GameSession::GameSession(
     std::unique_ptr<GameController> controller,
     std::unique_ptr<GameSnapshotBuilder> snapshotBuilder,
     EventBus& eventBus)
-    :
-    m_id(id),
-    m_controller(std::move(controller)),
-    m_snapshotBuilder(std::move(snapshotBuilder)),
-    m_eventBus(eventBus)
+:
+m_id(id),
+m_controller(std::move(controller)),
+m_snapshotBuilder(std::move(snapshotBuilder)),
+m_eventBus(eventBus)
 {
 }
-
+GameSession::~GameSession() = default;
 
 
 //================================================
@@ -123,10 +125,6 @@ MoveResult GameSession::handleClick(
     const ClickCommand& command)
 {
 
-    /*
-        Observers cannot play.
-    */
-
     if(isObserver(player))
     {
         return
@@ -138,22 +136,11 @@ MoveResult GameSession::handleClick(
 
 
 
-    /*
-        No turns exist in Kung Fu Chess.
-
-        Both players can send commands.
-    */
-
     MoveResult result =
         m_controller->click(
             command.getPosition());
 
 
-
-    /*
-        Only successful changes
-        create a new snapshot.
-    */
 
     if(result.success)
     {
@@ -164,8 +151,8 @@ MoveResult GameSession::handleClick(
 
 
         m_eventBus.publish(
-    std::make_shared<GameStateChangedEvent>(
-        snapshot));
+            std::make_shared<GameStateChangedEvent>(
+                snapshot));
     }
 
 
