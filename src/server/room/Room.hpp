@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <string>
-
+#include <cstddef>
 
 
 class GameContext;
@@ -11,27 +11,6 @@ class GameSession;
 
 
 
-/**
- * @brief Represents one active game room.
- *
- * Owns:
- *
- *  - GameContext
- *  - GameSession
- *
- *
- * Responsibilities:
- *
- *  - Maintain one running game instance.
- *  - Provide access to game services.
- *
- *
- * Does NOT know:
- *
- *  - Server
- *  - Network
- *  - Database
- */
 class Room
 {
 
@@ -53,36 +32,54 @@ public:
         const Room&) = delete;
 
 
-
-    Room& operator=(
-        const Room&) = delete;
+    Room& operator=(const Room&) = delete;
 
 
 
 public:
 
 
-    const std::string& getId() const;
+    const std::string&
+    getId() const;
 
 
 
-    GameSession& getSession();
+    GameSession&
+    getSession();
 
 
 
-    const GameSession& getSession() const;
+    const GameSession&
+    getSession() const;
 
 
 
-    GameContext& getContext();
+    GameContext&
+    getContext();
 
 
 
-    const GameContext& getContext() const;
+    const GameContext&
+    getContext() const;
 
+
+
+public:
+
+
+    bool canJoin() const;
 
 
     bool isEmpty() const;
+
+
+    bool isRunning() const;
+
+
+    bool isFinished() const;
+
+
+    size_t getPlayerCount() const;
 
 
 

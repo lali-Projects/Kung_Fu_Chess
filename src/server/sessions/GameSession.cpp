@@ -1,34 +1,37 @@
 #include "GameSession.hpp"
 
 
+#include "GameContext.hpp"
+
 #include "GameController.hpp"
 #include "GameSnapshotBuilder.hpp"
+
+#include "GameSnapshot.hpp"
 #include "GameStateChangedEvent.hpp"
+
+#include "EventBus.hpp"
 
 #include "PlayerSession.hpp"
 #include "ClickCommand.hpp"
 
-#include "EventBus.hpp"
 
-#include <stdexcept>
-
+#include <algorithm>
 
 
 
 
-//================================================
+
+//=================================
 // Constructor
-//================================================
+//=================================
 
 GameSession::GameSession(
     const std::string& id,
-    GameController& controller,
-    GameSnapshotBuilder& snapshotBuilder,
+    GameContext& context,
     EventBus& eventBus)
 :
 m_id(id),
-m_controller(controller),
-m_snapshotBuilder(snapshotBuilder),
+m_context(context),
 m_eventBus(eventBus)
 {
 }
@@ -36,11 +39,6 @@ m_eventBus(eventBus)
 
 
 
-
-
-//================================================
-// Destructor
-//================================================
 
 GameSession::~GameSession() = default;
 
@@ -50,25 +48,20 @@ GameSession::~GameSession() = default;
 
 
 
-//================================================
+//=================================
 // Add Player
-//================================================
+//=================================
 
 bool GameSession::addPlayer(
     std::shared_ptr<PlayerSession> player)
 {
 
     if(!player)
-    {
         return false;
-    }
-
 
 
     if(player->hasRoom())
-    {
         return false;
-    }
 
 
 
@@ -79,7 +72,6 @@ bool GameSession::addPlayer(
 
     player->setSide(side);
 
-
     player->setRoomId(
         m_id);
 
@@ -89,24 +81,30 @@ bool GameSession::addPlayer(
     {
 
         case Side::WHITE:
-
             m_whitePlayer = player;
             break;
 
 
 
         case Side::BLACK:
-
             m_blackPlayer = player;
             break;
 
 
 
         case Side::OBSERVER:
-
             m_observers.push_back(player);
             break;
 
+    }
+
+
+
+    if(m_whitePlayer &&
+       m_blackPlayer)
+    {
+        m_state =
+            State::RUNNING;
     }
 
 
@@ -120,24 +118,74 @@ bool GameSession::addPlayer(
 
 
 
-//================================================
+//=================================
+// Remove Player
+//=================================
+
+bool GameSession::removePlayer(
+    const PlayerSession& player)
+{
+
+    if(m_whitePlayer &&
+       m_whitePlayer.get() == &player)
+    {
+        m_whitePlayer.reset();
+        return true;
+    }
+
+
+
+    if(m_blackPlayer &&
+       m_blackPlayer.get() == &player)
+    {
+        m_blackPlayer.reset();
+        return true;
+    }
+
+
+
+    auto oldSize =
+        m_observers.size();
+
+
+
+    m_observers.erase(
+        std::remove_if(
+            m_observers.begin(),
+            m_observers.end(),
+            [&](const auto& observer)
+            {
+                return observer &&
+                       observer.get() == &player;
+            }),
+        m_observers.end());
+
+
+
+    return
+        oldSize != m_observers.size();
+}
+
+
+
+
+
+
+
+//=================================
 // Assign Side
-//================================================
+//=================================
 
 Side GameSession::assignSide()
 {
 
     if(!m_whitePlayer)
-    {
         return Side::WHITE;
-    }
 
 
 
     if(!m_blackPlayer)
-    {
         return Side::BLACK;
-    }
 
 
 
@@ -150,15 +198,36 @@ Side GameSession::assignSide()
 
 
 
-
-//================================================
+//=================================
 // Handle Click
-//================================================
+//=================================
 
 MoveResult GameSession::handleClick(
     PlayerSession& player,
     const ClickCommand& command)
 {
+
+    if(m_state != State::RUNNING)
+    {
+        return
+        {
+            false,
+            "game_not_running"
+        };
+    }
+
+
+
+    if(!player.isConnected())
+    {
+        return
+        {
+            false,
+            "player_disconnected"
+        };
+    }
+
+
 
     if(!containsPlayer(player))
     {
@@ -182,26 +251,18 @@ MoveResult GameSession::handleClick(
 
 
 
+
+
     MoveResult result =
-        m_controller.click(
-            command.getPosition());
-
-
+        m_context.getController()
+            .click(
+                command.getPosition());
 
 
 
     if(result.success)
     {
-
-        GameSnapshot snapshot =
-            m_snapshotBuilder.build();
-
-
-
-        m_eventBus.publish(
-            std::make_shared<GameStateChangedEvent>(
-                m_id,
-                snapshot));
+        publishSnapshot();
     }
 
 
@@ -215,9 +276,34 @@ MoveResult GameSession::handleClick(
 
 
 
-//================================================
-// Contains Player
-//================================================
+//=================================
+// Snapshot
+//=================================
+
+void GameSession::publishSnapshot()
+{
+
+    GameSnapshot snapshot =
+        m_context.getSnapshotBuilder()
+            .build();
+
+
+
+    m_eventBus.publish(
+        std::make_shared<GameStateChangedEvent>(
+            m_id,
+            snapshot));
+}
+
+
+
+
+
+
+
+//=================================
+// Contains
+//=================================
 
 bool GameSession::containsPlayer(
     const PlayerSession& player) const
@@ -225,30 +311,22 @@ bool GameSession::containsPlayer(
 
     if(m_whitePlayer &&
        m_whitePlayer.get() == &player)
-    {
         return true;
-    }
 
 
 
     if(m_blackPlayer &&
        m_blackPlayer.get() == &player)
-    {
         return true;
-    }
 
 
 
     for(const auto& observer :
         m_observers)
     {
-
         if(observer &&
            observer.get() == &player)
-        {
             return true;
-        }
-
     }
 
 
@@ -262,19 +340,13 @@ bool GameSession::containsPlayer(
 
 
 
-//================================================
-// Is Observer
-//================================================
-
 bool GameSession::isObserver(
     const PlayerSession& player) const
 {
-
     return
         player.getSide()
         ==
         Side::OBSERVER;
-
 }
 
 
@@ -283,9 +355,9 @@ bool GameSession::isObserver(
 
 
 
-//================================================
-// ID
-//================================================
+//=================================
+// Getters
+//=================================
 
 const std::string&
 GameSession::getId() const
@@ -294,14 +366,6 @@ GameSession::getId() const
 }
 
 
-
-
-
-
-
-//================================================
-// Count
-//================================================
 
 size_t GameSession::getPlayerCount() const
 {
@@ -327,14 +391,6 @@ size_t GameSession::getPlayerCount() const
 
 
 
-
-
-
-
-//================================================
-// Observer Count
-//================================================
-
 size_t GameSession::getObserverCount() const
 {
     return m_observers.size();
@@ -343,13 +399,6 @@ size_t GameSession::getObserverCount() const
 
 
 
-
-
-
-//================================================
-// White
-//================================================
-
 const std::shared_ptr<PlayerSession>&
 GameSession::getWhitePlayer() const
 {
@@ -357,14 +406,6 @@ GameSession::getWhitePlayer() const
 }
 
 
-
-
-
-
-
-//================================================
-// Black
-//================================================
 
 const std::shared_ptr<PlayerSession>&
 GameSession::getBlackPlayer() const
@@ -376,26 +417,24 @@ GameSession::getBlackPlayer() const
 
 
 
-
-
-//================================================
-// Snapshot Builder
-//================================================
-
-GameSnapshotBuilder&
-GameSession::getSnapshotBuilder()
+GameSession::State
+GameSession::getState() const
 {
-    return m_snapshotBuilder;
+    return m_state;
 }
 
 
 
-
-
-
-
-const GameSnapshotBuilder&
-GameSession::getSnapshotBuilder() const
+void GameSession::setState(
+    State state)
 {
-    return m_snapshotBuilder;
+    m_state = state;
+}
+
+
+
+bool GameSession::isRunning() const
+{
+    return
+        m_state == State::RUNNING;
 }

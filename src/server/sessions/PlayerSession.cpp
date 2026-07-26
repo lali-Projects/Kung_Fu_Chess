@@ -5,39 +5,123 @@
 
 
 
-//================================================
-// Constructor
-//================================================
+
 
 PlayerSession::PlayerSession(
-    std::string id)
+    std::string sessionId)
 :
-m_id(std::move(id))
+m_sessionId(std::move(sessionId))
 {
 }
 
 
 
-//================================================
-// ID
-//================================================
+
 
 const std::string&
-PlayerSession::getId() const
+PlayerSession::getSessionId() const
 {
-    return m_id;
+    return m_sessionId;
 }
 
 
 
-//================================================
-// Side
-//================================================
+
+
+const std::string&
+PlayerSession::getUserId() const
+{
+    return m_userId;
+}
+
+
+
+
+
+void PlayerSession::setUserId(
+    const std::string& id)
+{
+    m_userId = id;
+}
+
+
+
+
+
+const std::string&
+PlayerSession::getUsername() const
+{
+    return m_username;
+}
+
+
+
+
+
+void PlayerSession::setUsername(
+    const std::string& username)
+{
+    m_username = username;
+}
+
+
+
+
+
+
+bool PlayerSession::isAuthenticated() const
+{
+    return m_authenticated;
+}
+
+
+
+
+
+bool PlayerSession::hasUser() const
+{
+    return !m_userId.empty();
+}
+
+
+
+
+
+void PlayerSession::authenticate(
+    const std::string& userId,
+    const std::string& username)
+{
+    m_userId = userId;
+
+    m_username = username;
+
+    m_authenticated = true;
+}
+
+
+
+
+
+void PlayerSession::logout()
+{
+    m_authenticated = false;
+
+    m_userId.clear();
+
+    m_username.clear();
+}
+
+
+
+
+
 
 Side PlayerSession::getSide() const
 {
     return m_side;
 }
+
+
 
 
 
@@ -49,15 +133,25 @@ void PlayerSession::setSide(
 
 
 
-//================================================
-// Connection State
-//================================================
+
+
+void PlayerSession::clearSide()
+{
+    m_side = Side::NONE;
+}
+
+
+
+
+
 
 PlayerSession::ConnectionState
 PlayerSession::getState() const
 {
     return m_state;
 }
+
+
 
 
 
@@ -69,15 +163,44 @@ void PlayerSession::setState(
 
 
 
-//================================================
-// Room
-//================================================
+
+
+bool PlayerSession::isConnected() const
+{
+    return
+        m_state == ConnectionState::CONNECTED;
+}
+
+
+
+
+
+void PlayerSession::disconnect()
+{
+    m_state =
+        ConnectionState::DISCONNECTED;
+
+
+    logout();
+
+
+    clearRoom();
+
+
+    clearSide();
+}
+
+
+
+
 
 void PlayerSession::setRoomId(
     const std::string& roomId)
 {
     m_roomId = roomId;
 }
+
+
 
 
 
@@ -89,6 +212,8 @@ PlayerSession::getRoomId() const
 
 
 
+
+
 bool PlayerSession::hasRoom() const
 {
     return !m_roomId.empty();
@@ -96,9 +221,16 @@ bool PlayerSession::hasRoom() const
 
 
 
-//================================================
-// Connection Id
-//================================================
+
+
+void PlayerSession::clearRoom()
+{
+    m_roomId.clear();
+}
+
+
+
+
 
 void PlayerSession::setConnectionId(
     int id)
@@ -108,12 +240,30 @@ void PlayerSession::setConnectionId(
 
 
 
+
+
 int PlayerSession::getConnectionId() const
 {
     return m_connectionId;
 }
 
-void PlayerSession::clearRoom()
+
+
+
+
+
+void PlayerSession::reset()
 {
-    m_roomId.clear();
+    logout();
+
+    clearRoom();
+
+    clearSide();
+
+
+    m_state =
+        ConnectionState::DISCONNECTED;
+
+
+    m_connectionId = -1;
 }

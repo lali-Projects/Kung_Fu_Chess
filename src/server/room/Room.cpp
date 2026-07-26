@@ -51,6 +51,9 @@ m_session(std::move(session))
 
 
 
+
+
+
 //================================================
 // Destructor
 //================================================
@@ -61,8 +64,10 @@ Room::~Room() = default;
 
 
 
+
+
 //================================================
-// Get Id
+// ID
 //================================================
 
 const std::string&
@@ -75,8 +80,10 @@ Room::getId() const
 
 
 
+
+
 //================================================
-// Get Session
+// Session
 //================================================
 
 GameSession&
@@ -84,6 +91,7 @@ Room::getSession()
 {
     return *m_session;
 }
+
 
 
 
@@ -98,8 +106,10 @@ Room::getSession() const
 
 
 
+
+
 //================================================
-// Get Context
+// Context
 //================================================
 
 GameContext&
@@ -107,6 +117,7 @@ Room::getContext()
 {
     return *m_context;
 }
+
 
 
 
@@ -121,14 +132,98 @@ Room::getContext() const
 
 
 
+
+
 //================================================
-// Is Empty
+// Can Join
+//================================================
+
+bool Room::canJoin() const
+{
+
+    return
+        m_session->getState()
+        ==
+        GameSession::State::WAITING
+        &&
+        m_session->getPlayerCount()
+        < 
+        2;
+
+}
+
+
+
+
+
+
+
+//================================================
+// Empty
 //================================================
 
 bool Room::isEmpty() const
 {
+
     return
         m_session->getPlayerCount()
         ==
         0;
+
+}
+
+
+
+
+
+
+
+//================================================
+// Running
+//================================================
+
+bool Room::isRunning() const
+{
+
+    return
+        m_session->isRunning();
+
+}
+
+
+
+
+
+
+
+//================================================
+// Finished
+//================================================
+
+bool Room::isFinished() const
+{
+
+    return
+        m_session->getState()
+        ==
+        GameSession::State::FINISHED;
+
+}
+
+
+
+
+
+
+
+//================================================
+// Player Count
+//================================================
+
+size_t Room::getPlayerCount() const
+{
+
+    return
+        m_session->getPlayerCount();
+
 }

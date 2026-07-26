@@ -14,23 +14,23 @@ class PlayerSession;
 
 
 
-
 /**
- * @brief Handles commands received from one client.
+ * @brief Processes commands from one client connection.
  *
  * Responsibilities:
  *
- *  - Validate incoming message.
- *  - Parse raw command.
- *  - Forward command with player identity.
+ *  - Validate raw messages.
+ *  - Parse protocol commands.
+ *  - Forward commands to CommandHandler.
  *
  *
  * Does NOT know:
  *
- *  - Network.
+ *  - Network transport.
+ *  - Database.
+ *  - Authentication logic.
  *  - Rooms.
  *  - Game rules.
- *  - Board.
  *  - GameEngine.
  */
 class ConnectionHandler
@@ -39,9 +39,8 @@ class ConnectionHandler
 public:
 
 
-    ConnectionHandler(
-        CommandHandler& commandHandler,
-        PlayerSession& player);
+    explicit ConnectionHandler(
+        CommandHandler& commandHandler);
 
 
 
@@ -63,7 +62,8 @@ public:
 
 
     MoveResult receive(
-        const std::string& message);
+        const std::string& message,
+        PlayerSession* player = nullptr);
 
 
 
@@ -73,11 +73,6 @@ private:
     CommandParser m_parser;
 
 
-
     CommandHandler& m_commandHandler;
-
-
-
-    PlayerSession& m_player;
 
 };

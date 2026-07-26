@@ -7,8 +7,13 @@
 //================================================
 
 NetworkMessage::NetworkMessage()
+:
+m_type(MessageType::UNKNOWN),
+m_payload()
 {
 }
+
+
 
 
 
@@ -28,6 +33,9 @@ m_payload(payload)
 
 
 
+
+
+
 //================================================
 // Move Constructor
 //================================================
@@ -43,6 +51,9 @@ m_payload(std::move(payload))
 
 
 
+
+
+
 //================================================
 // Set Type
 //================================================
@@ -52,6 +63,9 @@ void NetworkMessage::setType(
 {
     m_type = type;
 }
+
+
+
 
 
 
@@ -66,8 +80,56 @@ MessageType NetworkMessage::getType() const
 
 
 
+
+
+
 //================================================
-// Set Payload
+// Type Name
+//================================================
+
+std::string NetworkMessage::typeName() const
+{
+
+    switch(m_type)
+    {
+
+        case MessageType::GAME_STATE:
+            return "GAME_STATE";
+
+
+        case MessageType::COMMAND:
+            return "COMMAND";
+
+
+        case MessageType::COMMAND_RESULT:
+            return "COMMAND_RESULT";
+
+
+        case MessageType::SYSTEM_ERROR:
+            return "SYSTEM_ERROR";
+
+
+        case MessageType::DISCONNECT:
+            return "DISCONNECT";
+
+
+        case MessageType::HEARTBEAT:
+            return "HEARTBEAT";
+
+
+        default:
+            return "UNKNOWN";
+    }
+
+}
+
+
+
+
+
+
+//================================================
+// Payload
 //================================================
 
 void NetworkMessage::setPayload(
@@ -75,6 +137,8 @@ void NetworkMessage::setPayload(
 {
     m_payload = payload;
 }
+
+
 
 
 
@@ -87,9 +151,8 @@ void NetworkMessage::setPayload(
 
 
 
-//================================================
-// Get Payload
-//================================================
+
+
 
 const std::string&
 NetworkMessage::getPayload() const
@@ -99,8 +162,11 @@ NetworkMessage::getPayload() const
 
 
 
+
+
+
 //================================================
-// Empty
+// State
 //================================================
 
 bool NetworkMessage::empty() const
@@ -110,9 +176,8 @@ bool NetworkMessage::empty() const
 
 
 
-//================================================
-// Valid
-//================================================
+
+
 
 bool NetworkMessage::valid() const
 {
@@ -124,9 +189,8 @@ bool NetworkMessage::valid() const
 
 
 
-//================================================
-// Clear
-//================================================
+
+
 
 void NetworkMessage::clear()
 {
@@ -137,4 +201,63 @@ void NetworkMessage::clear()
 
     m_payload.clear();
 
+}
+
+
+
+
+
+
+//================================================
+// Helpers
+//================================================
+
+bool NetworkMessage::isCommand() const
+{
+    return
+        m_type == MessageType::COMMAND;
+}
+
+
+
+
+
+
+bool NetworkMessage::isGameState() const
+{
+    return
+        m_type == MessageType::GAME_STATE;
+}
+
+
+
+
+
+
+bool NetworkMessage::isError() const
+{
+    return
+        m_type == MessageType::SYSTEM_ERROR;
+}
+
+
+
+
+
+
+bool NetworkMessage::isDisconnect() const
+{
+    return
+        m_type == MessageType::DISCONNECT;
+}
+
+
+
+
+
+
+bool NetworkMessage::isHeartbeat() const
+{
+    return
+        m_type == MessageType::HEARTBEAT;
 }

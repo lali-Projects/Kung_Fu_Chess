@@ -17,26 +17,23 @@ class PlayerSession;
 
 
 
-
 /**
- * @brief Represents one logical client connection.
+ * @brief Represents one client connection.
  *
  * Responsibilities:
  *
- *  - Own PlayerSession.
- *  - Receive commands.
- *  - Forward commands to CommandHandler.
- *  - Send messages.
- *  - Store last outgoing message for tests.
+ *  - Own connection state.
+ *  - Receive messages.
+ *  - Deliver outgoing messages.
+ *  - Hold attached PlayerSession.
  *
  *
  * Does NOT know:
  *
- *  - GameEngine.
- *  - Board.
- *  - Rules.
+ *  - Database.
+ *  - Authentication.
  *  - Rooms.
- *  - Server.
+ *  - Game rules.
  */
 class ClientConnection
 {
@@ -91,12 +88,23 @@ public:
 
 
 
-    const std::optional<NetworkMessage>&
-    getLastMessage() const;
-
+public:
 
 
     int getId() const;
+
+
+
+    bool hasPlayer() const;
+
+
+
+    void attachPlayer(
+        std::shared_ptr<PlayerSession> player);
+
+
+
+    void clearPlayer();
 
 
 
@@ -112,6 +120,14 @@ public:
 
     PlayerSession&
     getPlayerSession();
+
+
+
+public:
+
+
+    const std::optional<NetworkMessage>&
+    getLastMessage() const;
 
 
 

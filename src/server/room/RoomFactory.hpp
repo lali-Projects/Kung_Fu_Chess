@@ -1,7 +1,9 @@
 #pragma once
 
+
 #include <memory>
 #include <string>
+
 
 
 class Room;
@@ -9,10 +11,12 @@ class EventBus;
 
 
 
+
 class RoomFactory
 {
 
 public:
+
 
     explicit RoomFactory(
         EventBus& eventBus);
@@ -26,6 +30,7 @@ public:
 
 
 private:
+
 
     EventBus& m_eventBus;
 

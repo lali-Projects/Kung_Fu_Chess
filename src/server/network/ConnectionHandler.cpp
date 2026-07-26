@@ -7,16 +7,15 @@
 
 
 
+
 //================================================
 // Constructor
 //================================================
 
 ConnectionHandler::ConnectionHandler(
-    CommandHandler& commandHandler,
-    PlayerSession& player)
+    CommandHandler& commandHandler)
 :
-m_commandHandler(commandHandler),
-m_player(player)
+m_commandHandler(commandHandler)
 {
 }
 
@@ -30,7 +29,8 @@ m_player(player)
 //================================================
 
 MoveResult ConnectionHandler::receive(
-    const std::string& message)
+    const std::string& message,
+    PlayerSession* player)
 {
 
     //---------------------------------
@@ -46,25 +46,6 @@ MoveResult ConnectionHandler::receive(
         };
     }
 
-
-
-
-
-    //---------------------------------
-    // Validate player connection
-    //---------------------------------
-
-    if(
-        m_player.getState()
-        ==
-        PlayerSession::ConnectionState::DISCONNECTED)
-    {
-        return
-        {
-            false,
-            "player_disconnected"
-        };
-    }
 
 
 
@@ -92,13 +73,14 @@ MoveResult ConnectionHandler::receive(
 
 
 
+
     //---------------------------------
     // Forward command
     //---------------------------------
 
     return
         m_commandHandler.handle(
-            m_player,
+            player,
             *command);
 
 }

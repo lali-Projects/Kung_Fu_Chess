@@ -137,8 +137,14 @@ m_networkServer(std::move(networkServer))
 Server::~Server()
 {
     stop();
-}
 
+    if(m_networkServer)
+    {
+        m_networkServer->setMessageCallback(nullptr);
+        m_networkServer->setConnectionCallback(nullptr);
+        m_networkServer->setDisconnectCallback(nullptr);
+    }
+}
 
 
 
@@ -174,23 +180,17 @@ void Server::start()
 void Server::stop()
 {
 
-    if(!m_running)
-        return;
-
-
-
     if(m_networkServer)
+    {
         m_networkServer->stop();
-
+    }
 
 
     m_running = false;
 
 
-
     std::cout
         << "[SERVER] Stopped\n";
-
 }
 
 

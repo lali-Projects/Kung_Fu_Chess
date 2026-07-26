@@ -1,11 +1,12 @@
 #include "RoomManager.hpp"
 
 
-#include <stdexcept>
-
-
 #include "Room.hpp"
 #include "RoomFactory.hpp"
+
+
+#include <stdexcept>
+
 
 
 
@@ -25,7 +26,16 @@ m_factory(factory)
 
 
 
-RoomManager::~RoomManager() = default;
+//================================================
+// Destructor
+//================================================
+
+RoomManager::~RoomManager()
+{
+    clearRooms();
+}
+
+
 
 
 
@@ -41,21 +51,20 @@ bool RoomManager::createRoom(
 {
 
     if(id.empty())
-    {
         return false;
-    }
 
 
 
     {
+
         std::lock_guard<std::mutex> lock(
             m_mutex);
 
 
+
         if(existsUnsafe(id))
-        {
             return false;
-        }
+
     }
 
 
@@ -66,34 +75,34 @@ bool RoomManager::createRoom(
 
 
     if(!room)
-    {
         return false;
-    }
 
 
 
     {
+
         std::lock_guard<std::mutex> lock(
             m_mutex);
 
 
 
         if(existsUnsafe(id))
-        {
             return false;
-        }
 
 
 
         m_rooms.emplace(
             id,
             std::move(room));
+
     }
 
 
 
     return true;
+
 }
+
 
 
 
@@ -118,7 +127,32 @@ bool RoomManager::removeRoom(
         m_rooms.erase(id)
         >
         0;
+
 }
+
+
+
+
+
+
+
+
+//================================================
+// Clear
+//================================================
+
+void RoomManager::clearRooms()
+{
+
+    std::lock_guard<std::mutex> lock(
+        m_mutex);
+
+
+
+    m_rooms.clear();
+
+}
+
 
 
 
@@ -130,7 +164,7 @@ bool RoomManager::removeRoom(
 // Get Room
 //================================================
 
-Room*
+std::shared_ptr<Room>
 RoomManager::getRoom(
     const std::string& id)
 {
@@ -146,13 +180,12 @@ RoomManager::getRoom(
 
 
     if(iterator == m_rooms.end())
-    {
         return nullptr;
-    }
 
 
 
-    return iterator->second.get();
+    return iterator->second;
+
 }
 
 
@@ -161,7 +194,8 @@ RoomManager::getRoom(
 
 
 
-const Room*
+
+std::shared_ptr<const Room>
 RoomManager::getRoom(
     const std::string& id) const
 {
@@ -177,14 +211,15 @@ RoomManager::getRoom(
 
 
     if(iterator == m_rooms.end())
-    {
         return nullptr;
-    }
 
 
 
-    return iterator->second.get();
+    return iterator->second;
+
 }
+
+
 
 
 
@@ -196,53 +231,32 @@ RoomManager::getRoom(
 // Get Or Create
 //================================================
 
-Room&
+std::shared_ptr<Room>
 RoomManager::getOrCreateRoom(
     const std::string& id)
 {
 
-    {
-        std::lock_guard<std::mutex> lock(
-            m_mutex);
+    auto existing =
+        getRoom(id);
 
 
 
-        auto iterator =
-            m_rooms.find(id);
-
-
-
-        if(iterator != m_rooms.end())
-        {
-            return *iterator->second;
-        }
-    }
+    if(existing)
+        return existing;
 
 
 
     if(!createRoom(id))
     {
-        throw std::runtime_error(
-            "Cannot create room: " + id);
+         return nullptr;
     }
 
 
 
-    Room* room =
-        getRoom(id);
+    return getRoom(id);
 
-
-
-    if(!room)
-    {
-        throw std::runtime_error(
-            "Room creation failed");
-    }
-
-
-
-    return *room;
 }
+
 
 
 
@@ -264,6 +278,7 @@ bool RoomManager::exists(
 
 
     return existsUnsafe(id);
+
 }
 
 
@@ -272,10 +287,18 @@ bool RoomManager::exists(
 
 
 
-bool RoomManager::existsUnsafe(const std::string& id) const
+
+bool RoomManager::existsUnsafe(
+    const std::string& id) const
 {
-    return m_rooms.find(id) != m_rooms.end();
+
+    return
+        m_rooms.find(id)
+        !=
+        m_rooms.end();
+
 }
+
 
 
 
@@ -296,4 +319,40 @@ size_t RoomManager::roomCount() const
 
 
     return m_rooms.size();
+
+}
+
+
+
+
+
+
+
+
+//================================================
+// IDs
+//================================================
+
+std::vector<std::string>
+RoomManager::getRoomIds() const
+{
+
+    std::vector<std::string> result;
+
+
+
+    std::lock_guard<std::mutex> lock(
+        m_mutex);
+
+
+
+    for(const auto& [id, room] : m_rooms)
+    {
+        result.push_back(id);
+    }
+
+
+
+    return result;
+
 }

@@ -1,20 +1,18 @@
 #pragma once
 
-
 #include <cstddef>
 #include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
-
-
+#include <string>
 #include "NetworkMessage.hpp"
-
 
 
 class ClientConnection;
 class CommandHandler;
+class PlayerSession;
 
 
 
@@ -53,7 +51,13 @@ public:
 
 
 
+
 public:
+
+
+//=================================
+// Connection Management
+//=================================
 
 
     int addConnection();
@@ -70,10 +74,70 @@ public:
 
 
 
+    void disconnectAll();
+
+
+
+
+public:
+
+
+//=================================
+// Player
+//=================================
+
+
+    bool attachPlayer(
+        int connectionId,
+        std::shared_ptr<PlayerSession> player);
+
+
+
+
+public:
+
+
+//=================================
+// Lookup
+//=================================
+
+
     ClientConnection*
     getConnection(
         int id);
 
+
+
+    const ClientConnection*
+    getConnection(
+        int id) const;
+
+
+
+    bool containsConnection(
+        int id) const;
+
+
+
+    ClientConnection*
+    findByPlayer(
+        const PlayerSession& player);
+
+
+
+    const ClientConnection*
+    findByPlayer(
+        const PlayerSession& player) const;
+
+
+
+
+public:
+
+
+//=================================
+// Messaging
+//=================================
 
 
     void broadcast(
@@ -87,12 +151,47 @@ public:
 
 
 
+
+public:
+
+
+//=================================
+// Information
+//=================================
+
+
     size_t size() const;
 
 
 
+
+public:
+
+
+//=================================
+// Callback
+//=================================
+
+
     void setSendCallback(
         SendCallback callback);
+
+
+
+
+private:
+
+
+    ClientConnection*
+    findUnsafe(
+        int id);
+
+
+
+    const ClientConnection*
+    findUnsafe(
+        int id) const;
+
 
 
 

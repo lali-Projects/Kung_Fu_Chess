@@ -5,40 +5,69 @@
 
 
 
-//================================================
-// Parse
-//================================================
-
-std::optional<ClickCommand>
+std::optional<Command>
 CommandParser::parse(
     const std::string& input)
 {
 
     if(input.empty())
-    {
         return std::nullopt;
-    }
 
 
 
     std::stringstream stream(input);
 
 
-    std::string commandType;
+
+    std::string commandName;
+
+    stream >> commandName;
 
 
-    stream >> commandType;
+
+    CommandType type =
+        convertCommandType(commandName);
 
 
 
-    if(commandType == "CLICK")
+    if(type == CommandType::UNKNOWN)
+        return std::nullopt;
+
+
+
+
+    std::vector<std::string> args;
+
+
+
+    std::string value;
+
+
+    while(stream >> value)
     {
-        return parseClick(input);
+        args.push_back(value);
     }
 
 
 
-    return std::nullopt;
+
+
+    if(!validateArguments(
+            type,
+            args))
+    {
+        return std::nullopt;
+    }
+
+
+
+
+
+
+    return Command(
+        type,
+        args);
+
 }
 
 
@@ -46,71 +75,178 @@ CommandParser::parse(
 
 
 
+
+
+
 //================================================
-// Parse CLICK
+// Validate Arguments
 //================================================
 
-std::optional<ClickCommand>
-CommandParser::parseClick(
-    const std::string& input)
+bool CommandParser::validateArguments(
+    CommandType type,
+    const std::vector<std::string>& args)
 {
 
-    std::stringstream stream(input);
-
-
-
-    std::string commandType;
-
-
-    int row;
-    int col;
-
-
-
-    if(!(stream
-            >> commandType
-            >> row
-            >> col))
+    switch(type)
     {
-        return std::nullopt;
+
+        case CommandType::CLICK:
+
+            return
+                validateClickArguments(args);
+
+
+
+        case CommandType::LOGIN:
+
+        case CommandType::REGISTER:
+
+            return
+                args.size() == 2;
+
+
+
+        case CommandType::CREATE_ROOM:
+
+        case CommandType::JOIN_ROOM:
+
+            return
+                args.size() == 1;
+
+
+
+        default:
+
+            return false;
+    }
+
+}
+
+
+
+
+
+
+
+
+
+//================================================
+// Validate CLICK
+//================================================
+
+bool CommandParser::validateClickArguments(
+    const std::vector<std::string>& args)
+{
+
+    if(args.size() != 2)
+        return false;
+
+
+
+    if(!isInteger(args[0]) ||
+       !isInteger(args[1]))
+    {
+        return false;
     }
 
 
 
-    //---------------------------------
-    // Reject extra parameters
-    //---------------------------------
-
-    std::string extra;
 
 
-    if(stream >> extra)
+    int row =
+        std::stoi(args[0]);
+
+
+    int col =
+        std::stoi(args[1]);
+
+
+
+
+
+    return
+        row >= 0 &&
+        row < 8 &&
+        col >= 0 &&
+        col < 8;
+
+}
+
+
+
+
+
+
+
+
+
+//================================================
+// Integer Check
+//================================================
+
+bool CommandParser::isInteger(
+    const std::string& value)
+{
+
+    if(value.empty())
+        return false;
+
+
+
+    for(char c : value)
     {
-        return std::nullopt;
+        if(!std::isdigit(c))
+            return false;
     }
 
 
 
-    //---------------------------------
-    // Validate syntax
-    //---------------------------------
+    return true;
 
-    if(commandType != "CLICK")
-    {
-        return std::nullopt;
-    }
+}
 
 
 
-    if(row < 0 || col < 0)
-    {
-        return std::nullopt;
-    }
 
 
 
-    return ClickCommand(
-        Position(
-            row,
-            col));
+
+
+
+//================================================
+// Convert Command
+//================================================
+
+CommandType
+CommandParser::convertCommandType(
+    const std::string& command)
+{
+
+    if(command == "CLICK")
+        return CommandType::CLICK;
+
+
+
+    if(command == "LOGIN")
+        return CommandType::LOGIN;
+
+
+
+    if(command == "REGISTER")
+        return CommandType::REGISTER;
+
+
+
+    if(command == "CREATE_ROOM")
+        return CommandType::CREATE_ROOM;
+
+
+
+    if(command == "JOIN_ROOM")
+        return CommandType::JOIN_ROOM;
+
+
+
+    return CommandType::UNKNOWN;
+
 }

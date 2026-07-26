@@ -6,6 +6,7 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 
 
@@ -15,7 +16,24 @@ class RoomFactory;
 
 
 /**
- * @brief Manages active game rooms.
+ * @brief Manages lifetime of active game rooms.
+ *
+ *
+ * Responsibilities:
+ *
+ *  - Create rooms.
+ *  - Remove rooms.
+ *  - Find existing rooms.
+ *  - Own active room instances.
+ *
+ *
+ * Does NOT know:
+ *
+ *  - Network.
+ *  - Database.
+ *  - Authentication.
+ *  - Game rules.
+ *  - Board.
  */
 class RoomManager
 {
@@ -55,19 +73,32 @@ public:
 
 
 
-    Room* getRoom(
+    void clearRooms();
+
+
+
+public:
+
+
+    std::shared_ptr<Room>
+    getRoom(
         const std::string& id);
 
 
 
-    const Room* getRoom(
+    std::shared_ptr<const Room>
+    getRoom(
         const std::string& id) const;
 
 
 
-    Room& getOrCreateRoom(
+    std::shared_ptr<Room>
+    getOrCreateRoom(
         const std::string& id);
 
+
+
+public:
 
 
     bool exists(
@@ -76,6 +107,11 @@ public:
 
 
     size_t roomCount() const;
+
+
+
+    std::vector<std::string>
+    getRoomIds() const;
 
 
 
@@ -100,7 +136,7 @@ private:
 
     std::unordered_map<
         std::string,
-        std::unique_ptr<Room>>
+        std::shared_ptr<Room>>
         m_rooms;
 
 };

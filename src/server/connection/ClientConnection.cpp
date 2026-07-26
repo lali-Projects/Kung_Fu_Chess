@@ -7,6 +7,7 @@
 
 
 #include <utility>
+#include <stdexcept>
 
 
 
@@ -23,26 +24,9 @@ ClientConnection::ClientConnection(
 m_id(id)
 {
 
-
-    m_player =
-        std::make_shared<PlayerSession>(
-            std::to_string(id));
-
-
-
-    m_player->setConnectionId(id);
-
-
-
-    m_player->setState(
-        PlayerSession::ConnectionState::CONNECTED);
-
-
-
     m_handler =
         std::make_unique<ConnectionHandler>(
-            commandHandler,
-            *m_player);
+            commandHandler);
 
 }
 
@@ -63,10 +47,10 @@ ClientConnection::~ClientConnection() = default;
 
 
 
+
 //================================================
 // Receive Network Message
 //================================================
-
 MoveResult ClientConnection::receiveNetworkMessage(
     const NetworkMessage& message)
 {
@@ -76,17 +60,29 @@ MoveResult ClientConnection::receiveNetworkMessage(
         return
         {
             false,
-            "connection_handler_missing"
+            "handler_missing"
         };
     }
 
 
 
-    return m_handler->receive(
-        message.getPayload());
+    if(!m_player)
+    {
+        return
+        {
+            false,
+            "player_missing"
+        };
+    }
+
+
+
+    return
+        m_handler->receive(
+            message.getPayload(),
+            m_player.get());
 
 }
-
 
 
 
@@ -112,8 +108,9 @@ void ClientConnection::deliverMessage(
 
 
 
+
 //================================================
-// Set Send Callback
+// Set Callback
 //================================================
 
 void ClientConnection::setSendCallback(
@@ -131,6 +128,7 @@ void ClientConnection::setSendCallback(
 
 
 
+
 //================================================
 // Send
 //================================================
@@ -139,9 +137,8 @@ void ClientConnection::sendMessageToClient(
     const NetworkMessage& message)
 {
 
-
     /*
-        Used by tests.
+        Saved for tests.
     */
 
     m_lastMessage =
@@ -157,21 +154,6 @@ void ClientConnection::sendMessageToClient(
 
 }
 
-
-
-
-
-
-
-//================================================
-// Last Message
-//================================================
-
-const std::optional<NetworkMessage>&
-ClientConnection::getLastMessage() const
-{
-    return m_lastMessage;
-}
 
 
 
@@ -194,15 +176,81 @@ int ClientConnection::getId() const
 
 
 
+
 //================================================
 // Player
 //================================================
+
+bool ClientConnection::hasPlayer() const
+{
+    return
+        m_player != nullptr;
+}
+
+
+
+
+
+
+
+
+void ClientConnection::attachPlayer(
+    std::shared_ptr<PlayerSession> player)
+{
+
+    if(!player)
+    {
+        return;
+    }
+
+
+
+    m_player =
+        std::move(player);
+
+
+
+    m_player->setConnectionId(
+        m_id);
+
+}
+
+
+
+
+
+
+
+
+void ClientConnection::clearPlayer()
+{
+
+    if(m_player)
+    {
+        m_player->setState(
+            PlayerSession::ConnectionState::DISCONNECTED);
+    }
+
+
+
+    m_player.reset();
+
+}
+
+
+
+
+
+
+
 
 std::shared_ptr<PlayerSession>
 ClientConnection::getPlayer()
 {
     return m_player;
 }
+
+
 
 
 
@@ -221,9 +269,6 @@ ClientConnection::getPlayer() const
 
 
 
-//================================================
-// Player Session
-//================================================
 
 PlayerSession&
 ClientConnection::getPlayerSession()
@@ -232,10 +277,28 @@ ClientConnection::getPlayerSession()
     if(!m_player)
     {
         throw std::runtime_error(
-            "ClientConnection has no PlayerSession");
+            "No player attached");
     }
+
 
 
     return *m_player;
 
+}
+
+
+
+
+
+
+
+
+//================================================
+// Last Message
+//================================================
+
+const std::optional<NetworkMessage>&
+ClientConnection::getLastMessage() const
+{
+    return m_lastMessage;
 }

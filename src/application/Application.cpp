@@ -7,18 +7,39 @@
 
 #include "EventBus.hpp"
 
+
+// Database
+#include "IDatabase.hpp"
+#include "SQLiteDatabase.hpp"
+#include "DatabaseInitializer.hpp"
+
+
+// Authentication
+#include "UserRepository.hpp"
+#include "AuthService.hpp"
+
+
+// Rooms
 #include "RoomFactory.hpp"
 #include "RoomManager.hpp"
 
+
+// Commands
 #include "CommandHandler.hpp"
 
-#include "Server.hpp"
 
+// Server
+#include "Server.hpp"
 #include "WebSocketServer.hpp"
 
 
 
 
+
+
+//================================================
+// Constructor
+//================================================
 
 Application::Application()
 {
@@ -26,6 +47,14 @@ Application::Application()
 }
 
 
+
+
+
+
+
+//================================================
+// Destructor
+//================================================
 
 Application::~Application()
 {
@@ -36,17 +65,116 @@ Application::~Application()
 
 
 
+
+
+//================================================
+// Initialize
+//================================================
+
 void Application::initialize()
 {
+
+    //---------------------------------
+    // Event System
+    //---------------------------------
 
     m_eventBus =
         std::make_unique<EventBus>();
 
 
 
+
+
+
+
+
+    //---------------------------------
+    // Database
+    //---------------------------------
+
+    m_database =
+        std::make_unique<SQLiteDatabase>(
+            "kungfu_chess.db");
+
+
+
+
+
+    if(!m_database->open())
+    {
+        throw std::runtime_error(
+            "Database open failed: "
+            +
+            m_database->getLastError());
+    }
+
+
+
+
+
+
+
+
+    //---------------------------------
+    // Database Schema
+    //---------------------------------
+
+    m_databaseInitializer =
+        std::make_unique<DatabaseInitializer>(
+            *m_database);
+
+
+
+
+
+    if(!m_databaseInitializer->initialize())
+    {
+        throw std::runtime_error(
+            "Database initialization failed");
+    }
+
+
+
+
+
+
+
+
+
+    //---------------------------------
+    // Authentication
+    //---------------------------------
+
+    m_userRepository =
+        std::make_unique<UserRepository>(
+            *m_database);
+
+
+
+
+
+    m_authService =
+        std::make_unique<AuthService>(
+            *m_userRepository);
+
+
+
+
+
+
+
+
+
+    //---------------------------------
+    // Rooms
+    //---------------------------------
+
     m_roomFactory =
         std::make_unique<RoomFactory>(
             *m_eventBus);
+
+
+
 
 
 
@@ -56,28 +184,67 @@ void Application::initialize()
 
 
 
+
+
+
+
+
+
+    //---------------------------------
+    // Create Default Room
+    //---------------------------------
+
     if(!m_roomManager->createRoom(
             "room_001"))
     {
         throw std::runtime_error(
-            "Failed creating room");
+            "Default room creation failed");
     }
 
 
 
 
+
+
+
+
+
+    //---------------------------------
+    // Commands
+    //---------------------------------
+
     m_commandHandler =
         std::make_unique<CommandHandler>(
-            *m_roomManager);
+            *m_roomManager,
+            *m_authService);
 
 
 
+
+
+
+
+
+
+    //---------------------------------
+    // Network
+    //---------------------------------
 
     auto network =
         std::make_unique<WebSocketServer>(
             8080);
 
 
+
+
+
+
+
+
+
+    //---------------------------------
+    // Server
+    //---------------------------------
 
     m_server =
         std::make_unique<Server>(
@@ -92,17 +259,49 @@ void Application::initialize()
 
 
 
+
+
+
+
+
+//================================================
+// Start
+//================================================
+
 void Application::start()
 {
 
     if(m_running)
+    {
         return;
+    }
+
+
+
+
+
+
+    if(!m_server)
+    {
+        throw std::runtime_error(
+            "Cannot start: server missing");
+    }
+
+
+
+
+
 
 
     m_server->start();
 
 
+
+
     m_running = true;
+
+
+
 
 
     std::cout
@@ -115,18 +314,65 @@ void Application::start()
 
 
 
+
+
+
+
+
+//================================================
+// Stop
+//================================================
+
 void Application::stop()
 {
 
     if(!m_running)
+    {
         return;
+    }
 
+
+
+
+
+
+
+    //---------------------------------
+    // Stop Network Server
+    //---------------------------------
 
     if(m_server)
+    {
         m_server->stop();
+    }
 
 
-    m_running=false;
+
+
+
+
+
+    //---------------------------------
+    // Close Database
+    //---------------------------------
+
+    if(m_database &&
+       m_database->isOpen())
+    {
+        m_database->close();
+    }
+
+
+
+
+
+
+
+    m_running = false;
+
+
+
+
 
 
     std::cout
@@ -139,9 +385,32 @@ void Application::stop()
 
 
 
+
+
+
+
+
+//================================================
+// Send Command
+//================================================
+
 MoveResult Application::sendCommand(
     const std::string& message)
 {
+
+    if(!m_server)
+    {
+        return
+        {
+            false,
+            "server_missing"
+        };
+    }
+
+
+
+
+
 
     return
         m_server->simulateClientCommand(
@@ -153,28 +422,62 @@ MoveResult Application::sendCommand(
 
 
 
+
+
+
+
+
+
+//================================================
+// Get Server
+//================================================
+
 Server&
 Application::getServer()
 {
+
     if(!m_server)
+    {
         throw std::runtime_error(
             "Server missing");
+    }
+
+
+
+
 
 
     return *m_server;
+
 }
 
 
 
 
 
+
+
+
+
+
+
+//================================================
+// Get Room Manager
+//================================================
+
 RoomManager&
 Application::getRoomManager()
 {
 
     if(!m_roomManager)
+    {
         throw std::runtime_error(
             "RoomManager missing");
+    }
+
+
+
+
 
 
     return *m_roomManager;

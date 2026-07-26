@@ -11,44 +11,36 @@
 
 
 
-class GameController;
-class GameSnapshotBuilder;
+class GameContext;
 class EventBus;
 class PlayerSession;
 class ClickCommand;
 
 
 
-/**
- * @brief Represents one running game inside a Room.
- *
- * Owned by Room.
- *
- * Responsibilities:
- *
- *  - Manage players.
- *  - Forward commands.
- *  - Build snapshots.
- *  - Publish game events.
- *
- *
- * Does NOT own:
- *
- *  - GameController
- *  - GameSnapshotBuilder
- *
- * They are owned by GameContext.
- */
+
 class GameSession
 {
 
 public:
 
 
+    enum class State
+    {
+        WAITING,
+        RUNNING,
+        FINISHED
+    };
+
+
+
+
+public:
+
+
     GameSession(
         const std::string& id,
-        GameController& controller,
-        GameSnapshotBuilder& snapshotBuilder,
+        GameContext& context,
         EventBus& eventBus);
 
 
@@ -67,7 +59,14 @@ public:
 
 
 
+
+
 public:
+
+
+//=================================
+// Players
+//=================================
 
 
     bool addPlayer(
@@ -75,22 +74,17 @@ public:
 
 
 
-    MoveResult handleClick(
-        PlayerSession& player,
-        const ClickCommand& command);
-
-
-
-    const std::string& getId() const;
-
-
-
-    bool isObserver(
-        const PlayerSession& player) const;
+    bool removePlayer(
+        const PlayerSession& player);
 
 
 
     bool containsPlayer(
+        const PlayerSession& player) const;
+
+
+
+    bool isObserver(
         const PlayerSession& player) const;
 
 
@@ -113,13 +107,50 @@ public:
 
 
 
-    GameSnapshotBuilder&
-    getSnapshotBuilder();
+
+
+//=================================
+// Commands
+//=================================
+
+
+    MoveResult handleClick(
+        PlayerSession& player,
+        const ClickCommand& command);
 
 
 
-    const GameSnapshotBuilder&
-    getSnapshotBuilder() const;
+
+
+//=================================
+// State
+//=================================
+
+
+    State getState() const;
+
+
+
+    void setState(
+        State state);
+
+
+
+    bool isRunning() const;
+
+
+
+
+
+//=================================
+// Identity
+//=================================
+
+
+    const std::string&
+    getId() const;
+
+
 
 
 
@@ -130,6 +161,12 @@ private:
 
 
 
+    void publishSnapshot();
+
+
+
+
+
 private:
 
 
@@ -137,21 +174,7 @@ private:
 
 
 
-    /*
-        Not owned.
-
-        Lifetime managed by GameContext.
-    */
-    GameController& m_controller;
-
-
-
-    /*
-        Not owned.
-
-        Lifetime managed by GameContext.
-    */
-    GameSnapshotBuilder& m_snapshotBuilder;
+    GameContext& m_context;
 
 
 
@@ -172,5 +195,11 @@ private:
     std::vector<
         std::shared_ptr<PlayerSession>>
         m_observers;
+
+
+
+    State m_state{
+        State::WAITING
+    };
 
 };

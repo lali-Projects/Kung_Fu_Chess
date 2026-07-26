@@ -2,7 +2,7 @@
 
 #include <string>
 enum class Side
-{
+{   NONE,
     WHITE,
     BLACK,
     OBSERVER

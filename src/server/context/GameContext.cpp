@@ -20,6 +20,9 @@
 
 
 
+//================================================
+// Constructor
+//================================================
 
 GameContext::GameContext()
 {
@@ -41,6 +44,7 @@ GameContext::GameContext()
 
 
 
+
     //---------------------------------
     // Rules
     //---------------------------------
@@ -51,13 +55,19 @@ GameContext::GameContext()
 
 
 
+
+
+
     //---------------------------------
-    // Real time
+    // Real Time
     //---------------------------------
 
     m_realTimeArbiter =
         std::make_unique<RealTimeArbiter>(
             *m_board);
+
+
+
 
 
 
@@ -75,6 +85,10 @@ GameContext::GameContext()
 
 
 
+
+
+
+
     //---------------------------------
     // Controller
     //---------------------------------
@@ -87,8 +101,17 @@ GameContext::GameContext()
 
 
 
+
+
+
+
     //---------------------------------
-    // Snapshot
+    // Snapshot Builder
+    //---------------------------------
+    //
+    // Updated:
+    // Requires Engine + Controller
+    //
     //---------------------------------
 
     m_snapshotBuilder =
@@ -102,6 +125,12 @@ GameContext::GameContext()
 
 
 
+
+
+//================================================
+// Destructor
+//================================================
+
 GameContext::~GameContext() = default;
 
 
@@ -109,16 +138,25 @@ GameContext::~GameContext() = default;
 
 
 
+
+//================================================
+// Engine
+//================================================
+
 GameEngine&
 GameContext::getEngine()
 {
+
     if(!m_gameEngine)
+    {
         throw std::runtime_error(
             "GameEngine not available");
+    }
 
 
     return *m_gameEngine;
 }
+
 
 
 
@@ -127,9 +165,12 @@ GameContext::getEngine()
 const GameEngine&
 GameContext::getEngine() const
 {
+
     if(!m_gameEngine)
+    {
         throw std::runtime_error(
             "GameEngine not available");
+    }
 
 
     return *m_gameEngine;
@@ -139,16 +180,26 @@ GameContext::getEngine() const
 
 
 
+
+
+//================================================
+// Board
+//================================================
+
 Board&
 GameContext::getBoard()
 {
+
     if(!m_board)
+    {
         throw std::runtime_error(
             "Board not available");
+    }
 
 
     return *m_board;
 }
+
 
 
 
@@ -157,9 +208,12 @@ GameContext::getBoard()
 const Board&
 GameContext::getBoard() const
 {
+
     if(!m_board)
+    {
         throw std::runtime_error(
             "Board not available");
+    }
 
 
     return *m_board;
@@ -169,16 +223,112 @@ GameContext::getBoard() const
 
 
 
+
+
+//================================================
+// Rule Engine
+//================================================
+
+RuleEngine&
+GameContext::getRuleEngine()
+{
+
+    if(!m_ruleEngine)
+    {
+        throw std::runtime_error(
+            "RuleEngine not available");
+    }
+
+
+    return *m_ruleEngine;
+}
+
+
+
+
+
+
+const RuleEngine&
+GameContext::getRuleEngine() const
+{
+
+    if(!m_ruleEngine)
+    {
+        throw std::runtime_error(
+            "RuleEngine not available");
+    }
+
+
+    return *m_ruleEngine;
+}
+
+
+
+
+
+
+
+//================================================
+// Real Time Arbiter
+//================================================
+
+RealTimeArbiter&
+GameContext::getRealTimeArbiter()
+{
+
+    if(!m_realTimeArbiter)
+    {
+        throw std::runtime_error(
+            "RealTimeArbiter not available");
+    }
+
+
+    return *m_realTimeArbiter;
+}
+
+
+
+
+
+
+const RealTimeArbiter&
+GameContext::getRealTimeArbiter() const
+{
+
+    if(!m_realTimeArbiter)
+    {
+        throw std::runtime_error(
+            "RealTimeArbiter not available");
+    }
+
+
+    return *m_realTimeArbiter;
+}
+
+
+
+
+
+
+
+//================================================
+// Controller
+//================================================
+
 GameController&
 GameContext::getController()
 {
+
     if(!m_controller)
+    {
         throw std::runtime_error(
             "Controller not available");
+    }
 
 
     return *m_controller;
 }
+
 
 
 
@@ -187,9 +337,12 @@ GameContext::getController()
 const GameController&
 GameContext::getController() const
 {
+
     if(!m_controller)
+    {
         throw std::runtime_error(
             "Controller not available");
+    }
 
 
     return *m_controller;
@@ -199,16 +352,26 @@ GameContext::getController() const
 
 
 
+
+
+//================================================
+// Snapshot Builder
+//================================================
+
 GameSnapshotBuilder&
 GameContext::getSnapshotBuilder()
 {
+
     if(!m_snapshotBuilder)
+    {
         throw std::runtime_error(
-            "Snapshot builder not available");
+            "SnapshotBuilder not available");
+    }
 
 
     return *m_snapshotBuilder;
 }
+
 
 
 
@@ -217,15 +380,39 @@ GameContext::getSnapshotBuilder()
 const GameSnapshotBuilder&
 GameContext::getSnapshotBuilder() const
 {
+
     if(!m_snapshotBuilder)
+    {
         throw std::runtime_error(
-            "Snapshot builder not available");
+            "SnapshotBuilder not available");
+    }
 
 
     return *m_snapshotBuilder;
 }
 
 
+
+
+
+
+
+//================================================
+// Validation
+//================================================
+
+bool GameContext::hasBoard() const
+{
+    return m_board != nullptr;
+}
+
+
+
+
+bool GameContext::hasEngine() const
+{
+    return m_gameEngine != nullptr;
+}
 
 
 
@@ -237,7 +424,24 @@ bool GameContext::hasController() const
 
 
 
+
 bool GameContext::hasSnapshotBuilder() const
 {
     return m_snapshotBuilder != nullptr;
+}
+
+
+
+
+bool GameContext::hasRuleEngine() const
+{
+    return m_ruleEngine != nullptr;
+}
+
+
+
+
+bool GameContext::hasRealTimeArbiter() const
+{
+    return m_realTimeArbiter != nullptr;
 }

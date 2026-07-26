@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
-project(KungFuChess LANGUAGES CXX)
-
+project(KungFuChess LANGUAGES CXX C)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(FetchContent)
 
 # ---------------------------------------------------------
@@ -17,6 +17,16 @@ set(USE_TLS OFF CACHE BOOL "" FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(ixwebsocket)
+# ---------------------------------------------------------
+
+# ---------------------------------------------------------
+# הגדרה והורדה אוטומטית של SQLite3 (Amalgamation)
+# ---------------------------------------------------------
+FetchContent_Declare(
+    sqlite3
+    URL https://www.sqlite.org/2024/sqlite-amalgamation-3450200.zip
+)
+FetchContent_MakeAvailable(sqlite3)
 # ---------------------------------------------------------
 
 # הגדרת נתיבי חיפוש מפורשים עבור Qt6 ב-MSYS2 UCRT64
@@ -41,8 +51,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 # 1. איסוף אוטומטי של כל קובצי ה-cpp בתוך src וכל תת-התיקיות
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.cpp")
 
-# יצירת ה-Executable עם main.cpp וכל קובצי המקור שנמצאו
-add_executable(app main.cpp ${SOURCES})
+# יצירת ה-Executable עם main.cpp, כל קובצי המקור שנמצאו, וקובץ ה-C של SQLite שהורד אוטומטית
+add_executable(app main.cpp ${SOURCES} ${sqlite3_SOURCE_DIR}/sqlite3.c)
 
 # 2. איסוף אוטומטי של כל תת-התיקיות בתוך src המכילות קובצי hpp / h
 file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS "src/*.hpp" "src/*.h")
@@ -57,9 +67,10 @@ target_include_directories(app PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
     ${SRC_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
+    ${sqlite3_SOURCE_DIR}
 )
 
-# קישור הספריות האוטומטי של OpenCV, Qt6 ו-ixwebsocket
+# קישור הספריות של OpenCV, Qt6 ו-ixwebsocket
 target_link_libraries(app PRIVATE 
     ${OpenCV_LIBS}
     Qt6::Core

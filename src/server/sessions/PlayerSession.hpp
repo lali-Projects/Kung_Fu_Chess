@@ -1,32 +1,12 @@
 #pragma once
 
+
 #include <string>
 
 #include "PieceTypes.hpp"
 
 
-/**
- * @brief Represents a connected player.
- *
- * Belongs to server core layer.
- *
- * Responsibilities:
- *
- *  - Store player identity.
- *  - Store connection state.
- *  - Store assigned game side.
- *  - Store room association.
- *  - Store connection identifier.
- *
- *
- * Does NOT know:
- *
- *  - GameEngine.
- *  - Board.
- *  - Rules.
- *  - Network transport.
- *  - WebSocket.
- */
+
 class PlayerSession
 {
 
@@ -45,18 +25,73 @@ public:
 
 
     explicit PlayerSession(
-        std::string id);
+        std::string sessionId);
 
 
 
 public:
 
 
-    const std::string& getId() const;
+//=================================
+// Identity
+//=================================
+
+    const std::string&
+    getSessionId() const;
 
 
+
+    const std::string&
+    getUserId() const;
+
+
+
+    void setUserId(
+        const std::string& id);
+
+
+
+    const std::string&
+    getUsername() const;
+
+
+
+    void setUsername(
+        const std::string& username);
+
+
+
+
+
+//=================================
+// Authentication
+//=================================
+
+    bool isAuthenticated() const;
+
+
+    bool hasUser() const;
+
+
+
+    void authenticate(
+        const std::string& userId,
+        const std::string& username);
+
+
+
+    void logout();
+
+
+
+
+
+//=================================
+// Side
+//=================================
 
     Side getSide() const;
+
 
 
     void setSide(
@@ -64,7 +99,19 @@ public:
 
 
 
+    void clearSide();
+
+
+
+
+
+
+//=================================
+// Connection
+//=================================
+
     ConnectionState getState() const;
+
 
 
     void setState(
@@ -72,19 +119,28 @@ public:
 
 
 
-public:
+    bool isConnected() const;
 
-    //==============================
-    // Room association
-    //==============================
 
+
+    void disconnect();
+
+
+
+
+
+
+//=================================
+// Room
+//=================================
 
     void setRoomId(
         const std::string& roomId);
 
 
 
-    const std::string& getRoomId() const;
+    const std::string&
+    getRoomId() const;
 
 
 
@@ -92,12 +148,16 @@ public:
 
 
 
-public:
+    void clearRoom();
 
-    //==============================
-    // Connection identification
-    //==============================
 
+
+
+
+
+//=================================
+// Connection
+//=================================
 
     void setConnectionId(
         int id);
@@ -106,17 +166,34 @@ public:
 
     int getConnectionId() const;
 
-void clearRoom();
+
+
+public:
+
+
+    void reset();
+
+
 
 private:
 
 
-    std::string m_id;
+    std::string m_sessionId;
+
+
+    std::string m_userId;
+
+
+    std::string m_username;
+
+
+
+    bool m_authenticated{false};
 
 
 
     Side m_side{
-        Side::WHITE
+        Side::NONE
     };
 
 
@@ -127,18 +204,10 @@ private:
 
 
 
-    /*
-        Room that owns this player.
-    */
     std::string m_roomId;
 
 
 
-    /*
-        Logical connection identifier.
-
-        Does not represent transport.
-    */
     int m_connectionId{-1};
 
 };

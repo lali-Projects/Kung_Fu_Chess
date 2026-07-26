@@ -5,27 +5,29 @@
 
 
 
-class ClickCommand;
+class Command;
 class PlayerSession;
 class RoomManager;
-
+class AuthService;
 
 
 
 /**
- * @brief Dispatches commands to the correct room.
+ * @brief Routes parsed commands to application services.
  *
  * Responsibilities:
  *
- *  - Receive commands.
- *  - Locate player's room.
- *  - Forward command to GameSession.
+ *  - Receive commands from server layer.
+ *  - Route authentication commands.
+ *  - Route room commands.
+ *  - Route game commands.
  *
  *
  * Does NOT know:
  *
  *  - Network.
- *  - Rules.
+ *  - Database.
+ *  - Game rules.
  *  - Board.
  *  - GameEngine.
  */
@@ -35,8 +37,9 @@ class CommandHandler
 public:
 
 
-    explicit CommandHandler(
-        RoomManager& roomManager);
+    CommandHandler(
+        RoomManager& roomManager,
+        AuthService& authService);
 
 
 
@@ -44,8 +47,38 @@ public:
 
 
     MoveResult handle(
-        PlayerSession& player,
-        const ClickCommand& command);
+        PlayerSession* player,
+        const Command& command);
+
+
+
+private:
+
+
+    MoveResult handleClick(
+        PlayerSession* player,
+        const Command& command);
+
+
+
+    MoveResult handleLogin(
+        const Command& command);
+
+
+
+    MoveResult handleRegister(
+        const Command& command);
+
+
+
+    MoveResult handleCreateRoom(
+        const Command& command);
+
+
+
+    MoveResult handleJoinRoom(
+        PlayerSession* player,
+        const Command& command);
 
 
 
@@ -53,5 +86,8 @@ private:
 
 
     RoomManager& m_roomManager;
+
+
+    AuthService& m_authService;
 
 };

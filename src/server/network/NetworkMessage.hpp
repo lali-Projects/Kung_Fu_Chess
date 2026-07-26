@@ -6,15 +6,12 @@
 
 
 
-
-
 /**
  * @brief Type of network message.
  *
  * Used only for routing.
  *
- * NetworkMessage does not interpret
- * payload content.
+ * NetworkMessage does not interpret payload.
  */
 enum class MessageType
 {
@@ -40,22 +37,22 @@ enum class MessageType
 
 
 /**
- * @brief Represents a transport independent message.
- *
+ * @brief Transport independent message container.
  *
  * Responsibilities:
  *
  *  - Store message type.
  *  - Store raw payload.
- *  - Provide common message container.
+ *  - Provide message state checks.
  *
  *
  * Does NOT know:
  *
- *  - JSON.
- *  - WebSocket.
- *  - TCP.
- *  - Game logic.
+ *  - JSON
+ *  - WebSocket
+ *  - TCP
+ *  - Game logic
+ *  - Authentication
  */
 class NetworkMessage
 {
@@ -64,7 +61,6 @@ public:
 
 
     NetworkMessage();
-
 
 
     NetworkMessage(
@@ -83,9 +79,10 @@ public:
 
 
 
+public:
+
     NetworkMessage(
         const NetworkMessage&) = default;
-
 
 
     NetworkMessage& operator=(
@@ -97,10 +94,8 @@ public:
         NetworkMessage&&) noexcept = default;
 
 
-
     NetworkMessage& operator=(
         NetworkMessage&&) noexcept = default;
-
 
 
 
@@ -119,6 +114,12 @@ public:
     MessageType getType() const;
 
 
+
+    std::string typeName() const;
+
+
+
+public:
 
 
     //---------------------------------
@@ -140,13 +141,14 @@ public:
 
 
 
+public:
+
 
     //---------------------------------
     // State
     //---------------------------------
 
     bool empty() const;
-
 
 
     bool valid() const;
@@ -157,6 +159,32 @@ public:
 
 
 
+public:
+
+
+    //---------------------------------
+    // Type helpers
+    //---------------------------------
+
+    bool isCommand() const;
+
+
+
+    bool isGameState() const;
+
+
+
+    bool isError() const;
+
+
+
+    bool isDisconnect() const;
+
+
+
+    bool isHeartbeat() const;
+
+
 
 private:
 
@@ -164,7 +192,6 @@ private:
     MessageType m_type{
         MessageType::UNKNOWN
     };
-
 
 
     std::string m_payload;

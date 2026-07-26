@@ -1,6 +1,8 @@
 #pragma once
 
+
 #include <memory>
+
 
 
 class Board;
@@ -13,18 +15,23 @@ class GameSnapshotBuilder;
 
 
 
+
 class GameContext
 {
 
 public:
 
+
     GameContext();
+
 
     ~GameContext();
 
 
+
     GameContext(
         const GameContext&) = delete;
+
 
 
     GameContext& operator=(
@@ -32,7 +39,13 @@ public:
 
 
 
+
 public:
+
+
+//=================================
+// Core
+//=================================
 
 
     GameEngine& getEngine();
@@ -45,6 +58,25 @@ public:
 
     const Board& getBoard() const;
 
+
+
+    RuleEngine& getRuleEngine();
+
+    const RuleEngine& getRuleEngine() const;
+
+
+
+    RealTimeArbiter& getRealTimeArbiter();
+
+    const RealTimeArbiter& getRealTimeArbiter() const;
+
+
+
+
+
+//=================================
+// Services
+//=================================
 
 
     GameController& getController();
@@ -61,10 +93,22 @@ public:
 
 
 
+//=================================
+// Validation
+//=================================
+
+
+    bool hasBoard() const;
+
+    bool hasEngine() const;
+
     bool hasController() const;
 
     bool hasSnapshotBuilder() const;
 
+bool hasRuleEngine() const;
+
+bool hasRealTimeArbiter() const;
 
 
 private:
@@ -74,20 +118,25 @@ private:
         m_board;
 
 
+
     std::unique_ptr<RuleEngine>
         m_ruleEngine;
+
 
 
     std::unique_ptr<RealTimeArbiter>
         m_realTimeArbiter;
 
 
+
     std::unique_ptr<GameEngine>
         m_gameEngine;
 
 
+
     std::unique_ptr<GameController>
         m_controller;
+
 
 
     std::unique_ptr<GameSnapshotBuilder>
