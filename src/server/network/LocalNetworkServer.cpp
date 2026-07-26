@@ -61,6 +61,14 @@ void LocalNetworkServer::stop()
 
     m_messageCallback = nullptr;
 
+    m_connectionCallback = nullptr;
+
+    m_disconnectCallback = nullptr;
+
+
+
+    m_sentMessages.clear();
+
 
 
     std::cout
@@ -97,6 +105,11 @@ void LocalNetworkServer::send(
 
 
 
+    m_sentMessages[connectionId] =
+        message;
+
+
+
     std::cout
         << "[Send] Client "
         << connectionId
@@ -129,12 +142,20 @@ void LocalNetworkServer::disconnect(
         << "[Disconnect] Client "
         << connectionId
         << std::endl;
+
+
+
+    if(m_disconnectCallback)
+    {
+        m_disconnectCallback(
+            connectionId);
+    }
 }
 
 
 
 //================================================
-// Set Callback
+// Set Message Callback
 //================================================
 
 void LocalNetworkServer::setMessageCallback(
@@ -143,6 +164,52 @@ void LocalNetworkServer::setMessageCallback(
 
     m_messageCallback =
         std::move(callback);
+}
+
+
+
+//================================================
+// Set Connection Callback
+//================================================
+
+void LocalNetworkServer::setConnectionCallback(
+    ConnectionCallback callback)
+{
+
+    m_connectionCallback =
+        std::move(callback);
+}
+
+
+
+//================================================
+// Simulate New Connection
+//================================================
+
+int LocalNetworkServer::simulateNewConnection()
+{
+
+    if(!m_running)
+    {
+        return -1;
+    }
+
+
+
+    int connectionId =
+        m_nextConnectionId++;
+
+
+
+    if(m_connectionCallback)
+    {
+        m_connectionCallback(
+            connectionId);
+    }
+
+
+
+    return connectionId;
 }
 
 
@@ -173,4 +240,51 @@ void LocalNetworkServer::simulateIncomingMessage(
     m_messageCallback(
         connectionId,
         message);
+}
+
+void LocalNetworkServer::setDisconnectCallback(
+    DisconnectCallback callback)
+{
+
+    m_disconnectCallback =
+        std::move(callback);
+
+}
+
+//================================================
+// Get Last Sent Message
+//================================================
+
+std::optional<NetworkMessage>
+LocalNetworkServer::getLastSentMessage(
+    int connectionId) const
+{
+
+    auto iterator =
+        m_sentMessages.find(
+            connectionId);
+
+
+
+    if(iterator ==
+       m_sentMessages.end())
+    {
+        return std::nullopt;
+    }
+
+
+
+    return iterator->second;
+}
+
+
+
+
+//================================================
+// Clear Messages
+//================================================
+
+void LocalNetworkServer::clearSentMessages()
+{
+    m_sentMessages.clear();
 }

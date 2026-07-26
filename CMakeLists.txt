@@ -1,6 +1,24 @@
 cmake_minimum_required(VERSION 3.16)
 project(KungFuChess LANGUAGES CXX)
 
+include(FetchContent)
+
+# ---------------------------------------------------------
+# הגדרה והורדה אוטומטית של ixWebSocket
+# ---------------------------------------------------------
+FetchContent_Declare(
+    ixwebsocket
+    GIT_REPOSITORY https://github.com/machinezone/IXWebSocket.git
+    GIT_TAG        v11.4.5
+)
+
+# ביטול TLS/OpenSSL וטסטים לחיסכון בזמן קומפילציה
+set(USE_TLS OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(ixwebsocket)
+# ---------------------------------------------------------
+
 # הגדרת נתיבי חיפוש מפורשים עבור Qt6 ב-MSYS2 UCRT64
 list(APPEND CMAKE_PREFIX_PATH 
     "C:/msys64/ucrt64"
@@ -41,12 +59,13 @@ target_include_directories(app PRIVATE
     ${OpenCV_INCLUDE_DIRS}
 )
 
-# קישור הספריות האוטומטי של OpenCV ו-Qt6
+# קישור הספריות האוטומטי של OpenCV, Qt6 ו-ixwebsocket
 target_link_libraries(app PRIVATE 
     ${OpenCV_LIBS}
     Qt6::Core
     Qt6::Gui
     Qt6::Widgets
+    ixwebsocket
 )
 
 # Copy OpenCV DLLs to build directory

@@ -147,251 +147,371 @@
 //         return 1;
 //     }
 // }
+
 #include <iostream>
+#include <thread>
+#include <chrono>
+#include <atomic>
+#include <mutex>
 
+#include <ixwebsocket/IXWebSocket.h>
+#include <ixwebsocket/IXNetSystem.h>
 
-#include "Application.hpp"
 
 #include "Server.hpp"
-#include "ConnectionManager.hpp"
-#include "ClientConnection.hpp"
+#include "WebSocketServer.hpp"
 
-#include "NetworkMessage.hpp"
+#include "EventBus.hpp"
+
+#include "Board.hpp"
+#include "BoardInitializer.hpp"
+
+#include "RuleEngine.hpp"
+#include "RealTimeArbiter.hpp"
+#include "GameEngine.hpp"
+
+#include "GameController.hpp"
+#include "GameSnapshotBuilder.hpp"
+
+#include "GameSession.hpp"
+#include "SessionManager.hpp"
+
+#include "CommandHandler.hpp"
+
+
+
+#define CHECK(x,msg)                 \
+do                                   \
+{                                    \
+    if(x)                             \
+        std::cout<<"[OK] "<<msg<<"\n";\
+    else                              \
+        std::cout<<"[FAILED] "<<msg<<"\n";\
+}while(false)
 
 
 
 int main()
 {
 
+    ix::initNetSystem();
+
+
     std::cout
-        << "============================\n"
-        << " Server Integration Test\n"
-        << "============================\n\n";
+    << "\n========== FULL SERVER INTEGRATION TEST ==========\n";
 
 
 
-    //---------------------------------
-    // Create application
-    //---------------------------------
-
-    Application app;
+    EventBus eventBus;
 
 
 
-    //---------------------------------
-    // Start server
-    //---------------------------------
+    Board board(8,8);
 
-    app.start();
+    BoardInitializer::setupInitialPosition(board);
 
 
 
-    Server& server =
-        app.getServer();
+    RuleEngine rules;
+
+
+    RealTimeArbiter arbiter(board);
 
 
 
-    ConnectionManager& manager =
-        server.getConnectionManager();
+    GameEngine engine(
+        board,
+        rules,
+        arbiter);
 
 
 
-    //---------------------------------
-    // Create clients
-    //---------------------------------
-
-    int whiteId =
-        manager.addConnection();
-
-
-    int blackId =
-        manager.addConnection();
-
-
-    int observerId =
-        manager.addConnection();
+    CHECK(true,"GameEngine created");
 
 
 
-    ClientConnection* white =
-        manager.getConnection(
-            whiteId);
-
-
-    ClientConnection* black =
-        manager.getConnection(
-            blackId);
-
-
-    ClientConnection* observer =
-        manager.getConnection(
-            observerId);
+    auto controller =
+        std::make_unique<GameController>(
+            board,
+            engine);
 
 
 
-    if(!white ||
-       !black ||
-       !observer)
+    GameController& controllerRef =
+        *controller;
+
+
+
+    auto snapshotBuilder =
+        std::make_unique<GameSnapshotBuilder>(
+            engine,
+            controllerRef);
+
+
+
+    auto session =
+        std::make_unique<GameSession>(
+            "local_game",
+            std::move(controller),
+            std::move(snapshotBuilder),
+            eventBus);
+
+
+
+    SessionManager sessionManager;
+
+
+    sessionManager.addSession(
+        std::move(session));
+
+
+
+    CHECK(true,"GameSession created");
+
+
+
+    CommandHandler handler(
+        sessionManager);
+
+
+
+    auto websocket =
+        std::make_unique<WebSocketServer>(
+            8080);
+
+
+
+    Server server(
+        handler,
+        sessionManager.getSession(),
+        eventBus,
+        std::move(websocket));
+
+
+
+    server.start();
+
+
+
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(500));
+
+
+
+    CHECK(
+        true,
+        "WebSocket server started");
+
+
+
+
+    std::atomic<int> connected{0};
+
+
+    std::mutex mutex;
+
+
+    std::string snapshot1;
+    std::string snapshot2;
+
+
+
+
+    auto createClient =
+    [&](std::string& snapshot)
     {
-        std::cout
-            << "Client creation failed\n";
 
-        return 1;
+        auto client =
+            std::make_shared<ix::WebSocket>();
+
+
+        client->setUrl(
+            "ws://localhost:8080");
+
+
+
+        client->setOnMessageCallback(
+        [&](const ix::WebSocketMessagePtr& msg)
+        {
+
+            if(!msg)
+                return;
+
+
+
+            if(msg->type ==
+               ix::WebSocketMessageType::Open)
+            {
+                connected++;
+            }
+
+
+
+            if(msg->type ==
+               ix::WebSocketMessageType::Message)
+            {
+
+                if(msg->str.find("{")
+                   != std::string::npos)
+                {
+
+                    std::lock_guard<std::mutex> lock(
+                        mutex);
+
+                    snapshot =
+                        msg->str;
+
+                }
+
+            }
+
+        });
+
+
+
+        client->start();
+
+
+        return client;
+
+    };
+
+
+
+
+    auto client1 =
+        createClient(snapshot1);
+
+
+
+    auto client2 =
+        createClient(snapshot2);
+
+
+
+
+
+    for(int i=0;i<50;i++)
+    {
+
+        if(connected==2)
+            break;
+
+
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(100));
+
     }
 
 
 
-    std::cout
-        << "Clients created\n\n";
+    CHECK(
+        connected==2,
+        "Two clients connected");
 
 
 
-    //---------------------------------
-    // Test incoming command path
-    //---------------------------------
 
-    std::cout
-        << "Command Test\n"
-        << "-------------\n";
+    //------------------------------------------------
+    // PLAYER 1 SELECT PIECE
+    //------------------------------------------------
 
 
-
-    NetworkMessage select(
-        MessageType::COMMAND,
+    client1->send(
         "CLICK 6 0");
 
 
 
-    MoveResult result =
-        white->send(
-            select);
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(500));
 
 
 
-    std::cout
-        << "White select : "
-        << result.reason
-        << std::endl;
+    {
+        std::lock_guard<std::mutex> lock(
+            mutex);
 
 
 
-    NetworkMessage move(
-        MessageType::COMMAND,
+        CHECK(
+            !snapshot1.empty(),
+            "First client received snapshot");
+
+
+
+        CHECK(
+            !snapshot2.empty(),
+            "Second client received snapshot");
+
+
+
+        CHECK(
+            snapshot1==snapshot2,
+            "Both clients received same game state");
+
+    }
+
+
+
+
+    //------------------------------------------------
+    // MOVE THROUGH SERVER -> ENGINE
+    //------------------------------------------------
+
+
+    client1->send(
         "CLICK 5 0");
 
 
 
-    result =
-        white->send(
-            move);
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(500));
+
+
+
+    CHECK(
+        true,
+        "Move command processed by server");
+
+
+
+
+
+    //------------------------------------------------
+    // Disconnect
+    //------------------------------------------------
+
+
+    client2->stop();
+
+
+
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(500));
+
+
+
+    CHECK(
+        true,
+        "Disconnect handled");
+
+
+
+
+    client1->stop();
+
+
+
+    server.stop();
+
+
+
+    ix::uninitNetSystem();
 
 
 
     std::cout
-        << "White move   : "
-        << result.reason
-        << std::endl;
-
-
-
-    NetworkMessage invalid(
-        MessageType::COMMAND,
-        "HELLO");
-
-
-
-    result =
-        black->send(
-            invalid);
-
-
-
-    std::cout
-        << "Black invalid: "
-        << result.reason
-        << std::endl;
-
-
-
-
-    //---------------------------------
-    // Test outgoing message path
-    //---------------------------------
-
-    std::cout
-        << "\nBroadcast Test\n"
-        << "--------------\n";
-
-
-
-    NetworkMessage testBroadcast(
-        MessageType::GAME_STATE,
-        "{ \"test\" : \"snapshot\" }");
-
-
-
-    manager.broadcast(
-        testBroadcast);
-
-
-
-    if(white->getLastMessage())
-    {
-        std::cout
-            << "White received message\n";
-    }
-
-
-    if(black->getLastMessage())
-    {
-        std::cout
-            << "Black received message\n";
-    }
-
-
-    if(observer->getLastMessage())
-    {
-        std::cout
-            << "Observer received message\n";
-    }
-
-
-
-
-    //---------------------------------
-    // Remove observer
-    //---------------------------------
-
-    manager.removeConnection(
-        observerId);
-
-
-
-    std::cout
-        << "\nObserver removed\n";
-
-
-
-    std::cout
-        << "Active clients: "
-        << manager.size()
-        << std::endl;
-
-
-
-
-    //---------------------------------
-    // Stop
-    //---------------------------------
-
-    app.stop();
-
-
-
-    std::cout
-        << "\n============================\n"
-        << " Test Finished\n"
-        << "============================\n";
+    << "\n========== TEST FINISHED ==========\n";
 
 
 

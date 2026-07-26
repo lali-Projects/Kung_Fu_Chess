@@ -25,7 +25,9 @@ enum class MessageType
 
     COMMAND,
 
-    ERROR,
+    COMMAND_RESULT,
+
+    SYSTEM_ERROR,
 
     DISCONNECT,
 

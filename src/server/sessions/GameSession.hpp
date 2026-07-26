@@ -80,6 +80,15 @@ public:
         const PlayerSession& player) const;
 
 
+    const std::shared_ptr<PlayerSession>&
+    getWhitePlayer() const;
+
+
+    const std::shared_ptr<PlayerSession>&
+    getBlackPlayer() const;
+
+
+    size_t getObserverCount() const;
 
 private:
 

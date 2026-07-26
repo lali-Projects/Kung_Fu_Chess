@@ -1,10 +1,20 @@
 #pragma once
 
+#include <atomic>
+#include <cstdint>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <unordered_map>
+
+
+#include <ixwebsocket/IXWebSocketServer.h>
+#include <ixwebsocket/IXWebSocket.h>
+#include <ixwebsocket/IXConnectionState.h>
+
 
 #include "INetworkServer.hpp"
 
-#include <memory>
-#include <unordered_map>
 
 
 class WebSocketServer : public INetworkServer
@@ -14,7 +24,7 @@ public:
 
 
     explicit WebSocketServer(
-        unsigned short port);
+        uint16_t port = 8080);
 
 
 
@@ -24,6 +34,7 @@ public:
 
     WebSocketServer(
         const WebSocketServer&) = delete;
+
 
 
     WebSocketServer& operator=(
@@ -60,40 +71,88 @@ public:
 
 
 
+    void setConnectionCallback(
+        ConnectionCallback callback) override;
+
+
+
+    void setDisconnectCallback(
+        DisconnectCallback callback) override;
+
+
+
 private:
 
 
-    /*
-        Callback to upper server layer.
-
-        Network layer does not know:
-        - GameSession
-        - GameEngine
-        - Commands
-    */
-    MessageCallback m_callback;
+    void configureServer();
 
 
 
-    /*
-        WebSocket connections.
-
-        Key:
-            connection id
-
-        Value:
-            websocket connection object
-
-        Real type depends on library.
-    */
-    std::unordered_map<int, void*> m_connections;
+    void handleClientConnection(
+        std::weak_ptr<ix::WebSocket> webSocket,
+        std::shared_ptr<ix::ConnectionState> connectionState);
 
 
 
-    unsigned short m_port;
+    void handleMessage(
+        int connectionId,
+        const std::string& payload);
 
 
 
-    bool m_running{false};
+    void removeConnection(
+        int connectionId);
+
+
+
+private:
+
+
+    uint16_t m_port;
+
+
+    std::unique_ptr<ix::WebSocketServer>
+        m_server;
+
+
+
+    std::atomic<bool>
+        m_running{false};
+
+
+
+    bool m_configured{false};
+
+
+
+    MessageCallback
+        m_messageCallback;
+
+
+
+    ConnectionCallback
+        m_connectionCallback;
+
+
+
+    DisconnectCallback
+        m_disconnectCallback;
+
+
+
+    std::mutex
+        m_connectionsMutex;
+
+
+
+    std::unordered_map<
+        int,
+        std::shared_ptr<ix::WebSocket>>
+        m_connections;
+
+
+
+    std::atomic<int>
+        m_nextConnectionId{1};
 
 };

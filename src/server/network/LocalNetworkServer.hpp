@@ -1,6 +1,11 @@
 #pragma once
 
 
+#include <atomic>
+#include <map>
+#include <optional>
+
+
 #include "INetworkServer.hpp"
 
 
@@ -10,12 +15,12 @@
  *
  * Development transport layer.
  *
- * Responsibilities:
+ * Simulates real network flow.
  *
- *  - Simulate server lifecycle.
- *  - Send messages to clients.
- *  - Receive simulated messages.
- *  - Notify upper layers through callback.
+ * Used for:
+ *
+ *  - Integration tests.
+ *  - Server pipeline validation.
  *
  *
  * Does NOT know:
@@ -55,6 +60,10 @@ public:
 public:
 
 
+    //---------------------------------
+    // INetworkServer
+    //---------------------------------
+
     void start() override;
 
 
@@ -83,17 +92,51 @@ public:
 
 
 
+    void setConnectionCallback(
+        ConnectionCallback callback) override;
+
+
+
+    void setDisconnectCallback(
+        DisconnectCallback callback) override;
+
+
+
 public:
 
 
-    /**
-     * @brief Development only.
-     *
-     * Simulates incoming network packet.
-     */
+    //---------------------------------
+    // Test Helpers
+    //---------------------------------
+
+
+    int simulateNewConnection();
+
+
+
     void simulateIncomingMessage(
         int connectionId,
         const NetworkMessage& message);
+
+
+
+    /**
+     * @brief Returns last message sent to client.
+     *
+     * Testing only.
+     */
+    std::optional<NetworkMessage>
+    getLastSentMessage(
+        int connectionId) const;
+
+
+
+    /**
+     * @brief Clears stored messages.
+     *
+     * Testing only.
+     */
+    void clearSentMessages();
 
 
 
@@ -104,6 +147,32 @@ private:
 
 
 
-    MessageCallback m_messageCallback;
+    MessageCallback
+        m_messageCallback;
+
+
+
+    ConnectionCallback
+        m_connectionCallback;
+
+
+
+    DisconnectCallback
+        m_disconnectCallback;
+
+
+
+    std::atomic<int>
+        m_nextConnectionId{1};
+
+
+
+    /*
+        Testing storage only.
+    */
+    std::map<
+        int,
+        NetworkMessage>
+        m_sentMessages;
 
 };

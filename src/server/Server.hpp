@@ -8,33 +8,19 @@
 #include "MoveResult.hpp"
 
 
+
 class CommandHandler;
 class ConnectionManager;
 class GameSession;
 class EventBus;
 class Event;
 class INetworkServer;
+class NetworkMessage;
 
 
 
 /**
  * @brief Application server facade.
- *
- * Responsibilities:
- *
- *  - Start server.
- *  - Stop server.
- *  - Own ConnectionManager.
- *  - Handle network input.
- *  - Broadcast game messages.
- *
- *
- * Does NOT know:
- *
- *  - Game rules.
- *  - Board.
- *  - GameEngine.
- *  - Network implementation.
  */
 class Server
 {
@@ -56,6 +42,7 @@ public:
 
     Server(
         const Server&) = delete;
+
 
 
     Server& operator=(
@@ -82,11 +69,20 @@ public:
 
 
     /**
-     * @brief Local testing only.
+     * @brief Access transport layer.
      *
-     * Simulates a client command.
+     * Used only for integration tests.
+     */
+    INetworkServer&
+    getNetworkServer();
+
+
+
+    /**
+     * @brief Development helper.
      *
-     * Same path as real network.
+     * Sends command through same path
+     * as real network.
      */
     MoveResult simulateClientCommand(
         const std::string& message);
@@ -94,6 +90,21 @@ public:
 
 
 private:
+
+    void handleNetworkMessage(
+        int connectionId,
+        const NetworkMessage& message);
+
+
+
+    void handleConnection(
+        int connectionId);
+
+
+
+    void handleDisconnect(
+        int connectionId);
+
 
 
     void onGameStateChanged(

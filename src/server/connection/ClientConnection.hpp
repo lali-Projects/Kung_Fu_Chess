@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <optional>
+#include <functional>
 
 
 #include "NetworkMessage.hpp"
@@ -16,16 +17,18 @@ class PlayerSession;
 
 
 
-
 /**
  * @brief Represents one connected client.
+ *
+ * Logical client connection.
  *
  * Responsibilities:
  *
  *  - Own player identity.
- *  - Receive network messages.
- *  - Forward commands.
- *  - Deliver outgoing messages.
+ *  - Receive incoming messages.
+ *  - Forward commands to CommandHandler.
+ *  - Deliver outgoing messages through transport callback.
+ *  - Keep local message storage for tests.
  *
  *
  * Does NOT know:
@@ -35,10 +38,19 @@ class PlayerSession;
  *  - Rules.
  *  - Snapshots.
  *  - Serialization.
- *  - Network implementation.
+ *  - WebSocket.
  */
 class ClientConnection
 {
+
+public:
+
+
+    using SendCallback =
+        std::function<void(
+            const NetworkMessage&)>;
+
+
 
 public:
 
@@ -63,13 +75,7 @@ public:
 
 
 
-
 public:
-
-
-    MoveResult send(
-        const NetworkMessage& message);
-
 
 
     MoveResult receiveNetworkMessage(
@@ -77,19 +83,13 @@ public:
 
 
 
-
-    /**
-     * @brief Delivers outgoing message.
-     *
-     * Current:
-     * Stores locally.
-     *
-     * Future:
-     * WebSocket transport.
-     */
     void deliverMessage(
         const NetworkMessage& message);
 
+
+
+    void setSendCallback(
+        SendCallback callback);
 
 
 
@@ -98,9 +98,7 @@ public:
 
 
 
-
     int getId() const;
-
 
 
 
@@ -114,10 +112,8 @@ public:
 
 
 
-
     PlayerSession&
     getPlayerSession();
-
 
 
 
@@ -126,7 +122,6 @@ private:
 
     void sendMessageToClient(
         const NetworkMessage& message);
-
 
 
 
@@ -148,12 +143,21 @@ private:
 
 
     /*
-        Testing storage only.
-
-        Future:
-        replaced by WebSocket transport.
+        Used for:
+        - tests
+        - LocalNetworkServer
     */
     std::optional<NetworkMessage>
         m_lastMessage;
+
+
+
+    /*
+        Transport callback.
+
+        ConnectionManager connects it
+        to INetworkServer::send().
+    */
+    SendCallback m_sendCallback;
 
 };

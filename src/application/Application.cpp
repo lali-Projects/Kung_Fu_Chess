@@ -27,7 +27,7 @@
 
 
 #include "INetworkServer.hpp"
-#include "LocalNetworkServer.hpp"
+#include "WebSocketServer.hpp"
 
 
 
@@ -176,29 +176,34 @@ void Application::initialize()
     //---------------------------------
 
     /*
-        Current:
+        Real network layer.
 
-            LocalNetworkServer
+        Flow:
 
-
-        Future:
-
-            WebSocketServer
-
-
-        Application is the only place
-        that decides which implementation
-        exists.
+        WebSocket Client
+                |
+                v
+        WebSocketServer
+                |
+                v
+        INetworkServer
+                |
+                v
+        Server
+                |
+                v
+        Game Logic
     */
 
 
     auto networkServer =
-        std::make_unique<LocalNetworkServer>();
+        std::make_unique<WebSocketServer>(
+            8080);
 
 
 
     //---------------------------------
-    // Server
+    // Application Server
     //---------------------------------
 
     m_server =
@@ -289,8 +294,13 @@ MoveResult Application::sendCommand(
 
 
 
-    return m_server->simulateClientCommand(
-        message);
+
+
+    return
+    {
+        false,
+        "use_websocket_client"
+    };
 }
 
 

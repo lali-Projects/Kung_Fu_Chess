@@ -19,9 +19,7 @@ SessionManager::SessionManager()
 // Destructor
 //================================================
 
-SessionManager::~SessionManager()
-{
-}
+SessionManager::~SessionManager() = default;
 
 
 
@@ -35,6 +33,7 @@ void SessionManager::addSession(
 
     m_session =
         std::move(session);
+
 }
 
 
@@ -48,6 +47,7 @@ SessionManager::getSession()
 {
 
     return *m_session;
+
 }
 
 
@@ -58,5 +58,7 @@ SessionManager::getSession()
 
 bool SessionManager::hasSession() const
 {
+
     return m_session != nullptr;
+
 }

@@ -10,22 +10,22 @@
 /**
  * @brief Abstract network server interface.
  *
- * This layer hides the transport technology.
+ * Hides transport implementation.
  *
- * Possible implementations:
+ * Implementations:
  *
  *      LocalNetworkServer
  *      WebSocketServer
- *      TcpServer
  *
  *
  * Responsibilities:
  *
  *  - Start network service.
  *  - Stop network service.
- *  - Send messages to clients.
+ *  - Send messages.
  *  - Disconnect clients.
- *  - Notify upper layers about incoming messages.
+ *  - Notify about connections.
+ *  - Notify about disconnections.
  *
  *
  * Does NOT know:
@@ -46,6 +46,18 @@ public:
         std::function<void(
             int connectionId,
             const NetworkMessage& message)>;
+
+
+
+    using ConnectionCallback =
+        std::function<void(
+            int connectionId)>;
+
+
+
+    using DisconnectCallback =
+        std::function<void(
+            int connectionId)>;
 
 
 
@@ -112,19 +124,64 @@ public:
 
 
     /**
-     * @brief Sets callback for incoming messages.
+     * @brief Called when client sends message.
      *
-     * Network layer calls this when:
+     * Flow:
      *
-     * client
-     *   |
-     *   v
-     * network
-     *   |
-     *   v
-     * server
+     * Client
+     *    |
+     *    v
+     * Network layer
+     *    |
+     *    v
+     * MessageCallback
+     *    |
+     *    v
+     * Server
      */
     virtual void setMessageCallback(
         MessageCallback callback) = 0;
+
+
+
+    /**
+     * @brief Called when new client connects.
+     *
+     * Flow:
+     *
+     * Client
+     *    |
+     *    v
+     * Network layer
+     *    |
+     *    v
+     * ConnectionCallback
+     *    |
+     *    v
+     * Server
+     */
+    virtual void setConnectionCallback(
+        ConnectionCallback callback) = 0;
+
+
+
+    /**
+     * @brief Called when client disconnects.
+     *
+     * Flow:
+     *
+     * Client
+     *    |
+     *    v
+     * Network layer
+     *    |
+     *    v
+     * DisconnectCallback
+     *    |
+     *    v
+     * Server
+     */
+    virtual void setDisconnectCallback(
+        DisconnectCallback callback) = 0;
 
 };

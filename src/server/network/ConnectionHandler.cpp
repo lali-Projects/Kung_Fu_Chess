@@ -1,6 +1,9 @@
 #include "ConnectionHandler.hpp"
 
 
+#include <iostream>
+
+
 #include "CommandHandler.hpp"
 #include "PlayerSession.hpp"
 
@@ -19,6 +22,8 @@ m_commandHandler(commandHandler),
 m_player(player)
 {
 }
+
+
 
 
 
@@ -44,6 +49,13 @@ MoveResult ConnectionHandler::receive(
             "invalid_command"
         };
     }
+
+
+
+    std::cout
+        << "[CONNECTION] Received command: "
+        << message
+        << std::endl;
 
 
 

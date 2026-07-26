@@ -1,8 +1,10 @@
 #pragma once
 
-
+#include <cstddef>
+#include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 
 
 #include "NetworkMessage.hpp"
@@ -15,27 +17,18 @@ class GameSession;
 
 
 
-/**
- * @brief Manages connected clients.
- *
- * Responsibilities:
- *
- *  - Create client connections.
- *  - Store active connections.
- *  - Remove disconnected clients.
- *  - Broadcast network messages.
- *
- *
- * Does NOT know:
- *
- *  - Game rules.
- *  - Board.
- *  - GameEngine.
- *  - GameSnapshot.
- *  - Serialization.
- */
 class ConnectionManager
 {
+
+public:
+
+
+    using SendCallback =
+        std::function<void(
+            int connectionId,
+            const NetworkMessage& message)>;
+
+
 
 public:
 
@@ -62,41 +55,34 @@ public:
 public:
 
 
-    /**
-     * @brief Creates new client connection.
-     */
     int addConnection();
 
 
+    bool addConnection(
+        int id);
 
-    /**
-     * @brief Removes client connection.
-     */
+
     void removeConnection(
         int id);
 
 
 
-    /**
-     * @brief Finds client connection.
-     */
     ClientConnection* getConnection(
         int id);
 
 
 
-    /**
-     * @brief Sends message to all clients.
-     */
     void broadcast(
         const NetworkMessage& message);
 
 
 
-    /**
-     * @brief Number of active clients.
-     */
     size_t size() const;
+
+
+
+    void setSendCallback(
+        SendCallback callback);
 
 
 
@@ -106,22 +92,19 @@ private:
     int m_nextId{1};
 
 
-
-    /*
-        Provides access to
-        active game session.
-
-        Used only for player registration.
-    */
     GameSession& m_session;
 
 
-
-    /*
-        Dispatches commands
-        received from clients.
-    */
     CommandHandler& m_commandHandler;
+
+
+
+    SendCallback m_sendCallback;
+
+
+
+    mutable std::mutex
+        m_connectionsMutex;
 
 
 

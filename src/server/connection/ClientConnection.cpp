@@ -5,6 +5,7 @@
 #include "CommandHandler.hpp"
 #include "PlayerSession.hpp"
 
+
 #include <utility>
 
 
@@ -43,21 +44,6 @@ ClientConnection::~ClientConnection() = default;
 
 
 
-
-//================================================
-// Send
-//================================================
-
-MoveResult ClientConnection::send(
-    const NetworkMessage& message)
-{
-    return receiveNetworkMessage(
-        message);
-}
-
-
-
-
 //================================================
 // Receive Network Message
 //================================================
@@ -65,7 +51,10 @@ MoveResult ClientConnection::send(
 MoveResult ClientConnection::receiveNetworkMessage(
     const NetworkMessage& message)
 {
-
+std::cout
+    << "[CLIENT CONNECTION] receive: "
+    << message.getPayload()
+    << std::endl;
     if(!m_handler)
     {
         return
@@ -84,7 +73,6 @@ MoveResult ClientConnection::receiveNetworkMessage(
 
 
 
-
 //================================================
 // Deliver Message
 //================================================
@@ -92,31 +80,65 @@ MoveResult ClientConnection::receiveNetworkMessage(
 void ClientConnection::deliverMessage(
     const NetworkMessage& message)
 {
+
     sendMessageToClient(
         message);
+
 }
 
 
 
+//================================================
+// Set Send Callback
+//================================================
+
+void ClientConnection::setSendCallback(
+    SendCallback callback)
+{
+
+    m_sendCallback =
+        std::move(callback);
+
+}
+
+
 
 //================================================
-// Store Outgoing Message
+// Send Message
 //================================================
 
 void ClientConnection::sendMessageToClient(
     const NetworkMessage& message)
 {
 
+    /*
+        Keep local copy.
+
+        Required for tests.
+    */
     m_lastMessage =
         message;
+
+
+
+    /*
+        Forward to real transport.
+
+        ConnectionManager decides
+        where the message goes.
+    */
+    if(m_sendCallback)
+    {
+        m_sendCallback(
+            message);
+    }
 
 }
 
 
 
-
 //================================================
-// Get Last Message
+// Last Message
 //================================================
 
 const std::optional<NetworkMessage>&
@@ -127,9 +149,8 @@ ClientConnection::getLastMessage() const
 
 
 
-
 //================================================
-// Get Id
+// Id
 //================================================
 
 int ClientConnection::getId() const
@@ -139,9 +160,8 @@ int ClientConnection::getId() const
 
 
 
-
 //================================================
-// Get Player
+// Player
 //================================================
 
 std::shared_ptr<PlayerSession>
@@ -149,7 +169,6 @@ ClientConnection::getPlayer()
 {
     return m_player;
 }
-
 
 
 
@@ -161,9 +180,8 @@ ClientConnection::getPlayer() const
 
 
 
-
 //================================================
-// Get Player Session
+// Player Session
 //================================================
 
 PlayerSession&

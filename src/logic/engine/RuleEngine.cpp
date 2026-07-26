@@ -20,17 +20,24 @@ RuleEngine::RuleEngine() {
 MoveValidation RuleEngine::isValidMove(const Position& to, const Position& from, const Board& grid) {
     // 1. בדיקת גבולות הלוח
     if (!grid.isInsideBoard(to)) {
+        std::cout
+    << "[RULE FAILED] outside_board"
+    << std::endl;
         return {false, "outside_board"};
     }
 
     // 2. בדיקת קיום כלי במקור
     auto sourcePiece = grid.getPieceAt(from);
     if (!sourcePiece) {
+        std::cout
+    << "[RULE FAILED] wrong_turn"
+    << std::endl;
         return {false, "empty_source"};
     }
 
     // 2.5 כלי שנח (לאחר תנועה או קפיצה) אינו יכול לבצע פעולה נוספת
     if (sourcePiece->getState() == PieceState::LONG_REST) {
+        
         return {false, "piece_is_resting"};
     }
     if (sourcePiece->getState() == PieceState::SHORT_REST) {
@@ -40,6 +47,9 @@ MoveValidation RuleEngine::isValidMove(const Position& to, const Position& from,
     // 3. בדיקת "אש ידידותית" - מניעת תנועה למשבצת שבה נמצא כלי מאותו צבע
     auto destinationPiece = grid.getPieceAt(to);
     if (destinationPiece && sourcePiece->getSide() == destinationPiece->getSide()) {
+        std::cout
+    << "[RULE FAILED] wrong_turn"
+    << std::endl;
         return {false, "friendly_destination"};
     }
 
@@ -49,6 +59,9 @@ MoveValidation RuleEngine::isValidMove(const Position& to, const Position& from,
 
     // אם מיקום היעד לא נמצא ברשימת היעדים החוקיים של הכלי
     if (legalMoves.find(to) == legalMoves.end()) {
+       std::cout
+    << "[RULE FAILED] wrong_turn"
+    << std::endl;
         return {false, "not_valid_path_for_this_type"};
     }
 

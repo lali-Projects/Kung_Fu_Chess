@@ -1,6 +1,9 @@
 #include "CommandHandler.hpp"
 
 
+#include <iostream>
+
+
 #include "ClickCommand.hpp"
 
 #include "SessionManager.hpp"
@@ -15,8 +18,8 @@
 
 CommandHandler::CommandHandler(
     SessionManager& sessionManager)
-    :
-    m_sessionManager(sessionManager)
+:
+m_sessionManager(sessionManager)
 {
 }
 
@@ -31,25 +34,10 @@ MoveResult CommandHandler::handle(
     const ClickCommand& command)
 {
 
-    /*
-        CommandHandler is only a dispatcher.
 
-        Responsibility:
-
-            ClickCommand
-                  |
-                  v
-            GameSession
-
-
-        It does not:
-            - parse input
-            - validate chess rules
-            - modify board
-            - execute movement
-    */
-
-
+std::cout
+    << "[COMMAND HANDLER] handling command"
+    << std::endl;
     if(!m_sessionManager.hasSession())
     {
         return
@@ -61,6 +49,12 @@ MoveResult CommandHandler::handle(
 
 
 
+    std::cout
+        << "[COMMAND] Forwarding to session"
+        << std::endl;
+
+
+
     GameSession& session =
         m_sessionManager.getSession();
 
@@ -69,4 +63,5 @@ MoveResult CommandHandler::handle(
     return session.handleClick(
         player,
         command);
+
 }

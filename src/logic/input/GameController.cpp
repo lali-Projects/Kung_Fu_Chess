@@ -18,6 +18,12 @@ MoveResult GameController::jump(const Position& pos) {
 }
 
 MoveResult GameController::click(const Position& pos) {
+    std::cout
+    << "[CONTROLLER] click "
+    << pos.row
+    << ","
+    << pos.col
+    << std::endl;
     if (!board.isInsideBoard(pos)) {
         return {false, "outsideBoard"};
     }
@@ -44,7 +50,16 @@ MoveResult GameController::click(const Position& pos) {
         selectedPosition = pos;
         return {true, "change_selection"};
     }
-
+std::cout
+    << "[CONTROLLER] calling requestMove from "
+    << selectedPosition->row
+    << ","
+    << selectedPosition->col
+    << " to "
+    << pos.row
+    << ","
+    << pos.col
+    << std::endl;
     // ניסיון תנועה רגילה
     MoveResult result = gameEngine.requestMove(selectedPosition.value(), pos);
     clearSelection();

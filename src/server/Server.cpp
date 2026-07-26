@@ -1,26 +1,18 @@
 #include "Server.hpp"
 
 
+#include <iostream>
+
+
 #include "INetworkServer.hpp"
 #include "ConnectionManager.hpp"
-
-#include "CommandHandler.hpp"
-#include "GameSession.hpp"
-
 #include "ClientConnection.hpp"
-
 
 #include "EventBus.hpp"
 #include "GameStateChangedEvent.hpp"
 
-
 #include "SnapshotSerializer.hpp"
-
-
 #include "NetworkMessage.hpp"
-
-
-#include <iostream>
 
 
 
@@ -40,6 +32,9 @@ m_eventBus(eventBus),
 m_networkServer(std::move(networkServer))
 {
 
+    //---------------------------------
+    // Connection Manager
+    //---------------------------------
 
     m_connectionManager =
         std::make_unique<ConnectionManager>(
@@ -48,36 +43,87 @@ m_networkServer(std::move(networkServer))
 
 
 
+    //---------------------------------
+    // Outgoing messages flow
+    //
+    // Game
+    //  |
+    // EventBus
+    //  |
+    // Server
+    //  |
+    // ConnectionManager
+    //  |
+    // INetworkServer
+    //---------------------------------
+
+    m_connectionManager->setSendCallback(
+        [this]
+        (
+            int connectionId,
+            const NetworkMessage& message
+        )
+        {
+
+            if(m_networkServer)
+            {
+                m_networkServer->send(
+                    connectionId,
+                    message);
+            }
+
+        });
+
+
+
+    //---------------------------------
+    // Network callbacks
+    //---------------------------------
+
     if(m_networkServer)
     {
+
+        m_networkServer->setConnectionCallback(
+            [this]
+            (
+                int id
+            )
+            {
+                handleConnection(id);
+            });
+
+
 
         m_networkServer->setMessageCallback(
             [this]
             (
-                int connectionId,
+                int id,
                 const NetworkMessage& message
             )
             {
-
-                ClientConnection* client =
-                    m_connectionManager
-                        ->getConnection(connectionId);
-
-
-
-                if(!client)
-                {
-                    return;
-                }
-
-
-
-                client->receiveNetworkMessage(
+                handleNetworkMessage(
+                    id,
                     message);
             });
+
+
+
+        m_networkServer->setDisconnectCallback(
+            [this]
+            (
+                int id
+            )
+            {
+                handleDisconnect(id);
+            });
+
     }
 
 
+
+    //---------------------------------
+    // Game state updates
+    //---------------------------------
 
     m_eventBus.subscribe<GameStateChangedEvent>(
         [this]
@@ -87,6 +133,7 @@ m_networkServer(std::move(networkServer))
         {
             onGameStateChanged(event);
         });
+
 }
 
 
@@ -167,7 +214,7 @@ void Server::stop()
 
 
 //================================================
-// Is Running
+// Running
 //================================================
 
 bool Server::isRunning() const
@@ -178,7 +225,7 @@ bool Server::isRunning() const
 
 
 //================================================
-// Get Connection Manager
+// Connection Manager
 //================================================
 
 ConnectionManager&
@@ -190,7 +237,149 @@ Server::getConnectionManager()
 
 
 //================================================
-// Simulate Client Command
+// Network Server
+//================================================
+
+INetworkServer&
+Server::getNetworkServer()
+{
+    return *m_networkServer;
+}
+
+
+
+//================================================
+// Connection Created
+//================================================
+
+void Server::handleConnection(
+    int connectionId)
+{
+
+    bool added =
+        m_connectionManager->addConnection(
+            connectionId);
+
+
+
+    if(added)
+    {
+
+        std::cout
+            << "Client registered: "
+            << connectionId
+            << std::endl;
+    }
+
+}
+
+
+
+//================================================
+// Disconnect
+//================================================
+
+void Server::handleDisconnect(
+    int connectionId)
+{
+
+    m_connectionManager->removeConnection(
+        connectionId);
+
+
+
+    std::cout
+        << "Client removed: "
+        << connectionId
+        << std::endl;
+}
+
+
+
+//================================================
+// Incoming Network Message
+//================================================
+
+//================================================
+// Incoming Network Message
+//================================================
+
+void Server::handleNetworkMessage(
+    int connectionId,
+    const NetworkMessage& message)
+{
+std::cout
+    << "[SERVER] received network message: "
+    << message.getPayload()
+    << std::endl;
+    ClientConnection* client =
+        m_connectionManager->getConnection(
+            connectionId);
+
+
+
+    if(!client)
+    {
+        return;
+    }
+
+
+
+    MoveResult result =
+        client->receiveNetworkMessage(
+            message);
+
+
+
+    std::cout
+        << "[SERVER RESULT] "
+        << result.success
+        << " "
+        << result.reason
+        << std::endl;
+
+
+
+    //---------------------------------
+    // Send command result back
+    //---------------------------------
+
+    std::string responseText;
+
+
+
+    if(result.success)
+    {
+        responseText =
+            "RESULT SUCCESS "
+            +
+            result.reason;
+    }
+    else
+    {
+        responseText =
+            "RESULT FAILED "
+            +
+            result.reason;
+    }
+
+
+
+    NetworkMessage response(
+        MessageType::COMMAND_RESULT,
+        responseText);
+
+
+
+    client->deliverMessage(
+        response);
+
+}
+
+
+
+//================================================
+// Local Test Command
 //================================================
 
 MoveResult Server::simulateClientCommand(
@@ -199,6 +388,17 @@ MoveResult Server::simulateClientCommand(
 
     int id =
         m_connectionManager->addConnection();
+
+
+
+    if(id < 0)
+    {
+        return
+        {
+            false,
+            "connection_failed"
+        };
+    }
 
 
 
@@ -212,7 +412,7 @@ MoveResult Server::simulateClientCommand(
         return
         {
             false,
-            "client_creation_failed"
+            "client_missing"
         };
     }
 
@@ -224,30 +424,48 @@ MoveResult Server::simulateClientCommand(
 
 
 
-    return client->send(
+    return client->receiveNetworkMessage(
         networkMessage);
+
 }
 
 
 
 //================================================
-// Game State Changed
+// Snapshot Broadcast
 //================================================
 
 void Server::onGameStateChanged(
     std::shared_ptr<Event> event)
 {
+    std::cout
+        << "[SERVER] onGameStateChanged BEGIN"
+        << std::endl;
+
 
     if(!event)
     {
+        std::cout
+            << "[SERVER] EVENT NULL"
+            << std::endl;
+
         return;
     }
 
+
+    std::cout
+        << "[SERVER] casting event"
+        << std::endl;
 
 
     auto snapshotEvent =
         std::static_pointer_cast<GameStateChangedEvent>(
             event);
+
+
+    std::cout
+        << "[SERVER] event cast success"
+        << std::endl;
 
 
 
@@ -256,7 +474,22 @@ void Server::onGameStateChanged(
             snapshotEvent->getSnapshot());
 
 
+    std::cout
+        << "[SERVER] snapshot serialized"
+        << std::endl;
+
+
+
+    std::cout
+        << "[SERVER] before broadcast"
+        << std::endl;
+
 
     m_connectionManager->broadcast(
         message);
+
+
+    std::cout
+        << "[SERVER] after broadcast"
+        << std::endl;
 }

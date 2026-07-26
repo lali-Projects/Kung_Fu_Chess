@@ -3,6 +3,7 @@
 #include <sstream>
 
 
+
 //================================================
 // Parse Command
 //================================================
@@ -11,11 +12,15 @@ std::optional<ClickCommand>
 CommandParser::parse(
     const std::string& input)
 {
+
     std::stringstream stream(input);
+
 
     std::string commandType;
 
+
     stream >> commandType;
+
 
 
     if(commandType == "CLICK")
@@ -24,8 +29,11 @@ CommandParser::parse(
     }
 
 
+
     return std::nullopt;
 }
+
+
 
 
 
@@ -37,29 +45,45 @@ std::optional<ClickCommand>
 CommandParser::parseClick(
     const std::string& input)
 {
+
     std::stringstream stream(input);
 
 
+
     std::string commandType;
+
 
     int row;
     int col;
 
 
 
-    stream
-        >> commandType
-        >> row
-        >> col;
+    if(!(stream
+            >> commandType
+            >> row
+            >> col))
+    {
+        return std::nullopt;
+    }
+
+
 
 
 
     /*
-        Basic validation only.
+        Parser responsibility only:
 
-        Board rules remain
-        inside GameController/GameEngine.
+        - Validate syntax.
+        - Create command.
+
+        Does NOT:
+
+        - Check board.
+        - Check piece.
+        - Check rules.
     */
+
+
 
     if(commandType != "CLICK")
     {
@@ -75,12 +99,8 @@ CommandParser::parseClick(
 
 
 
-    Position position(
-        row,
-        col);
-
-
-
     return ClickCommand(
-        position);
+        Position(
+            row,
+            col));
 }

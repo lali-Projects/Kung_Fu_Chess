@@ -15,6 +15,9 @@ GameEngine::GameEngine(Board& b, RuleEngine& rules, RealTimeArbiter& arbiter)
 //================================================
 MoveResult GameEngine::requestMove(const Position& from, const Position& to)
 {
+    std::cout
+    << "[ENGINE] requestMove entered"
+    << std::endl;
     if(isGameOver)
     {
         return {
@@ -32,7 +35,10 @@ MoveResult GameEngine::requestMove(const Position& from, const Position& to)
     }
 
     MoveValidation validation = ruleEngine.isValidMove(to, from, board);
-
+std::cout
+    << "[ENGINE] validation: "
+    << validation.is_valid
+    << std::endl;
     if(!validation.is_valid)
     {
         return {

@@ -7,8 +7,8 @@
 
 ClickCommand::ClickCommand(
     const Position& position)
-    :
-    m_position(position)
+:
+m_position(position)
 {
 }
 
