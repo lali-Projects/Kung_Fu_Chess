@@ -1,6 +1,9 @@
 #pragma once
 
 
+#include <string>
+
+
 #include "Event.hpp"
 #include "GameSnapshot.hpp"
 
@@ -9,16 +12,21 @@
 /**
  * @brief Event published when game state changes.
  *
- * Carries immutable game snapshot.
+ * Carries:
+ *
+ *  - Immutable game snapshot.
+ *  - Room identifier.
  */
 class GameStateChangedEvent
     :
     public Event
 {
+
 public:
 
 
-    explicit GameStateChangedEvent(
+    GameStateChangedEvent(
+        const std::string& roomId,
         const GameSnapshot& snapshot);
 
 
@@ -27,8 +35,17 @@ public:
 
 
 
+    const std::string& getRoomId() const;
+
+
+
 private:
 
 
+    std::string m_roomId;
+
+
+
     GameSnapshot m_snapshot;
+
 };

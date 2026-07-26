@@ -11,7 +11,6 @@
 
 class CommandHandler;
 class ConnectionManager;
-class GameSession;
 class EventBus;
 class Event;
 class INetworkServer;
@@ -21,6 +20,22 @@ class NetworkMessage;
 
 /**
  * @brief Application server facade.
+ *
+ * Responsibilities:
+ *
+ *  - Manage network lifecycle.
+ *  - Connect network layer with game layer.
+ *  - Forward client messages.
+ *  - Broadcast room updates.
+ *
+ *
+ * Does NOT know:
+ *
+ *  - Game rules.
+ *  - Board.
+ *  - Pieces.
+ *  - GameEngine.
+ *  - Room internals.
  */
 class Server
 {
@@ -30,7 +45,6 @@ public:
 
     Server(
         CommandHandler& commandHandler,
-        GameSession& session,
         EventBus& eventBus,
         std::unique_ptr<INetworkServer> networkServer);
 
@@ -59,6 +73,7 @@ public:
     void stop();
 
 
+
     bool isRunning() const;
 
 
@@ -68,28 +83,36 @@ public:
 
 
 
-    /**
-     * @brief Access transport layer.
-     *
-     * Used only for integration tests.
-     */
     INetworkServer&
     getNetworkServer();
 
 
 
-    /**
-     * @brief Development helper.
-     *
-     * Sends command through same path
-     * as real network.
-     */
+    //---------------------------------
+    // Testing / Integration
+    //---------------------------------
+
+    int createTestConnection();
+
+
+
+    void closeTestConnection(
+        int connectionId);
+
+
+
     MoveResult simulateClientCommand(
+        int connectionId,
         const std::string& message);
 
 
 
+    MoveResult simulateClientCommand(
+        const std::string& message);
+
+
 private:
+
 
     void handleNetworkMessage(
         int connectionId,
@@ -117,8 +140,6 @@ private:
 
     CommandHandler& m_commandHandler;
 
-
-    GameSession& m_session;
 
 
     EventBus& m_eventBus;

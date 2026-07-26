@@ -2,38 +2,23 @@
 
 
 #include <iostream>
+#include <stdexcept>
 
 
 #include "EventBus.hpp"
 
-#include "Board.hpp"
-#include "BoardInitializer.hpp"
-
-#include "RuleEngine.hpp"
-#include "RealTimeArbiter.hpp"
-#include "GameEngine.hpp"
-#include "GameController.hpp"
-
-#include "GameSnapshotBuilder.hpp"
-
-#include "GameSession.hpp"
-#include "SessionManager.hpp"
+#include "RoomFactory.hpp"
+#include "RoomManager.hpp"
 
 #include "CommandHandler.hpp"
 
-#include "ProtocolParser.hpp"
-
 #include "Server.hpp"
 
-
-#include "INetworkServer.hpp"
 #include "WebSocketServer.hpp"
 
 
 
-//================================================
-// Constructor
-//================================================
+
 
 Application::Application()
 {
@@ -42,10 +27,6 @@ Application::Application()
 
 
 
-//================================================
-// Destructor
-//================================================
-
 Application::~Application()
 {
     stop();
@@ -53,264 +34,149 @@ Application::~Application()
 
 
 
-//================================================
-// Initialize
-//================================================
+
 
 void Application::initialize()
 {
-
-    //---------------------------------
-    // Infrastructure
-    //---------------------------------
 
     m_eventBus =
         std::make_unique<EventBus>();
 
 
 
-    //---------------------------------
-    // Board
-    //---------------------------------
-
-    m_board =
-        std::make_unique<Board>(
-            8,
-            8);
-
-
-
-    BoardInitializer::setupInitialPosition(
-        *m_board);
-
-
-
-    //---------------------------------
-    // Game Core
-    //---------------------------------
-
-    m_ruleEngine =
-        std::make_unique<RuleEngine>();
-
-
-
-    m_arbiter =
-        std::make_unique<RealTimeArbiter>(
-            *m_board);
-
-
-
-    m_engine =
-        std::make_unique<GameEngine>(
-            *m_board,
-            *m_ruleEngine,
-            *m_arbiter);
-
-
-
-    m_controller =
-        std::make_unique<GameController>(
-            *m_board,
-            *m_engine);
-
-
-
-    //---------------------------------
-    // Snapshot
-    //---------------------------------
-
-    m_snapshotBuilder =
-        std::make_unique<GameSnapshotBuilder>(
-            *m_engine,
-            *m_controller);
-
-
-
-    //---------------------------------
-    // Session
-    //---------------------------------
-
-    m_session =
-        std::make_unique<GameSession>(
-            "game_001",
-            std::move(m_controller),
-            std::move(m_snapshotBuilder),
+    m_roomFactory =
+        std::make_unique<RoomFactory>(
             *m_eventBus);
 
 
 
-    //---------------------------------
-    // Session Manager
-    //---------------------------------
-
-    m_sessionManager =
-        std::make_unique<SessionManager>();
-
-
-    m_sessionManager->addSession(
-        std::move(m_session));
+    m_roomManager =
+        std::make_unique<RoomManager>(
+            *m_roomFactory);
 
 
 
-    //---------------------------------
-    // Commands
-    //---------------------------------
+    if(!m_roomManager->createRoom(
+            "room_001"))
+    {
+        throw std::runtime_error(
+            "Failed creating room");
+    }
+
+
+
 
     m_commandHandler =
         std::make_unique<CommandHandler>(
-            *m_sessionManager);
+            *m_roomManager);
 
 
 
-    //---------------------------------
-    // Protocol
-    //---------------------------------
 
-    m_protocolParser =
-        std::make_unique<ProtocolParser>();
-
-
-
-    //---------------------------------
-    // Network
-    //---------------------------------
-
-    /*
-        Real network layer.
-
-        Flow:
-
-        WebSocket Client
-                |
-                v
-        WebSocketServer
-                |
-                v
-        INetworkServer
-                |
-                v
-        Server
-                |
-                v
-        Game Logic
-    */
-
-
-    auto networkServer =
+    auto network =
         std::make_unique<WebSocketServer>(
             8080);
 
 
 
-    //---------------------------------
-    // Application Server
-    //---------------------------------
-
     m_server =
         std::make_unique<Server>(
             *m_commandHandler,
-            m_sessionManager->getSession(),
             *m_eventBus,
-            std::move(networkServer));
+            std::move(network));
 
 }
 
 
 
-//================================================
-// Start
-//================================================
+
+
 
 void Application::start()
 {
 
     if(m_running)
-    {
         return;
-    }
-
 
 
     m_server->start();
 
 
-
     m_running = true;
 
 
-
     std::cout
-        << "Application started"
-        << std::endl;
+        << "[APPLICATION] Started\n";
+
 }
 
 
 
-//================================================
-// Stop
-//================================================
+
+
 
 void Application::stop()
 {
 
     if(!m_running)
-    {
         return;
-    }
 
 
+    if(m_server)
+        m_server->stop();
 
-    m_server->stop();
 
-
-
-    m_running = false;
-
+    m_running=false;
 
 
     std::cout
-        << "Application stopped"
-        << std::endl;
+        << "[APPLICATION] Stopped\n";
+
 }
 
 
 
-//================================================
-// Send Command
-//================================================
+
+
 
 MoveResult Application::sendCommand(
     const std::string& message)
 {
 
-    if(!m_running)
-    {
-        return
-        {
-            false,
-            "application_not_running"
-        };
-    }
-
-
-
-
-
     return
-    {
-        false,
-        "use_websocket_client"
-    };
+        m_server->simulateClientCommand(
+            message);
+
 }
 
 
 
-//================================================
-// Get Server
-//================================================
+
 
 Server&
 Application::getServer()
 {
+    if(!m_server)
+        throw std::runtime_error(
+            "Server missing");
+
+
     return *m_server;
+}
+
+
+
+
+
+RoomManager&
+Application::getRoomManager()
+{
+
+    if(!m_roomManager)
+        throw std::runtime_error(
+            "RoomManager missing");
+
+
+    return *m_roomManager;
+
 }

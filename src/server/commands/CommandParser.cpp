@@ -1,17 +1,25 @@
 #include "CommandParser.hpp"
 
+
 #include <sstream>
 
 
 
 //================================================
-// Parse Command
+// Parse
 //================================================
 
 std::optional<ClickCommand>
 CommandParser::parse(
     const std::string& input)
 {
+
+    if(input.empty())
+    {
+        return std::nullopt;
+    }
+
+
 
     std::stringstream stream(input);
 
@@ -32,6 +40,7 @@ CommandParser::parse(
 
     return std::nullopt;
 }
+
 
 
 
@@ -68,22 +77,23 @@ CommandParser::parseClick(
 
 
 
+    //---------------------------------
+    // Reject extra parameters
+    //---------------------------------
+
+    std::string extra;
 
 
-    /*
-        Parser responsibility only:
-
-        - Validate syntax.
-        - Create command.
-
-        Does NOT:
-
-        - Check board.
-        - Check piece.
-        - Check rules.
-    */
+    if(stream >> extra)
+    {
+        return std::nullopt;
+    }
 
 
+
+    //---------------------------------
+    // Validate syntax
+    //---------------------------------
 
     if(commandType != "CLICK")
     {

@@ -1,10 +1,12 @@
 #pragma once
 
+
 #include <cstddef>
 #include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <string>
 
 
 #include "NetworkMessage.hpp"
@@ -13,7 +15,6 @@
 
 class ClientConnection;
 class CommandHandler;
-class GameSession;
 
 
 
@@ -25,8 +26,8 @@ public:
 
     using SendCallback =
         std::function<void(
-            int connectionId,
-            const NetworkMessage& message)>;
+            int,
+            const NetworkMessage&)>;
 
 
 
@@ -34,8 +35,7 @@ public:
 
 
     explicit ConnectionManager(
-        CommandHandler& commandHandler,
-        GameSession& session);
+        CommandHandler& commandHandler);
 
 
 
@@ -45,6 +45,7 @@ public:
 
     ConnectionManager(
         const ConnectionManager&) = delete;
+
 
 
     ConnectionManager& operator=(
@@ -58,8 +59,10 @@ public:
     int addConnection();
 
 
+
     bool addConnection(
         int id);
+
 
 
     void removeConnection(
@@ -67,12 +70,19 @@ public:
 
 
 
-    ClientConnection* getConnection(
+    ClientConnection*
+    getConnection(
         int id);
 
 
 
     void broadcast(
+        const NetworkMessage& message);
+
+
+
+    void broadcastToRoom(
+        const std::string& roomId,
         const NetworkMessage& message);
 
 
@@ -91,8 +101,6 @@ private:
 
     int m_nextId{1};
 
-
-    GameSession& m_session;
 
 
     CommandHandler& m_commandHandler;

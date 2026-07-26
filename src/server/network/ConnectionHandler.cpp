@@ -1,9 +1,6 @@
 #include "ConnectionHandler.hpp"
 
 
-#include <iostream>
-
-
 #include "CommandHandler.hpp"
 #include "PlayerSession.hpp"
 
@@ -36,6 +33,47 @@ MoveResult ConnectionHandler::receive(
     const std::string& message)
 {
 
+    //---------------------------------
+    // Validate message
+    //---------------------------------
+
+    if(message.empty())
+    {
+        return
+        {
+            false,
+            "empty_message"
+        };
+    }
+
+
+
+
+
+    //---------------------------------
+    // Validate player connection
+    //---------------------------------
+
+    if(
+        m_player.getState()
+        ==
+        PlayerSession::ConnectionState::DISCONNECTED)
+    {
+        return
+        {
+            false,
+            "player_disconnected"
+        };
+    }
+
+
+
+
+
+    //---------------------------------
+    // Parse command
+    //---------------------------------
+
     auto command =
         m_parser.parse(message);
 
@@ -52,15 +90,15 @@ MoveResult ConnectionHandler::receive(
 
 
 
-    std::cout
-        << "[CONNECTION] Received command: "
-        << message
-        << std::endl;
 
 
+    //---------------------------------
+    // Forward command
+    //---------------------------------
 
-    return m_commandHandler.handle(
-        m_player,
-        command.value());
+    return
+        m_commandHandler.handle(
+            m_player,
+            *command);
 
 }

@@ -10,6 +10,8 @@
 
 
 
+
+
 //================================================
 // Constructor
 //================================================
@@ -21,9 +23,19 @@ ClientConnection::ClientConnection(
 m_id(id)
 {
 
+
     m_player =
         std::make_shared<PlayerSession>(
             std::to_string(id));
+
+
+
+    m_player->setConnectionId(id);
+
+
+
+    m_player->setState(
+        PlayerSession::ConnectionState::CONNECTED);
 
 
 
@@ -36,11 +48,18 @@ m_id(id)
 
 
 
+
+
+
 //================================================
 // Destructor
 //================================================
 
 ClientConnection::~ClientConnection() = default;
+
+
+
+
 
 
 
@@ -51,10 +70,7 @@ ClientConnection::~ClientConnection() = default;
 MoveResult ClientConnection::receiveNetworkMessage(
     const NetworkMessage& message)
 {
-std::cout
-    << "[CLIENT CONNECTION] receive: "
-    << message.getPayload()
-    << std::endl;
+
     if(!m_handler)
     {
         return
@@ -73,6 +89,10 @@ std::cout
 
 
 
+
+
+
+
 //================================================
 // Deliver Message
 //================================================
@@ -85,6 +105,10 @@ void ClientConnection::deliverMessage(
         message);
 
 }
+
+
+
+
 
 
 
@@ -103,30 +127,28 @@ void ClientConnection::setSendCallback(
 
 
 
+
+
+
+
 //================================================
-// Send Message
+// Send
 //================================================
 
 void ClientConnection::sendMessageToClient(
     const NetworkMessage& message)
 {
 
-    /*
-        Keep local copy.
 
-        Required for tests.
+    /*
+        Used by tests.
     */
+
     m_lastMessage =
         message;
 
 
 
-    /*
-        Forward to real transport.
-
-        ConnectionManager decides
-        where the message goes.
-    */
     if(m_sendCallback)
     {
         m_sendCallback(
@@ -134,6 +156,10 @@ void ClientConnection::sendMessageToClient(
     }
 
 }
+
+
+
+
 
 
 
@@ -149,14 +175,22 @@ ClientConnection::getLastMessage() const
 
 
 
+
+
+
+
 //================================================
-// Id
+// ID
 //================================================
 
 int ClientConnection::getId() const
 {
     return m_id;
 }
+
+
+
+
 
 
 
@@ -172,11 +206,18 @@ ClientConnection::getPlayer()
 
 
 
+
+
+
 std::shared_ptr<const PlayerSession>
 ClientConnection::getPlayer() const
 {
     return m_player;
 }
+
+
+
+
 
 
 
@@ -187,5 +228,14 @@ ClientConnection::getPlayer() const
 PlayerSession&
 ClientConnection::getPlayerSession()
 {
+
+    if(!m_player)
+    {
+        throw std::runtime_error(
+            "ClientConnection has no PlayerSession");
+    }
+
+
     return *m_player;
+
 }

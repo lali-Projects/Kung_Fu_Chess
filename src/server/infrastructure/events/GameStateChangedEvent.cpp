@@ -7,11 +7,14 @@
 //================================================
 
 GameStateChangedEvent::GameStateChangedEvent(
+    const std::string& roomId,
     const GameSnapshot& snapshot)
-    :
-    m_snapshot(snapshot)
+:
+m_roomId(roomId),
+m_snapshot(snapshot)
 {
 }
+
 
 
 
@@ -23,4 +26,15 @@ const GameSnapshot&
 GameStateChangedEvent::getSnapshot() const
 {
     return m_snapshot;
+}
+
+
+//================================================
+// Get Room Id
+//================================================
+
+const std::string&
+GameStateChangedEvent::getRoomId() const
+{
+    return m_roomId;
 }

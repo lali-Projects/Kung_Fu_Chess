@@ -20,19 +20,18 @@ class PlayerSession;
  *
  * Responsibilities:
  *
- *  - Parse raw messages.
- *  - Convert messages into commands.
- *  - Attach player identity.
- *  - Forward commands.
+ *  - Validate incoming message.
+ *  - Parse raw command.
+ *  - Forward command with player identity.
  *
  *
  * Does NOT know:
  *
- *  - Network transport.
+ *  - Network.
+ *  - Rooms.
  *  - Game rules.
  *  - Board.
  *  - GameEngine.
- *  - GameSession internals.
  */
 class ConnectionHandler
 {
@@ -60,29 +59,11 @@ public:
 
 
 
-
 public:
 
 
-    /**
-     * @brief Receives raw client message.
-     *
-     * Flow:
-     *
-     * string
-     *   |
-     *   v
-     * Parser
-     *   |
-     *   v
-     * Command
-     *   |
-     *   v
-     * CommandHandler
-     */
     MoveResult receive(
         const std::string& message);
-
 
 
 

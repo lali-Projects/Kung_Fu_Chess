@@ -1,18 +1,18 @@
 #include "GameSession.hpp"
 
 
-#include <iostream>
-
-
 #include "GameController.hpp"
 #include "GameSnapshotBuilder.hpp"
-
 #include "GameStateChangedEvent.hpp"
 
 #include "PlayerSession.hpp"
 #include "ClickCommand.hpp"
 
 #include "EventBus.hpp"
+
+#include <stdexcept>
+
+
 
 
 
@@ -22,16 +22,19 @@
 
 GameSession::GameSession(
     const std::string& id,
-    std::unique_ptr<GameController> controller,
-    std::unique_ptr<GameSnapshotBuilder> snapshotBuilder,
+    GameController& controller,
+    GameSnapshotBuilder& snapshotBuilder,
     EventBus& eventBus)
 :
 m_id(id),
-m_controller(std::move(controller)),
-m_snapshotBuilder(std::move(snapshotBuilder)),
+m_controller(controller),
+m_snapshotBuilder(snapshotBuilder),
 m_eventBus(eventBus)
 {
 }
+
+
+
 
 
 
@@ -40,6 +43,8 @@ m_eventBus(eventBus)
 //================================================
 
 GameSession::~GameSession() = default;
+
+
 
 
 
@@ -60,13 +65,23 @@ bool GameSession::addPlayer(
 
 
 
+    if(player->hasRoom())
+    {
+        return false;
+    }
+
+
+
     Side side =
         assignSide();
 
 
 
-    player->setSide(
-        side);
+    player->setSide(side);
+
+
+    player->setRoomId(
+        m_id);
 
 
 
@@ -76,7 +91,6 @@ bool GameSession::addPlayer(
         case Side::WHITE:
 
             m_whitePlayer = player;
-
             break;
 
 
@@ -84,23 +98,23 @@ bool GameSession::addPlayer(
         case Side::BLACK:
 
             m_blackPlayer = player;
-
             break;
 
 
 
         case Side::OBSERVER:
 
-            m_observers.push_back(
-                player);
-
+            m_observers.push_back(player);
             break;
+
     }
 
 
 
     return true;
 }
+
+
 
 
 
@@ -134,6 +148,9 @@ Side GameSession::assignSide()
 
 
 
+
+
+
 //================================================
 // Handle Click
 //================================================
@@ -142,21 +159,20 @@ MoveResult GameSession::handleClick(
     PlayerSession& player,
     const ClickCommand& command)
 {
-    std::cout
-        << "[SESSION] Click received"
-        << std::endl;
+
+    if(!containsPlayer(player))
+    {
+        return
+        {
+            false,
+            "player_not_in_session"
+        };
+    }
 
 
-    //---------------------------------
-    // Observer check
-    //---------------------------------
 
     if(isObserver(player))
     {
-        std::cout
-            << "[SESSION] Observer rejected"
-            << std::endl;
-
         return
         {
             false,
@@ -166,131 +182,81 @@ MoveResult GameSession::handleClick(
 
 
 
-    //---------------------------------
-    // Controller check
-    //---------------------------------
-
-    if(!m_controller)
-    {
-        std::cout
-            << "[SESSION] Controller missing"
-            << std::endl;
-
-        return
-        {
-            false,
-            "controller_missing"
-        };
-    }
-
-
-
-    //---------------------------------
-    // Forward click to controller
-    //---------------------------------
-
-    std::cout
-        << "[SESSION] Forwarding click to controller"
-        << std::endl;
-
-
     MoveResult result =
-        m_controller->click(
+        m_controller.click(
             command.getPosition());
 
 
 
-    std::cout
-        << "[SESSION RESULT] "
-        << result.success
-        << " "
-        << result.reason
-        << std::endl;
 
-
-
-    //---------------------------------
-    // Only successful actions update state
-    //---------------------------------
 
     if(result.success)
     {
 
-        std::cout
-            << "[SESSION] ENTER SUCCESS BLOCK"
-            << std::endl;
-
-
-
-        //---------------------------------
-        // Snapshot builder check
-        //---------------------------------
-
-        if(!m_snapshotBuilder)
-        {
-            std::cout
-                << "[SESSION] SNAPSHOT BUILDER MISSING"
-                << std::endl;
-
-
-            return result;
-        }
-
-
-
-        //---------------------------------
-        // Build snapshot
-        //---------------------------------
-
-        std::cout
-            << "[SESSION] BEFORE BUILD"
-            << std::endl;
-
-
-
         GameSnapshot snapshot =
-            m_snapshotBuilder->build();
-
-
-
-        std::cout
-            << "[SESSION] AFTER BUILD"
-            << std::endl;
-
-
-
-        //---------------------------------
-        // Publish event
-        //---------------------------------
-
-        std::cout
-            << "[SESSION] BEFORE PUBLISH"
-            << std::endl;
+            m_snapshotBuilder.build();
 
 
 
         m_eventBus.publish(
             std::make_shared<GameStateChangedEvent>(
+                m_id,
                 snapshot));
-
-
-
-        std::cout
-            << "[SESSION] AFTER PUBLISH"
-            << std::endl;
-
-    }
-    else
-    {
-        std::cout
-            << "[SESSION] Move failed - no snapshot"
-            << std::endl;
     }
 
 
 
     return result;
 }
+
+
+
+
+
+
+
+//================================================
+// Contains Player
+//================================================
+
+bool GameSession::containsPlayer(
+    const PlayerSession& player) const
+{
+
+    if(m_whitePlayer &&
+       m_whitePlayer.get() == &player)
+    {
+        return true;
+    }
+
+
+
+    if(m_blackPlayer &&
+       m_blackPlayer.get() == &player)
+    {
+        return true;
+    }
+
+
+
+    for(const auto& observer :
+        m_observers)
+    {
+
+        if(observer &&
+           observer.get() == &player)
+        {
+            return true;
+        }
+
+    }
+
+
+
+    return false;
+}
+
+
 
 
 
@@ -308,14 +274,17 @@ bool GameSession::isObserver(
         player.getSide()
         ==
         Side::OBSERVER;
+
 }
 
 
 
 
 
+
+
 //================================================
-// Get Id
+// ID
 //================================================
 
 const std::string&
@@ -324,8 +293,61 @@ GameSession::getId() const
     return m_id;
 }
 
+
+
+
+
+
+
 //================================================
-// Get White Player
+// Count
+//================================================
+
+size_t GameSession::getPlayerCount() const
+{
+
+    size_t count = 0;
+
+
+    if(m_whitePlayer)
+        count++;
+
+
+    if(m_blackPlayer)
+        count++;
+
+
+    count +=
+        m_observers.size();
+
+
+
+    return count;
+}
+
+
+
+
+
+
+
+//================================================
+// Observer Count
+//================================================
+
+size_t GameSession::getObserverCount() const
+{
+    return m_observers.size();
+}
+
+
+
+
+
+
+
+//================================================
+// White
 //================================================
 
 const std::shared_ptr<PlayerSession>&
@@ -336,8 +358,12 @@ GameSession::getWhitePlayer() const
 
 
 
+
+
+
+
 //================================================
-// Get Black Player
+// Black
 //================================================
 
 const std::shared_ptr<PlayerSession>&
@@ -348,11 +374,28 @@ GameSession::getBlackPlayer() const
 
 
 
+
+
+
+
 //================================================
-// Get Observer Count
+// Snapshot Builder
 //================================================
 
-size_t GameSession::getObserverCount() const
+GameSnapshotBuilder&
+GameSession::getSnapshotBuilder()
 {
-    return m_observers.size();
+    return m_snapshotBuilder;
+}
+
+
+
+
+
+
+
+const GameSnapshotBuilder&
+GameSession::getSnapshotBuilder() const
+{
+    return m_snapshotBuilder;
 }

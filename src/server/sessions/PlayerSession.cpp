@@ -1,32 +1,37 @@
 #include "PlayerSession.hpp"
 
 
+#include <utility>
+
+
+
 //================================================
 // Constructor
 //================================================
 
 PlayerSession::PlayerSession(
     std::string id)
-    :
-    m_id(std::move(id)),
-    m_side(Side::WHITE),
-    m_state(ConnectionState::CONNECTED)
+:
+m_id(std::move(id))
 {
 }
 
 
+
 //================================================
-// Get ID
+// ID
 //================================================
 
-const std::string& PlayerSession::getId() const
+const std::string&
+PlayerSession::getId() const
 {
     return m_id;
 }
 
 
+
 //================================================
-// Get Side
+// Side
 //================================================
 
 Side PlayerSession::getSide() const
@@ -35,9 +40,6 @@ Side PlayerSession::getSide() const
 }
 
 
-//================================================
-// Set Side
-//================================================
 
 void PlayerSession::setSide(
     Side side)
@@ -46,8 +48,9 @@ void PlayerSession::setSide(
 }
 
 
+
 //================================================
-// Get Connection State
+// Connection State
 //================================================
 
 PlayerSession::ConnectionState
@@ -57,12 +60,60 @@ PlayerSession::getState() const
 }
 
 
-//================================================
-// Set Connection State
-//================================================
 
 void PlayerSession::setState(
     ConnectionState state)
 {
     m_state = state;
+}
+
+
+
+//================================================
+// Room
+//================================================
+
+void PlayerSession::setRoomId(
+    const std::string& roomId)
+{
+    m_roomId = roomId;
+}
+
+
+
+const std::string&
+PlayerSession::getRoomId() const
+{
+    return m_roomId;
+}
+
+
+
+bool PlayerSession::hasRoom() const
+{
+    return !m_roomId.empty();
+}
+
+
+
+//================================================
+// Connection Id
+//================================================
+
+void PlayerSession::setConnectionId(
+    int id)
+{
+    m_connectionId = id;
+}
+
+
+
+int PlayerSession::getConnectionId() const
+{
+    return m_connectionId;
+}
+
+void PlayerSession::clearRoom()
+{
+    m_roomId.clear();
 }

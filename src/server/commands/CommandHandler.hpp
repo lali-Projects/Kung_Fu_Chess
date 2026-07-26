@@ -6,53 +6,43 @@
 
 
 class ClickCommand;
-
-class SessionManager;
 class PlayerSession;
-class GameSession;
+class RoomManager;
+
 
 
 
 /**
- * @brief Dispatches validated commands to the game session.
- *
+ * @brief Dispatches commands to the correct room.
  *
  * Responsibilities:
  *
- *  - Receive validated commands.
- *  - Keep player context.
- *  - Forward commands to GameSession.
+ *  - Receive commands.
+ *  - Locate player's room.
+ *  - Forward command to GameSession.
  *
  *
  * Does NOT know:
  *
- *  - NetworkMessage.
- *  - JSON.
- *  - WebSocket.
- *  - Protocol parsing.
- *  - Game rules.
+ *  - Network.
+ *  - Rules.
  *  - Board.
  *  - GameEngine.
  */
 class CommandHandler
 {
+
 public:
 
 
     explicit CommandHandler(
-        SessionManager& sessionManager);
+        RoomManager& roomManager);
 
 
 
 public:
 
 
-    /**
-     * @brief Handles a click command.
-     *
-     * The command is already parsed
-     * and structurally valid.
-     */
     MoveResult handle(
         PlayerSession& player,
         const ClickCommand& command);
@@ -62,5 +52,6 @@ public:
 private:
 
 
-    SessionManager& m_sessionManager;
+    RoomManager& m_roomManager;
+
 };

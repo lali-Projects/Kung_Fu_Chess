@@ -1,29 +1,37 @@
 #pragma once
 
 #include <string>
-#include "PieceTypes.hpp"
 
+#include "PieceTypes.hpp"
 
 
 /**
  * @brief Represents a connected player.
  *
- * This class belongs to the server core layer.
+ * Belongs to server core layer.
  *
  * Responsibilities:
+ *
  *  - Store player identity.
  *  - Store connection state.
  *  - Store assigned game side.
+ *  - Store room association.
+ *  - Store connection identifier.
+ *
  *
  * Does NOT know:
+ *
  *  - GameEngine.
  *  - Board.
- *  - Network implementation.
- *  - Database.
+ *  - Rules.
+ *  - Network transport.
+ *  - WebSocket.
  */
 class PlayerSession
 {
+
 public:
+
 
     enum class ConnectionState
     {
@@ -32,61 +40,105 @@ public:
     };
 
 
+
 public:
 
-    /**
-     * @brief Creates a player session.
-     *
-     * @param id Unique player identifier.
-     */
+
     explicit PlayerSession(
         std::string id);
 
 
+
 public:
 
-    /**
-     * @brief Returns player identifier.
-     */
+
     const std::string& getId() const;
 
 
-    /**
-     * @brief Returns assigned side.
-     */
+
     Side getSide() const;
 
 
-    /**
-     * @brief Assigns player side.
-     */
     void setSide(
         Side side);
 
 
-    /**
-     * @brief Returns connection state.
-     */
+
     ConnectionState getState() const;
 
 
-    /**
-     * @brief Updates connection state.
-     */
     void setState(
         ConnectionState state);
 
 
+
+public:
+
+    //==============================
+    // Room association
+    //==============================
+
+
+    void setRoomId(
+        const std::string& roomId);
+
+
+
+    const std::string& getRoomId() const;
+
+
+
+    bool hasRoom() const;
+
+
+
+public:
+
+    //==============================
+    // Connection identification
+    //==============================
+
+
+    void setConnectionId(
+        int id);
+
+
+
+    int getConnectionId() const;
+
+void clearRoom();
+
 private:
 
-    /// Unique player identifier.
+
     std::string m_id;
 
 
-    /// Player side in current game.
-    Side m_side;
+
+    Side m_side{
+        Side::WHITE
+    };
 
 
-    /// Current connection state.
-    ConnectionState m_state;
+
+    ConnectionState m_state{
+        ConnectionState::CONNECTED
+    };
+
+
+
+    /*
+        Room that owns this player.
+    */
+    std::string m_roomId;
+
+
+
+    /*
+        Logical connection identifier.
+
+        Does not represent transport.
+    */
+    int m_connectionId{-1};
+
 };

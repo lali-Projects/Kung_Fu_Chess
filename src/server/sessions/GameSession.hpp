@@ -20,22 +20,24 @@ class ClickCommand;
 
 
 /**
- * @brief Represents one running Kung Fu Chess game.
+ * @brief Represents one running game inside a Room.
+ *
+ * Owned by Room.
  *
  * Responsibilities:
  *
- *  - Manage connected players.
- *  - Assign player roles.
+ *  - Manage players.
  *  - Forward commands.
- *  - Publish game state changes.
+ *  - Build snapshots.
+ *  - Publish game events.
  *
  *
- * Does NOT know:
+ * Does NOT own:
  *
- *  - Movement rules.
- *  - Board logic.
- *  - Timing logic.
- *  - RealTimeArbiter internals.
+ *  - GameController
+ *  - GameSnapshotBuilder
+ *
+ * They are owned by GameContext.
  */
 class GameSession
 {
@@ -45,22 +47,29 @@ public:
 
     GameSession(
         const std::string& id,
-        std::unique_ptr<GameController> controller,
-        std::unique_ptr<GameSnapshotBuilder> snapshotBuilder,
+        GameController& controller,
+        GameSnapshotBuilder& snapshotBuilder,
         EventBus& eventBus);
+
+
+
     ~GameSession();
+
+
+
+    GameSession(
+        const GameSession&) = delete;
+
+
+
+    GameSession& operator=(
+        const GameSession&) = delete;
+
 
 
 public:
 
 
-    /**
-     * @brief Adds connected player.
-     *
-     * First player  -> WHITE
-     * Second player -> BLACK
-     * Others       -> OBSERVER
-     */
     bool addPlayer(
         std::shared_ptr<PlayerSession> player);
 
@@ -80,15 +89,39 @@ public:
         const PlayerSession& player) const;
 
 
+
+    bool containsPlayer(
+        const PlayerSession& player) const;
+
+
+
+    size_t getPlayerCount() const;
+
+
+
+    size_t getObserverCount() const;
+
+
+
     const std::shared_ptr<PlayerSession>&
     getWhitePlayer() const;
+
 
 
     const std::shared_ptr<PlayerSession>&
     getBlackPlayer() const;
 
 
-    size_t getObserverCount() const;
+
+    GameSnapshotBuilder&
+    getSnapshotBuilder();
+
+
+
+    const GameSnapshotBuilder&
+    getSnapshotBuilder() const;
+
+
 
 private:
 
@@ -104,13 +137,21 @@ private:
 
 
 
-    std::unique_ptr<GameController>
-        m_controller;
+    /*
+        Not owned.
+
+        Lifetime managed by GameContext.
+    */
+    GameController& m_controller;
 
 
 
-    std::unique_ptr<GameSnapshotBuilder>
-        m_snapshotBuilder;
+    /*
+        Not owned.
+
+        Lifetime managed by GameContext.
+    */
+    GameSnapshotBuilder& m_snapshotBuilder;
 
 
 

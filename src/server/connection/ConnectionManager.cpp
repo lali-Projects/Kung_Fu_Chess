@@ -2,11 +2,11 @@
 
 
 #include "ClientConnection.hpp"
-#include "CommandHandler.hpp"
-#include "GameSession.hpp"
-#include <iostream>
+#include "PlayerSession.hpp"
 
 #include <utility>
+#include <vector>
+
 
 
 
@@ -15,13 +15,12 @@
 //================================================
 
 ConnectionManager::ConnectionManager(
-    CommandHandler& commandHandler,
-    GameSession& session)
+    CommandHandler& commandHandler)
 :
-m_session(session),
 m_commandHandler(commandHandler)
 {
 }
+
 
 
 
@@ -33,25 +32,79 @@ ConnectionManager::~ConnectionManager() = default;
 
 
 
+
+
+
 //================================================
-// Add Local Connection
+// Add Automatic Connection
 //================================================
 
 int ConnectionManager::addConnection()
 {
 
+    std::lock_guard<std::mutex> lock(
+        m_connectionsMutex);
+
+
+
     int id =
         m_nextId++;
 
 
-    if(addConnection(id))
-    {
-        return id;
-    }
+
+    auto connection =
+        std::make_unique<ClientConnection>(
+            id,
+            m_commandHandler);
 
 
-    return -1;
+
+
+    connection->setSendCallback(
+        [this,id]
+        (
+            const NetworkMessage& message
+        )
+        {
+
+            SendCallback callback;
+
+
+
+            {
+                std::lock_guard<std::mutex> lock(
+                    m_connectionsMutex);
+
+
+                callback =
+                    m_sendCallback;
+            }
+
+
+
+            if(callback)
+            {
+                callback(
+                    id,
+                    message);
+            }
+
+        });
+
+
+
+
+    m_connections[id] =
+        std::move(connection);
+
+
+
+    return id;
+
 }
+
+
+
 
 
 
@@ -68,11 +121,10 @@ bool ConnectionManager::addConnection(
 
 
 
-    if(m_connections.find(id) !=
-       m_connections.end())
-    {
-        return false;
-    }
+    if (m_connections.find(id) != m_connections.end())
+{
+    return false;
+}
 
 
 
@@ -83,15 +135,9 @@ bool ConnectionManager::addConnection(
 
 
 
-    /*
-        Connect logical client output
-        to transport layer.
 
-        ClientConnection remains
-        transport independent.
-    */
     connection->setSendCallback(
-        [this, id]
+        [this,id]
         (
             const NetworkMessage& message
         )
@@ -100,13 +146,16 @@ bool ConnectionManager::addConnection(
             SendCallback callback;
 
 
+
             {
                 std::lock_guard<std::mutex> lock(
                     m_connectionsMutex);
 
+
                 callback =
                     m_sendCallback;
             }
+
 
 
             if(callback)
@@ -120,10 +169,6 @@ bool ConnectionManager::addConnection(
 
 
 
-    m_session.addPlayer(
-        connection->getPlayer());
-
-
 
     m_connections[id] =
         std::move(connection);
@@ -131,7 +176,11 @@ bool ConnectionManager::addConnection(
 
 
     return true;
+
 }
+
+
+
 
 
 
@@ -148,22 +197,12 @@ void ConnectionManager::removeConnection(
 
 
 
-    auto iterator =
-        m_connections.find(id);
+    m_connections.erase(id);
 
-
-
-    if(iterator ==
-       m_connections.end())
-    {
-        return;
-    }
-
-
-
-    m_connections.erase(
-        iterator);
 }
+
+
+
 
 
 
@@ -195,24 +234,23 @@ ConnectionManager::getConnection(
 
 
     return iterator->second.get();
+
 }
 
 
 
+
+
+
 //================================================
-// Broadcast
+// Broadcast All Clients
 //================================================
 
 void ConnectionManager::broadcast(
     const NetworkMessage& message)
 {
-    std::cout
-        << "[CONNECTION MANAGER] broadcast ENTER"
-        << std::endl;
 
-
-
-    std::vector<ClientConnection*> connections;
+    std::vector<ClientConnection*> clients;
 
 
 
@@ -222,52 +260,122 @@ void ConnectionManager::broadcast(
 
 
 
-        std::cout
-            << "[CONNECTION MANAGER] LOCK ACQUIRED"
-            << std::endl;
-
-
-
-        for(auto& pair : m_connections)
+        for(auto& [id,connection] :
+            m_connections)
         {
-            if(pair.second)
+
+            if(connection)
             {
-                connections.push_back(
-                    pair.second.get());
+                clients.push_back(
+                    connection.get());
             }
+
         }
+
     }
 
 
 
-    std::cout
-        << "[CONNECTION MANAGER] LOCK RELEASED"
-        << std::endl;
+    /*
+        Send outside mutex.
 
+        Prevents deadlocks if
+        deliverMessage triggers callbacks.
+    */
 
-
-    for(auto* connection : connections)
+    for(auto* client : clients)
     {
 
-        if(connection)
+        if(client)
         {
-            std::cout
-                << "[CONNECTION MANAGER] delivering"
-                << std::endl;
-
-
-            connection->deliverMessage(
+            client->deliverMessage(
                 message);
         }
 
     }
 
-
-
-    std::cout
-        << "[CONNECTION MANAGER] broadcast END"
-        << std::endl;
 }
+
+
+
+
+
+
+//================================================
+// Broadcast Room
+//================================================
+
+void ConnectionManager::broadcastToRoom(
+    const std::string& roomId,
+    const NetworkMessage& message)
+{
+
+    std::vector<ClientConnection*> clients;
+
+
+
+    {
+        std::lock_guard<std::mutex> lock(
+            m_connectionsMutex);
+
+
+
+        for(auto& [id,connection] :
+            m_connections)
+        {
+
+            if(!connection)
+            {
+                continue;
+            }
+
+
+
+            auto player =
+                connection->getPlayer();
+
+
+
+            if(!player)
+            {
+                continue;
+            }
+
+
+
+            if(player->getRoomId()
+                ==
+               roomId)
+            {
+
+                clients.push_back(
+                    connection.get());
+
+            }
+
+        }
+
+    }
+
+
+
+
+
+    for(auto* client : clients)
+    {
+
+        if(client)
+        {
+            client->deliverMessage(
+                message);
+        }
+
+    }
+
+}
+
+
+
 
 
 
@@ -284,12 +392,16 @@ size_t ConnectionManager::size() const
 
 
     return m_connections.size();
+
 }
 
 
 
+
+
+
 //================================================
-// Set Send Callback
+// Send Callback
 //================================================
 
 void ConnectionManager::setSendCallback(

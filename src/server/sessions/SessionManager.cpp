@@ -1,64 +1,72 @@
 #include "SessionManager.hpp"
 
 
-#include "GameSession.hpp"
 
-
-
-//================================================
-// Constructor
-//================================================
-
-SessionManager::SessionManager()
-{
-}
-
-
-
-//================================================
-// Destructor
-//================================================
-
-SessionManager::~SessionManager() = default;
-
-
-
-//================================================
-// Add Session
-//================================================
-
-void SessionManager::addSession(
-    std::unique_ptr<GameSession> session)
+void SessionManager::registerRoom(
+    const std::string& roomId,
+    Room* room)
 {
 
-    m_session =
-        std::move(session);
+    if(!room)
+        return;
+
+
+    m_rooms[roomId] = room;
 
 }
 
 
 
-//================================================
-// Get Session
-//================================================
 
-GameSession&
-SessionManager::getSession()
+Room*
+SessionManager::getRoom(
+    const std::string& roomId)
 {
 
-    return *m_session;
+    auto it =
+        m_rooms.find(roomId);
 
+
+
+    if(it == m_rooms.end())
+        return nullptr;
+
+
+
+    return it->second;
 }
 
 
 
-//================================================
-// Has Session
-//================================================
 
-bool SessionManager::hasSession() const
+const Room*
+SessionManager::getRoom(
+    const std::string& roomId) const
 {
 
-    return m_session != nullptr;
+    auto it =
+        m_rooms.find(roomId);
+
+
+
+    if(it == m_rooms.end())
+        return nullptr;
+
+
+
+    return it->second;
+}
+
+
+
+
+bool SessionManager::exists(
+    const std::string& roomId) const
+{
+
+    return
+        m_rooms.find(roomId)
+        !=
+        m_rooms.end();
 
 }

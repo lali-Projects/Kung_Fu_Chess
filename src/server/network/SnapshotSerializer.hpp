@@ -16,14 +16,6 @@
  *  - Serialize GameSnapshot.
  *  - Create JSON representation.
  *  - Prepare data for network transfer.
- *
- *
- * Does NOT know:
- *
- *  - Server.
- *  - Clients.
- *  - GameEngine.
- *  - Rules.
  */
 class SnapshotSerializer
 {

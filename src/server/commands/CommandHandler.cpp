@@ -1,14 +1,15 @@
 #include "CommandHandler.hpp"
 
 
-#include <iostream>
-
-
 #include "ClickCommand.hpp"
 
-#include "SessionManager.hpp"
+#include "RoomManager.hpp"
+#include "Room.hpp"
+
 #include "GameSession.hpp"
 #include "PlayerSession.hpp"
+
+
 
 
 
@@ -17,16 +18,19 @@
 //================================================
 
 CommandHandler::CommandHandler(
-    SessionManager& sessionManager)
+    RoomManager& roomManager)
 :
-m_sessionManager(sessionManager)
+m_roomManager(roomManager)
 {
 }
 
 
 
+
+
+
 //================================================
-// Handle Click
+// Handle Command
 //================================================
 
 MoveResult CommandHandler::handle(
@@ -34,34 +38,52 @@ MoveResult CommandHandler::handle(
     const ClickCommand& command)
 {
 
+    //---------------------------------
+    // Player must belong to room
+    //---------------------------------
 
-std::cout
-    << "[COMMAND HANDLER] handling command"
-    << std::endl;
-    if(!m_sessionManager.hasSession())
+    if(!player.hasRoom())
     {
         return
         {
             false,
-            "no_active_session"
+            "player_has_no_room"
         };
     }
 
 
 
-    std::cout
-        << "[COMMAND] Forwarding to session"
-        << std::endl;
+    //---------------------------------
+    // Find room
+    //---------------------------------
+
+    Room* room =
+        m_roomManager.getRoom(
+            player.getRoomId());
 
 
 
-    GameSession& session =
-        m_sessionManager.getSession();
+    if(!room)
+    {
+        return
+        {
+            false,
+            "room_not_found"
+        };
+    }
 
 
 
-    return session.handleClick(
-        player,
-        command);
+
+
+    //---------------------------------
+    // Forward command
+    //---------------------------------
+
+    return
+        room->getSession()
+            .handleClick(
+                player,
+                command);
 
 }

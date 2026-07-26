@@ -1,49 +1,45 @@
 #pragma once
 
 
-#include <memory>
 #include <string>
+#include <unordered_map>
 
 
 
-class GameSession;
+class Room;
 
 
 
 /**
- * @brief Manages active game sessions.
+ * @brief Provides access to active room sessions.
  *
- * Current implementation:
- *
- *  - Supports one active game.
- *
- * Future:
- *
- *  - Multiple games.
- *  - Match making.
+ * Temporary bridge while Server migrates
+ * from single session architecture
+ * to RoomManager architecture.
  *
  *
  * Does NOT know:
  *
- *  - Network.
- *  - Players.
- *  - Commands.
- *  - Game rules.
+ * - Game rules.
+ * - Players.
+ * - Network.
  */
 class SessionManager
 {
+
 public:
 
 
-    SessionManager();
+    SessionManager() = default;
 
 
-    ~SessionManager();
+    ~SessionManager() = default;
 
 
 
     SessionManager(
         const SessionManager&) = delete;
+
 
 
     SessionManager& operator=(
@@ -54,40 +50,32 @@ public:
 public:
 
 
-    /**
-     * @brief Adds a game session.
-     *
-     * Takes ownership.
-     */
-    void addSession(
-        std::unique_ptr<GameSession> session);
+    void registerRoom(
+        const std::string& roomId,
+        Room* room);
 
 
 
-    /**
-     * @brief Returns current game session.
-     *
-     * Does not transfer ownership.
-     */
-    GameSession& getSession();
+    Room* getRoom(
+        const std::string& roomId);
 
 
 
-    /**
-     * @brief Checks if session exists.
-     */
-    bool hasSession() const;
+    const Room* getRoom(
+        const std::string& roomId) const;
+
+
+
+    bool exists(
+        const std::string& roomId) const;
 
 
 
 private:
 
 
-    /*
-        Current active game.
+    std::unordered_map<
+        std::string,
+        Room*> m_rooms;
 
-        SessionManager owns it.
-    */
-    std::unique_ptr<GameSession>
-        m_session;
 };

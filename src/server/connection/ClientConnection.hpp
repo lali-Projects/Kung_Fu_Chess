@@ -17,18 +17,17 @@ class PlayerSession;
 
 
 
+
 /**
- * @brief Represents one connected client.
- *
- * Logical client connection.
+ * @brief Represents one logical client connection.
  *
  * Responsibilities:
  *
- *  - Own player identity.
- *  - Receive incoming messages.
+ *  - Own PlayerSession.
+ *  - Receive commands.
  *  - Forward commands to CommandHandler.
- *  - Deliver outgoing messages through transport callback.
- *  - Keep local message storage for tests.
+ *  - Send messages.
+ *  - Store last outgoing message for tests.
  *
  *
  * Does NOT know:
@@ -36,9 +35,8 @@ class PlayerSession;
  *  - GameEngine.
  *  - Board.
  *  - Rules.
- *  - Snapshots.
- *  - Serialization.
- *  - WebSocket.
+ *  - Rooms.
+ *  - Server.
  */
 class ClientConnection
 {
@@ -142,22 +140,11 @@ private:
 
 
 
-    /*
-        Used for:
-        - tests
-        - LocalNetworkServer
-    */
     std::optional<NetworkMessage>
         m_lastMessage;
 
 
 
-    /*
-        Transport callback.
-
-        ConnectionManager connects it
-        to INetworkServer::send().
-    */
     SendCallback m_sendCallback;
 
 };
