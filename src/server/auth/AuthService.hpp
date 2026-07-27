@@ -2,6 +2,7 @@
 
 
 #include <string>
+#include <memory>
 
 
 #include "MoveResult.hpp"
@@ -9,27 +10,10 @@
 
 
 class UserRepository;
+class PlayerSession;
 
 
 
-/**
- * @brief Handles user authentication logic.
- *
- * Responsibilities:
- *
- *  - Register new users.
- *  - Authenticate existing users.
- *  - Validate authentication input.
- *
- *
- * Does NOT know:
- *
- *  - Database implementation.
- *  - SQL.
- *  - Network.
- *  - Server.
- *  - Game logic.
- */
 class AuthService
 {
 
@@ -50,7 +34,7 @@ public:
 
 
 
-    MoveResult login(
+    std::shared_ptr<PlayerSession> login(
         const std::string& username,
         const std::string& password);
 

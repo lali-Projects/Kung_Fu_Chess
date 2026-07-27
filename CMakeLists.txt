@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(KungFuChess LANGUAGES CXX C)
+set(CMAKE_TLS_VERIFY OFF CACHE BOOL "" FORCE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(FetchContent)
 
@@ -48,13 +49,9 @@ find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
-# 1. איסוף אוטומטי של כל קובצי ה-cpp בתוך src וכל תת-התיקיות
-file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.cpp")
-
-# יצירת ה-Executable עם main.cpp, כל קובצי המקור שנמצאו, וקובץ ה-C של SQLite שהורד אוטומטית
-add_executable(app main.cpp ${SOURCES} ${sqlite3_SOURCE_DIR}/sqlite3.c)
-
-# 2. איסוף אוטומטי של כל תת-התיקיות בתוך src המכילות קובצי hpp / h
+# ---------------------------------------------------------
+# איסוף אוטומטי של נתיבי ה-Headers
+# ---------------------------------------------------------
 file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS "src/*.hpp" "src/*.h")
 set(SRC_INCLUDE_DIRS "")
 foreach(HEADER_FILE ${HEADERS})
@@ -63,15 +60,43 @@ foreach(HEADER_FILE ${HEADERS})
 endforeach()
 list(REMOVE_DUPLICATES SRC_INCLUDE_DIRS)
 
-target_include_directories(app PRIVATE
+set(COMMON_INCLUDES
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
     ${SRC_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
     ${sqlite3_SOURCE_DIR}
 )
 
-# קישור הספריות של OpenCV, Qt6 ו-ixwebsocket
-target_link_libraries(app PRIVATE 
+# ---------------------------------------------------------
+# חלוקת קובצי המקור לפי התיקיות
+# ---------------------------------------------------------
+
+# 1. קוד משותף אמיתי (ללא application/ ששייך לשרת)
+file(GLOB_RECURSE COMMON_SOURCES CONFIGURE_DEPENDS 
+    "src/common/*.cpp"
+    "src/logic/*.cpp"
+)
+
+# 2. קוד ייעודי לשרת (כולל application)
+file(GLOB_RECURSE SERVER_SOURCES CONFIGURE_DEPENDS 
+    "src/server/*.cpp"
+    "src/application/*.cpp"
+)
+
+# 3. קוד ייעודי ללקוח (כולל gui)
+file(GLOB_RECURSE CLIENT_SOURCES CONFIGURE_DEPENDS 
+    "src/client/*.cpp"
+    "src/gui/*.cpp"
+)
+
+# ---------------------------------------------------------
+# הגדרת יעד השרת (Server Target)
+# ---------------------------------------------------------
+add_executable(server ${SERVER_SOURCES} ${COMMON_SOURCES} ${sqlite3_SOURCE_DIR}/sqlite3.c)
+
+target_include_directories(server PRIVATE ${COMMON_INCLUDES})
+
+target_link_libraries(server PRIVATE 
     ${OpenCV_LIBS}
     Qt6::Core
     Qt6::Gui
@@ -79,62 +104,85 @@ target_link_libraries(app PRIVATE
     ixwebsocket
 )
 
-# Copy OpenCV DLLs to build directory
+# ---------------------------------------------------------
+# הגדרת יעד הלקוח (Client Target)
+# ---------------------------------------------------------
+add_executable(client ${CLIENT_SOURCES} ${COMMON_SOURCES})
+
+target_include_directories(client PRIVATE ${COMMON_INCLUDES})
+
+target_link_libraries(client PRIVATE 
+    ${OpenCV_LIBS}
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    ixwebsocket
+)
+
+# ---------------------------------------------------------
+# העתקת DLLs של OpenCV ו-Qt6 עבור שני הקבצים
+# ---------------------------------------------------------
 if(WIN32)
-    foreach(OpenCV_LIB ${OpenCV_LIBS})
-        get_filename_component(OpenCV_LIB_DIR ${OpenCV_LIB} DIRECTORY)
-        file(GLOB OpenCV_DLLS "${OpenCV_LIB_DIR}/../bin/*.dll")
-        foreach(DLL ${OpenCV_DLLS})
-            add_custom_command(TARGET app POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${DLL}" "$<TARGET_FILE_DIR:app>/"
-                VERBATIM
-            )
+    set(ALL_TARGETS server client)
+
+    foreach(TARGET_NAME ${ALL_TARGETS})
+        # Copy OpenCV DLLs
+        foreach(OpenCV_LIB ${OpenCV_LIBS})
+            get_filename_component(OpenCV_LIB_DIR ${OpenCV_LIB} DIRECTORY)
+            file(GLOB OpenCV_DLLS "${OpenCV_LIB_DIR}/../bin/*.dll")
+            foreach(DLL ${OpenCV_DLLS})
+                add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${DLL}" "$<TARGET_FILE_DIR:${TARGET_NAME}>/"
+                    VERBATIM
+                )
+            endforeach()
         endforeach()
-    endforeach()
-    
-    # Copy Qt6 DLLs to build directory
-    get_target_property(Qt6_Core_Location Qt6::Core IMPORTED_LOCATION)
-    get_filename_component(Qt6_BIN_DIR ${Qt6_Core_Location} DIRECTORY)
-    
-    file(GLOB Qt6_DLLS 
-        "${Qt6_BIN_DIR}/Qt6Core.dll"
-        "${Qt6_BIN_DIR}/Qt6Gui.dll"
-        "${Qt6_BIN_DIR}/Qt6Widgets.dll"
-        "${Qt6_BIN_DIR}/Qt6Network.dll"
-        "${Qt6_BIN_DIR}/Qt6Sql.dll"
-        "${Qt6_BIN_DIR}/Qt6Concurrent.dll"
-        "${Qt6_BIN_DIR}/Qt6DBus.dll"
-    )
-    
-    foreach(DLL ${Qt6_DLLS})
-        if(EXISTS ${DLL})
-            add_custom_command(TARGET app POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${DLL}" "$<TARGET_FILE_DIR:app>/"
-                VERBATIM
-            )
-        endif()
-    endforeach()
-    
-    # Copy Qt6 platform plugin
-    file(GLOB Qt6_PLUGINS 
-        "${Qt6_BIN_DIR}/../plugins/platforms/qwindows.dll"
-    )
-    
-    foreach(PLUGIN ${Qt6_PLUGINS})
-        if(EXISTS ${PLUGIN})
-            add_custom_command(TARGET app POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E make_directory
-                "$<TARGET_FILE_DIR:app>/platforms"
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${PLUGIN}" "$<TARGET_FILE_DIR:app>/platforms/"
-                VERBATIM
-            )
-        endif()
+        
+        # Copy Qt6 DLLs
+        get_target_property(Qt6_Core_Location Qt6::Core IMPORTED_LOCATION)
+        get_filename_component(Qt6_BIN_DIR ${Qt6_Core_Location} DIRECTORY)
+        
+        file(GLOB Qt6_DLLS 
+            "${Qt6_BIN_DIR}/Qt6Core.dll"
+            "${Qt6_BIN_DIR}/Qt6Gui.dll"
+            "${Qt6_BIN_DIR}/Qt6Widgets.dll"
+            "${Qt6_BIN_DIR}/Qt6Network.dll"
+            "${Qt6_BIN_DIR}/Qt6Sql.dll"
+            "${Qt6_BIN_DIR}/Qt6Concurrent.dll"
+            "${Qt6_BIN_DIR}/Qt6DBus.dll"
+        )
+        
+        foreach(DLL ${Qt6_DLLS})
+            if(EXISTS ${DLL})
+                add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${DLL}" "$<TARGET_FILE_DIR:${TARGET_NAME}>/"
+                    VERBATIM
+                )
+            endif()
+        endforeach()
+        
+        # Copy Qt6 platform plugin
+        file(GLOB Qt6_PLUGINS 
+            "${Qt6_BIN_DIR}/../plugins/platforms/qwindows.dll"
+        )
+        
+        foreach(PLUGIN ${Qt6_PLUGINS})
+            if(EXISTS ${PLUGIN})
+                add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E make_directory
+                    "$<TARGET_FILE_DIR:${TARGET_NAME}>/platforms"
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${PLUGIN}" "$<TARGET_FILE_DIR:${TARGET_NAME}>/platforms/"
+                    VERBATIM
+                )
+            endif()
+        endforeach()
     endforeach()
 endif()
 
 if(MSVC)
-    target_compile_options(app PRIVATE /EHsc /MD)
+    target_compile_options(server PRIVATE /EHsc /MD)
+    target_compile_options(client PRIVATE /EHsc /MD)
 endif()

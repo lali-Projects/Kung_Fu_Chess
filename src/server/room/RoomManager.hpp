@@ -15,26 +15,6 @@ class RoomFactory;
 
 
 
-/**
- * @brief Manages lifetime of active game rooms.
- *
- *
- * Responsibilities:
- *
- *  - Create rooms.
- *  - Remove rooms.
- *  - Find existing rooms.
- *  - Own active room instances.
- *
- *
- * Does NOT know:
- *
- *  - Network.
- *  - Database.
- *  - Authentication.
- *  - Game rules.
- *  - Board.
- */
 class RoomManager
 {
 
@@ -60,6 +40,7 @@ public:
 
 
 
+
 public:
 
 
@@ -74,6 +55,7 @@ public:
 
 
     void clearRooms();
+
 
 
 
@@ -98,6 +80,7 @@ public:
 
 
 
+
 public:
 
 
@@ -115,11 +98,18 @@ public:
 
 
 
+
 private:
+
+
+    bool validateRoomId(
+        const std::string& id) const;
+
 
 
     bool existsUnsafe(
         const std::string& id) const;
+
 
 
 

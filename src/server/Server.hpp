@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include <atomic>
 #include <memory>
 #include <string>
 
@@ -18,15 +19,16 @@ class NetworkMessage;
 
 
 
+
 /**
  * @brief Application server facade.
  *
  * Responsibilities:
  *
- *  - Manage network lifecycle.
- *  - Connect network layer with game layer.
- *  - Forward client messages.
- *  - Broadcast room updates.
+ *  - Manage application lifecycle.
+ *  - Connect network layer with application layer.
+ *  - Route client messages.
+ *  - Broadcast game events.
  *
  *
  * Does NOT know:
@@ -64,10 +66,12 @@ public:
 
 
 
+
 public:
 
 
     void start();
+
 
 
     void stop();
@@ -76,6 +80,11 @@ public:
 
     bool isRunning() const;
 
+
+
+
+
+public:
 
 
     ConnectionManager&
@@ -88,9 +97,12 @@ public:
 
 
 
-    //---------------------------------
-    // Testing / Integration
-    //---------------------------------
+
+
+public:
+
+
+    // Testing
 
     int createTestConnection();
 
@@ -111,10 +123,13 @@ public:
         const std::string& message);
 
 
+
+
+
 private:
 
 
-    void handleNetworkMessage(
+    NetworkMessage handleNetworkMessage(
         int connectionId,
         const NetworkMessage& message);
 
@@ -132,6 +147,8 @@ private:
 
     void onGameStateChanged(
         std::shared_ptr<Event> event);
+
+
 
 
 
@@ -156,6 +173,7 @@ private:
 
 
 
-    bool m_running{false};
+    std::atomic<bool>
+        m_running{false};
 
 };

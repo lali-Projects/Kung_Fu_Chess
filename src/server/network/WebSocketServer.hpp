@@ -1,10 +1,10 @@
 #pragma once
 
+
 #include <atomic>
 #include <cstdint>
 #include <memory>
 #include <mutex>
-#include <string>
 #include <unordered_map>
 
 
@@ -42,16 +42,20 @@ public:
 
 
 
+
 public:
 
 
     void start() override;
 
 
+
     void stop() override;
 
 
+
     bool isRunning() const override;
+
 
 
 
@@ -61,8 +65,10 @@ public:
 
 
 
+
     void disconnect(
         int connectionId) override;
+
 
 
 
@@ -71,13 +77,17 @@ public:
 
 
 
+
     void setConnectionCallback(
         ConnectionCallback callback) override;
 
 
 
+
     void setDisconnectCallback(
         DisconnectCallback callback) override;
+
+
 
 
 
@@ -105,14 +115,18 @@ private:
 
 
 
+
+
 private:
 
 
     uint16_t m_port;
 
 
+
     std::unique_ptr<ix::WebSocketServer>
         m_server;
+
 
 
 
@@ -121,7 +135,9 @@ private:
 
 
 
+
     bool m_configured{false};
+
 
 
 
@@ -130,8 +146,10 @@ private:
 
 
 
+
     ConnectionCallback
         m_connectionCallback;
+
 
 
 
@@ -140,8 +158,10 @@ private:
 
 
 
+
     std::mutex
         m_connectionsMutex;
+
 
 
 
@@ -149,6 +169,7 @@ private:
         int,
         std::shared_ptr<ix::WebSocket>>
         m_connections;
+
 
 
 

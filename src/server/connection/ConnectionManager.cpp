@@ -1,12 +1,12 @@
 #include "ConnectionManager.hpp"
 
+
 #include "ClientConnection.hpp"
 #include "CommandHandler.hpp"
 #include "PlayerSession.hpp"
 
-#include <utility>
-#include <vector>
 
+#include <utility>
 //================================================
 // Constructor
 //================================================
@@ -18,26 +18,33 @@ m_commandHandler(commandHandler)
 {
 }
 
+
+
+
 //================================================
 // Destructor
 //================================================
 
-ConnectionManager::~ConnectionManager() = default;
+ConnectionManager::~ConnectionManager()
+{
+    disconnectAll();
+}
+
+
+
+
 
 
 //================================================
-// Add External Connection
+// Add Connection
 //================================================
+
 int ConnectionManager::addConnection()
 {
-    int id;
 
-    {
-        std::lock_guard<std::mutex> lock(
-            m_connectionsMutex);
+    int id =
+        m_nextId.fetch_add(1);
 
-        id = m_nextId++;
-    }
 
 
     if(!addConnection(id))
@@ -47,93 +54,148 @@ int ConnectionManager::addConnection()
 
 
     return id;
+
 }
 
-bool ConnectionManager::addConnection(
-    int id)
-{
-    std::lock_guard<std::mutex> lock(
-        m_connectionsMutex);
 
-    if(findUnsafe(id))
-    {
-        return false;
-    }
+
+
+
+
+
+bool ConnectionManager::addConnection(
+    int connectionId)
+{
 
     auto connection =
-        std::make_unique<ClientConnection>(
-            id,
+        std::make_shared<ClientConnection>(
+            connectionId,
             m_commandHandler);
 
+
+
     connection->setSendCallback(
-        [this, id]
+        [this, connectionId]
         (
             const NetworkMessage& message
         )
         {
+
+
             SendCallback callback;
 
+
             {
-                std::lock_guard<std::mutex> lock(
+
+                std::shared_lock lock(
                     m_connectionsMutex);
 
-                callback = m_sendCallback;
+
+                callback =
+                    m_sendCallback;
+
             }
+
+
 
             if(callback)
             {
                 callback(
-                    id,
+                    connectionId,
                     message);
             }
+
+
         });
 
-    m_connections.emplace(
-        id,
-        std::move(connection));
 
-    return true;
-}
 
- //================================================
-// Remove Connection
-//================================================
-
-void ConnectionManager::removeConnection(
-    int id)
-{
-    std::unique_ptr<ClientConnection> connection;
 
 
 
     {
-        std::lock_guard<std::mutex> lock(
+
+        std::unique_lock lock(
             m_connectionsMutex);
 
 
 
-        auto iterator =
-            m_connections.find(id);
+        if (m_connections.find(connectionId) != m_connections.end())
+{
+    return false;
+}
+
+
+        m_connections.emplace(
+            connectionId,
+            std::move(connection));
+
+    }
 
 
 
-        if(iterator == m_connections.end())
+    return true;
+
+}
+
+
+
+
+
+
+
+
+//================================================
+// Remove
+//================================================
+
+void ConnectionManager::removeConnection(
+    int connectionId)
+{
+
+    std::shared_ptr<ClientConnection>
+        connection;
+
+
+
+    {
+
+        std::unique_lock lock(
+            m_connectionsMutex);
+
+
+
+        auto it =
+            m_connections.find(
+                connectionId);
+
+
+
+        if(it ==
+           m_connections.end())
+        {
             return;
+        }
 
 
 
         connection =
-            std::move(iterator->second);
+            it->second;
 
 
 
-        m_connections.erase(iterator);
+        m_connections.erase(it);
+
     }
+
+
+
 
 
 
     if(connection)
     {
+
         auto player =
             connection->getPlayer();
 
@@ -143,8 +205,15 @@ void ConnectionManager::removeConnection(
         {
             player->disconnect();
         }
+
     }
+
 }
+
+
+
+
+
 
 
 //================================================
@@ -153,30 +222,34 @@ void ConnectionManager::removeConnection(
 
 void ConnectionManager::disconnectAll()
 {
+
     std::vector<
-        std::unique_ptr<ClientConnection>>
+        std::shared_ptr<ClientConnection>>
         connections;
 
 
 
     {
-        std::lock_guard<std::mutex> lock(
+
+        std::unique_lock lock(
             m_connectionsMutex);
 
 
-        for(auto& [id, connection] :
+
+        for(auto& [id,connection] :
             m_connections)
         {
-            if(connection)
-            {
-                connections.push_back(
-                    std::move(connection));
-            }
+            connections.push_back(
+                connection);
         }
 
 
+
         m_connections.clear();
+
     }
+
+
 
 
 
@@ -184,8 +257,10 @@ void ConnectionManager::disconnectAll()
     for(auto& connection :
         connections)
     {
+
         if(!connection)
             continue;
+
 
 
         auto player =
@@ -197,311 +272,21 @@ void ConnectionManager::disconnectAll()
         {
             player->disconnect();
         }
-    }
-}
 
-
-
-//================================================
-// Get Connection
-//================================================
-
-ClientConnection*
-ConnectionManager::getConnection(
-    int id)
-{
-    std::lock_guard<std::mutex> lock(
-        m_connectionsMutex);
-
-
-    return findUnsafe(id);
-}
-
-
-
-
-const ClientConnection* ConnectionManager::getConnection(
-    int id) const
-{
-    std::lock_guard<std::mutex> lock(
-        m_connectionsMutex);
-
-
-    return findUnsafe(id);
-}
-
-
-
-
-//================================================
-// Contains Connection
-//================================================
-
-bool ConnectionManager::containsConnection(
-    int id) const
-{
-    std::lock_guard<std::mutex> lock(
-        m_connectionsMutex);
-
-
-    return
-        findUnsafe(id)
-        !=
-        nullptr;
-}
-
-
-
-
-//================================================
-// Find Unsafe
-//================================================
-
-ClientConnection*
-ConnectionManager::findUnsafe(
-    int id)
-{
-    auto iterator =
-        m_connections.find(id);
-
-
-    if(iterator ==
-       m_connections.end())
-    {
-        return nullptr;
     }
 
-
-    return iterator->second.get();
 }
 
 
 
 
-const ClientConnection*
-ConnectionManager::findUnsafe(
-    int id) const
-{
-    auto iterator =
-        m_connections.find(id);
-
-
-    if(iterator ==
-       m_connections.end())
-    {
-        return nullptr;
-    }
-
-
-    return iterator->second.get();
-}
-
- //================================================
-// Find Connection By Player
-//================================================
-
-ClientConnection*
-ConnectionManager::findByPlayer(
-    const PlayerSession& player)
-{
-    std::lock_guard<std::mutex> lock(
-        m_connectionsMutex);
-
-
-    for(auto& [id, connection] :
-        m_connections)
-    {
-        if(!connection)
-        {
-            continue;
-        }
-
-
-        auto session =
-            connection->getPlayer();
-
-
-        if(session &&
-           session.get() == &player)
-        {
-            return connection.get();
-        }
-    }
-
-
-    return nullptr;
-}
-
-
-
-
-const ClientConnection*
-ConnectionManager::findByPlayer(
-    const PlayerSession& player) const
-{
-    std::lock_guard<std::mutex> lock(
-        m_connectionsMutex);
-
-
-    for(const auto& [id, connection] :
-        m_connections)
-    {
-        if(!connection)
-        {
-            continue;
-        }
-
-
-        auto session =
-            connection->getPlayer();
-
-
-        if(session &&
-           session.get() == &player)
-        {
-            return connection.get();
-        }
-    }
-
-
-    return nullptr;
-}
 
 
 
 
 //================================================
-// Broadcast All Clients
+// Attach Player
 //================================================
-
-void ConnectionManager::broadcast(
-    const NetworkMessage& message)
-{
-    std::vector<ClientConnection*> clients;
-
-
-    {
-        std::lock_guard<std::mutex> lock(
-            m_connectionsMutex);
-
-
-        for(auto& [id, connection] :
-            m_connections)
-        {
-            if(connection)
-            {
-                clients.push_back(
-                    connection.get());
-            }
-        }
-    }
-
-
-
-    /*
-        Send outside mutex.
-
-        Prevents deadlocks if
-        delivery triggers callbacks.
-    */
-
-    for(auto* client : clients)
-    {
-        if(client)
-        {
-            client->deliverMessage(
-                message);
-        }
-    }
-}
-
-
-
-
-//================================================
-// Broadcast To Room
-//================================================
-
-void ConnectionManager::broadcastToRoom(
-    const std::string& roomId,
-    const NetworkMessage& message)
-{
-    std::vector<ClientConnection*> clients;
-
-
-    {
-        std::lock_guard<std::mutex> lock(
-            m_connectionsMutex);
-
-
-        for(auto& [id, connection] :
-            m_connections)
-        {
-            if(!connection)
-            {
-                continue;
-            }
-
-
-            auto player =
-                connection->getPlayer();
-
-
-            if(!player)
-            {
-                continue;
-            }
-
-
-            if(player->getRoomId()
-                ==
-               roomId)
-            {
-                clients.push_back(
-                    connection.get());
-            }
-        }
-    }
-
-    for(auto* client : clients)
-    {
-        if(client)
-        {
-            client->deliverMessage(
-                message);
-        }
-    }
-}
- //================================================
-// Size
-//================================================
-
-size_t ConnectionManager::size() const
-{
-    std::lock_guard<std::mutex> lock(
-        m_connectionsMutex);
-
-
-    return m_connections.size();
-}
-
-
-
-
-//================================================
-// Send Callback
-//================================================
-
-void ConnectionManager::setSendCallback(
-    SendCallback callback)
-{
-    std::lock_guard<std::mutex> lock(
-        m_connectionsMutex);
-
-
-    m_sendCallback =
-        std::move(callback);
-}
 
 bool ConnectionManager::attachPlayer(
     int connectionId,
@@ -513,7 +298,7 @@ bool ConnectionManager::attachPlayer(
 
 
 
-    ClientConnection* connection =
+    auto connection =
         getConnection(connectionId);
 
 
@@ -523,7 +308,7 @@ bool ConnectionManager::attachPlayer(
 
 
 
-    if(connection->getPlayer())
+    if(connection->hasPlayer())
         return false;
 
 
@@ -534,4 +319,364 @@ bool ConnectionManager::attachPlayer(
 
 
     return true;
+
+}
+
+
+
+
+
+
+
+//================================================
+// Get Connection
+//================================================
+
+std::shared_ptr<ClientConnection>
+ConnectionManager::getConnection(
+    int connectionId)
+{
+
+    std::shared_lock lock(
+        m_connectionsMutex);
+
+
+
+    return findUnsafe(
+        connectionId);
+
+}
+
+
+
+
+
+
+
+std::shared_ptr<const ClientConnection>
+ConnectionManager::getConnection(
+    int connectionId) const
+{
+
+    std::shared_lock lock(
+        m_connectionsMutex);
+
+
+
+    return findUnsafe(
+        connectionId);
+
+}
+
+
+
+
+
+
+
+
+//================================================
+// Find Unsafe
+//================================================
+
+std::shared_ptr<ClientConnection>
+ConnectionManager::findUnsafe(
+    int connectionId)
+{
+
+    auto it =
+        m_connections.find(
+            connectionId);
+
+
+
+    if(it ==
+       m_connections.end())
+    {
+        return nullptr;
+    }
+
+
+
+    return it->second;
+
+}
+
+
+
+
+
+
+
+
+std::shared_ptr<const ClientConnection>
+ConnectionManager::findUnsafe(
+    int connectionId) const
+{
+
+    auto it =
+        m_connections.find(
+            connectionId);
+
+
+
+    if(it ==
+       m_connections.end())
+    {
+        return nullptr;
+    }
+
+
+
+    return it->second;
+
+}
+
+
+
+
+
+
+
+
+
+//================================================
+// Contains
+//================================================
+
+bool ConnectionManager::containsConnection(
+    int connectionId) const
+{
+
+    std::shared_lock lock(
+        m_connectionsMutex);
+
+
+
+  return m_connections.find(connectionId) != m_connections.end();
+}
+
+
+
+
+
+
+
+
+
+//================================================
+// Find Player
+//================================================
+
+std::shared_ptr<ClientConnection>
+ConnectionManager::findByPlayer(
+    const PlayerSession& player)
+{
+
+    std::shared_lock lock(
+        m_connectionsMutex);
+
+
+
+    for(auto& [id,connection] :
+        m_connections)
+    {
+
+        if(!connection)
+            continue;
+
+
+
+        auto session =
+            connection->getPlayer();
+
+
+
+        if(session &&
+           session.get()==&player)
+        {
+            return connection;
+        }
+
+    }
+
+
+
+    return nullptr;
+
+}
+
+
+
+
+
+
+
+
+
+//================================================
+// Broadcast
+//================================================
+
+void ConnectionManager::broadcast(
+    const NetworkMessage& message)
+{
+
+    std::vector<
+        std::shared_ptr<ClientConnection>>
+        connections;
+
+
+
+    {
+
+        std::shared_lock lock(
+            m_connectionsMutex);
+
+
+
+        for(auto& [id,connection] :
+            m_connections)
+        {
+            connections.push_back(
+                connection);
+        }
+
+    }
+
+
+
+
+
+    for(auto& connection :
+        connections)
+    {
+
+        if(connection)
+        {
+            connection->deliverMessage(
+                message);
+        }
+
+    }
+
+}
+
+
+
+
+
+
+
+
+//================================================
+// Broadcast Room
+//================================================
+
+void ConnectionManager::broadcastToRoom(
+    const std::string& roomId,
+    const NetworkMessage& message)
+{
+
+    std::vector<
+        std::shared_ptr<ClientConnection>>
+        connections;
+
+
+
+    {
+
+        std::shared_lock lock(
+            m_connectionsMutex);
+
+
+
+        for(auto& [id,connection] :
+            m_connections)
+        {
+
+            if(!connection)
+                continue;
+
+
+
+            auto player =
+                connection->getPlayer();
+
+
+
+            if(player &&
+               player->getRoomId()==roomId)
+            {
+                connections.push_back(
+                    connection);
+            }
+
+        }
+
+    }
+
+
+
+
+
+
+    for(auto& connection :
+        connections)
+    {
+
+        connection->deliverMessage(
+            message);
+
+    }
+
+}
+
+
+
+
+
+
+
+
+
+//================================================
+// Size
+//================================================
+
+size_t ConnectionManager::size() const
+{
+
+    std::shared_lock lock(
+        m_connectionsMutex);
+
+
+
+    return m_connections.size();
+
+}
+
+
+
+
+
+
+
+
+//================================================
+// Callback
+//================================================
+
+void ConnectionManager::setSendCallback(
+    SendCallback callback)
+{
+
+    std::unique_lock lock(
+        m_connectionsMutex);
+
+
+
+    m_sendCallback =
+        std::move(callback);
+
 }

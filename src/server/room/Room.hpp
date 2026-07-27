@@ -6,11 +6,36 @@
 #include <cstddef>
 
 
+
 class GameContext;
 class GameSession;
 
 
 
+/**
+ * @brief Represents a single game room.
+ *
+ * Owns:
+ *
+ *  - GameContext
+ *  - GameSession
+ *
+ *
+ * Responsibilities:
+ *
+ *  - Provide access to game session.
+ *  - Provide room state information.
+ *  - Control room lifetime.
+ *
+ *
+ * Does NOT know:
+ *
+ *  - Network.
+ *  - Authentication.
+ *  - Users.
+ *  - Database.
+ *  - Server.
+ */
 class Room
 {
 
@@ -18,13 +43,13 @@ public:
 
 
     Room(
-        const std::string& id,
+        std::string id,
         std::unique_ptr<GameContext> context,
         std::unique_ptr<GameSession> session);
 
 
 
-    ~Room();
+    ~Room() = default;
 
 
 
@@ -32,16 +57,38 @@ public:
         const Room&) = delete;
 
 
-    Room& operator=(const Room&) = delete;
+
+    Room& operator=(
+        const Room&) = delete;
+
+
+
+    Room(
+        Room&&) noexcept = default;
+
+
+
+    Room& operator=(
+        Room&&) noexcept = default;
 
 
 
 public:
 
 
+//=================================
+// Identity
+//=================================
+
+
     const std::string&
     getId() const;
 
+
+
+//=================================
+// Components
+//=================================
 
 
     GameSession&
@@ -64,22 +111,40 @@ public:
 
 
 
-public:
+
+//=================================
+// State
+//=================================
 
 
     bool canJoin() const;
 
 
+
     bool isEmpty() const;
+
+
+
+    bool isActive() const;
+
 
 
     bool isRunning() const;
 
 
+
     bool isFinished() const;
 
 
+
     size_t getPlayerCount() const;
+
+
+
+private:
+
+
+    bool valid() const;
 
 
 

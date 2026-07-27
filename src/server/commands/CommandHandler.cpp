@@ -1,9 +1,11 @@
 #include "CommandHandler.hpp"
 
 
+#include "ClientConnection.hpp"
 #include "Command.hpp"
-#include "ClickCommand.hpp"
 
+#include "Position.hpp"
+#include "ClickCommand.hpp"
 
 #include "RoomManager.hpp"
 #include "Room.hpp"
@@ -39,11 +41,11 @@ m_authService(authService)
 
 
 //================================================
-// Handle
+// Main Dispatcher
 //================================================
 
 MoveResult CommandHandler::handle(
-    PlayerSession* player,
+    ClientConnection& connection,
     const Command& command)
 {
 
@@ -51,220 +53,53 @@ MoveResult CommandHandler::handle(
     {
 
 
-        case CommandType::CLICK:
-        {
-            return handleClick(
-                player,
+        case CommandType::REGISTER:
+
+            return handleRegister(
                 command);
-        }
 
 
 
         case CommandType::LOGIN:
-        {
+
             return handleLogin(
+                connection,
                 command);
-        }
 
 
 
-        case CommandType::REGISTER:
-        {
-            return handleRegister(
+        case CommandType::CLICK:
+
+            return handleClick(
+                connection,
                 command);
-        }
 
 
 
         case CommandType::CREATE_ROOM:
-        {
+
             return handleCreateRoom(
+                connection,
                 command);
-        }
 
 
 
         case CommandType::JOIN_ROOM:
-        {
+
             return handleJoinRoom(
-                player,
+                connection,
                 command);
-        }
 
 
 
         default:
-        {
+
             return
             {
                 false,
                 "unknown_command"
             };
-        }
-
     }
-
-}
-
-
-
-
-
-
-
-//================================================
-// CLICK
-//================================================
-
-MoveResult CommandHandler::handleClick(
-    PlayerSession* player,
-    const Command& command)
-{
-
-    if(!player)
-    {
-        return
-        {
-            false,
-            "authentication_required"
-        };
-    }
-
-
-
-    if(!player->isConnected())
-    {
-        return
-        {
-            false,
-            "player_disconnected"
-        };
-    }
-
-
-
-    if(!player->hasRoom())
-    {
-        return
-        {
-            false,
-            "player_has_no_room"
-        };
-    }
-
-
-
-
-    const auto& args =
-        command.getArgs();
-
-
-
-    if(args.size() != 2)
-    {
-        return
-        {
-            false,
-            "invalid_click_arguments"
-        };
-    }
-
-
-
-    int row;
-    int col;
-
-
-
-    try
-    {
-        row = std::stoi(args[0]);
-        col = std::stoi(args[1]);
-    }
-    catch(...)
-    {
-        return
-        {
-            false,
-            "invalid_position"
-        };
-    }
-
-
-
-    Position position(
-        row,
-        col);
-
-
-
-    ClickCommand click(
-        position);
-
-
-
-
-
-    auto room =
-        m_roomManager.getRoom(
-            player->getRoomId());
-
-
-
-    if(!room)
-    {
-        return
-        {
-            false,
-            "room_not_found"
-        };
-    }
-
-
-
-    return
-        room->getSession()
-            .handleClick(
-                *player,
-                click);
-
-}
-
-
-
-
-
-
-
-
-//================================================
-// LOGIN
-//================================================
-
-MoveResult CommandHandler::handleLogin(
-    const Command& command)
-{
-
-    const auto& args =
-        command.getArgs();
-
-
-
-    if(args.size() != 2)
-    {
-        return
-        {
-            false,
-            "invalid_login_arguments"
-        };
-    }
-
-
-
-    return
-        m_authService.login(
-            args[0],
-            args[1]);
 
 }
 
@@ -288,7 +123,7 @@ MoveResult CommandHandler::handleRegister(
 
 
 
-    if(args.size() != 2)
+    if(args.size()!=2)
     {
         return
         {
@@ -296,6 +131,7 @@ MoveResult CommandHandler::handleRegister(
             "invalid_register_arguments"
         };
     }
+
 
 
 
@@ -314,19 +150,243 @@ MoveResult CommandHandler::handleRegister(
 
 
 //================================================
-// CREATE ROOM
+// LOGIN
 //================================================
-
-MoveResult CommandHandler::handleCreateRoom(
+MoveResult CommandHandler::handleLogin(
+    ClientConnection& connection,
     const Command& command)
 {
+    const auto& args =
+        command.getArgs();
+
+
+    if(args.size()!=2)
+    {
+        return
+        {
+            false,
+            "invalid_login_arguments"
+        };
+    }
+
+
+
+    auto player =
+        m_authService.login(
+            args[0],
+            args[1]);
+
+
+
+    if(!player)
+    {
+        return
+        {
+            false,
+            "login_failed"
+        };
+    }
+
+
+
+    connection.attachPlayer(
+        player);
+
+
+
+    return
+    {
+        true,
+        "login_success"
+    };
+}
+
+
+
+
+
+
+
+
+
+//================================================
+// CLICK
+//================================================
+
+MoveResult CommandHandler::handleClick(
+    ClientConnection& connection,
+    const Command& command)
+{
+
+    if(!connection.hasPlayer())
+    {
+        return
+        {
+            false,
+            "authentication_required"
+        };
+    }
+
+
+
+
+
+    auto player =
+        connection.getPlayer();
+
+
+
+
+
+    if(!player->hasRoom())
+    {
+        return
+        {
+            false,
+            "player_has_no_room"
+        };
+    }
+
+
+
+
 
     const auto& args =
         command.getArgs();
 
 
 
-    if(args.size() != 1)
+
+
+    if(args.size()!=2)
+    {
+        return
+        {
+            false,
+            "invalid_click_arguments"
+        };
+    }
+
+
+
+
+
+    int row;
+    int col;
+
+
+
+    try
+    {
+
+        row =
+            std::stoi(args[0]);
+
+
+        col =
+            std::stoi(args[1]);
+
+    }
+    catch(...)
+    {
+
+        return
+        {
+            false,
+            "invalid_position"
+        };
+
+    }
+
+
+
+
+
+
+    Position position(
+        row,
+        col);
+
+
+
+
+
+    ClickCommand click(
+        position);
+
+
+
+
+
+
+    auto room =
+        m_roomManager.getRoom(
+            player->getRoomId());
+
+
+
+
+
+
+    if(!room)
+    {
+        return
+        {
+            false,
+            "room_not_found"
+        };
+    }
+
+
+
+
+
+
+
+    return
+        room->getSession()
+            .handleClick(
+                *player,
+                click);
+
+}
+
+
+
+
+
+
+
+
+
+//================================================
+// CREATE ROOM
+//================================================
+
+MoveResult CommandHandler::handleCreateRoom(
+    ClientConnection& connection,
+    const Command& command)
+{
+
+    if(!connection.hasPlayer())
+    {
+        return
+        {
+            false,
+            "authentication_required"
+        };
+    }
+
+
+
+
+    const auto& args =
+        command.getArgs();
+
+
+
+
+    if(args.size()!=1)
     {
         return
         {
@@ -334,6 +394,9 @@ MoveResult CommandHandler::handleCreateRoom(
             "invalid_room_arguments"
         };
     }
+
+
+
 
 
 
@@ -352,6 +415,9 @@ MoveResult CommandHandler::handleCreateRoom(
 
 
 
+
+
+
     return
     {
         false,
@@ -367,16 +433,17 @@ MoveResult CommandHandler::handleCreateRoom(
 
 
 
+
 //================================================
 // JOIN ROOM
 //================================================
 
 MoveResult CommandHandler::handleJoinRoom(
-    PlayerSession* player,
+    ClientConnection& connection,
     const Command& command)
 {
 
-    if(!player)
+    if(!connection.hasPlayer())
     {
         return
         {
@@ -387,12 +454,24 @@ MoveResult CommandHandler::handleJoinRoom(
 
 
 
+
+
+    auto player =
+        connection.getPlayer();
+
+
+
+
+
+
     const auto& args =
         command.getArgs();
 
 
 
-    if(args.size() != 1)
+
+
+    if(args.size()!=1)
     {
         return
         {
@@ -408,6 +487,8 @@ MoveResult CommandHandler::handleJoinRoom(
     auto room =
         m_roomManager.getRoom(
             args[0]);
+
+
 
 
 
@@ -437,12 +518,11 @@ MoveResult CommandHandler::handleJoinRoom(
 
 
 
+
     if(
         room->getSession()
             .addPlayer(
-                std::shared_ptr<PlayerSession>(
-                    player,
-                    [](PlayerSession*){})))
+                player))
     {
 
         return
@@ -452,6 +532,9 @@ MoveResult CommandHandler::handleJoinRoom(
         };
 
     }
+
+
+
 
 
 

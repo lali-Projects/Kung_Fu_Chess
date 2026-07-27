@@ -11,30 +11,12 @@
 
 
 
-class ConnectionHandler;
 class CommandHandler;
+class CommandParser;
 class PlayerSession;
 
 
 
-/**
- * @brief Represents one client connection.
- *
- * Responsibilities:
- *
- *  - Own connection state.
- *  - Receive messages.
- *  - Deliver outgoing messages.
- *  - Hold attached PlayerSession.
- *
- *
- * Does NOT know:
- *
- *  - Database.
- *  - Authentication.
- *  - Rooms.
- *  - Game rules.
- */
 class ClientConnection
 {
 
@@ -73,6 +55,11 @@ public:
 public:
 
 
+//=================================
+// Messages
+//=================================
+
+
     MoveResult receiveNetworkMessage(
         const NetworkMessage& message);
 
@@ -88,15 +75,14 @@ public:
 
 
 
+
+
 public:
 
 
-    int getId() const;
-
-
-
-    bool hasPlayer() const;
-
+//=================================
+// Player
+//=================================
 
 
     void attachPlayer(
@@ -105,6 +91,10 @@ public:
 
 
     void clearPlayer();
+
+
+
+    bool hasPlayer() const;
 
 
 
@@ -123,11 +113,23 @@ public:
 
 
 
+
+
 public:
+
+
+//=================================
+// Information
+//=================================
+
+
+    int getId() const;
+
 
 
     const std::optional<NetworkMessage>&
     getLastMessage() const;
+
 
 
 
@@ -139,20 +141,23 @@ private:
 
 
 
+
 private:
 
 
     int m_id;
 
 
+    CommandHandler& m_commandHandler;
+
+
+    std::unique_ptr<CommandParser>
+        m_commandParser;
+
+
 
     std::shared_ptr<PlayerSession>
         m_player;
-
-
-
-    std::unique_ptr<ConnectionHandler>
-        m_handler;
 
 
 

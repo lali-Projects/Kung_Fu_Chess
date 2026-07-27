@@ -1,15 +1,15 @@
 #include "NetworkMessage.hpp"
 
 
+#include <sstream>
 
-//================================================
-// Default Constructor
-//================================================
+
+
+
 
 NetworkMessage::NetworkMessage()
 :
-m_type(MessageType::UNKNOWN),
-m_payload()
+m_type(MessageType::UNKNOWN)
 {
 }
 
@@ -17,10 +17,6 @@ m_payload()
 
 
 
-
-//================================================
-// Constructor
-//================================================
 
 NetworkMessage::NetworkMessage(
     MessageType type,
@@ -36,10 +32,6 @@ m_payload(payload)
 
 
 
-//================================================
-// Move Constructor
-//================================================
-
 NetworkMessage::NetworkMessage(
     MessageType type,
     std::string&& payload)
@@ -54,9 +46,6 @@ m_payload(std::move(payload))
 
 
 
-//================================================
-// Set Type
-//================================================
 
 void NetworkMessage::setType(
     MessageType type)
@@ -69,10 +58,6 @@ void NetworkMessage::setType(
 
 
 
-//================================================
-// Get Type
-//================================================
-
 MessageType NetworkMessage::getType() const
 {
     return m_type;
@@ -83,9 +68,6 @@ MessageType NetworkMessage::getType() const
 
 
 
-//================================================
-// Type Name
-//================================================
 
 std::string NetworkMessage::typeName() const
 {
@@ -128,9 +110,49 @@ std::string NetworkMessage::typeName() const
 
 
 
-//================================================
-// Payload
-//================================================
+
+
+
+MessageType NetworkMessage::typeFromString(
+    const std::string& name)
+{
+
+    if(name=="GAME_STATE")
+        return MessageType::GAME_STATE;
+
+
+    if(name=="COMMAND")
+        return MessageType::COMMAND;
+
+
+    if(name=="COMMAND_RESULT")
+        return MessageType::COMMAND_RESULT;
+
+
+    if(name=="SYSTEM_ERROR")
+        return MessageType::SYSTEM_ERROR;
+
+
+    if(name=="DISCONNECT")
+        return MessageType::DISCONNECT;
+
+
+    if(name=="HEARTBEAT")
+        return MessageType::HEARTBEAT;
+
+
+
+    return MessageType::UNKNOWN;
+
+}
+
+
+
+
+
+
+
+
 
 void NetworkMessage::setPayload(
     const std::string& payload)
@@ -154,6 +176,7 @@ void NetworkMessage::setPayload(
 
 
 
+
 const std::string&
 NetworkMessage::getPayload() const
 {
@@ -165,9 +188,100 @@ NetworkMessage::getPayload() const
 
 
 
+
+
+
 //================================================
-// State
+// Serialize
 //================================================
+
+std::string NetworkMessage::serialize() const
+{
+
+    return
+        typeName()
+        +
+        "|"
+        +
+        m_payload;
+
+}
+
+
+
+
+
+
+
+
+
+//================================================
+// Deserialize
+//================================================
+
+std::optional<NetworkMessage>
+NetworkMessage::deserialize(
+    const std::string& data)
+{
+
+    auto separator =
+        data.find('|');
+
+
+
+    if(separator == std::string::npos)
+    {
+        return std::nullopt;
+    }
+
+
+
+
+
+    std::string type =
+        data.substr(
+            0,
+            separator);
+
+
+
+
+    std::string payload =
+        data.substr(
+            separator + 1);
+
+
+
+
+    MessageType messageType =
+        typeFromString(type);
+
+
+
+
+    if(messageType ==
+       MessageType::UNKNOWN)
+    {
+        return std::nullopt;
+    }
+
+
+
+
+
+    return NetworkMessage(
+        messageType,
+        payload);
+
+}
+
+
+
+
+
+
+
+
 
 bool NetworkMessage::empty() const
 {
@@ -179,13 +293,35 @@ bool NetworkMessage::empty() const
 
 
 
+
+
 bool NetworkMessage::valid() const
 {
-    return
-        m_type != MessageType::UNKNOWN
-        &&
-        !m_payload.empty();
+
+    if(m_type ==
+       MessageType::UNKNOWN)
+    {
+        return false;
+    }
+
+
+
+    if(m_type ==
+       MessageType::DISCONNECT ||
+       m_type ==
+       MessageType::HEARTBEAT)
+    {
+        return true;
+    }
+
+
+
+    return !m_payload.empty();
+
 }
+
+
+
 
 
 
@@ -208,15 +344,28 @@ void NetworkMessage::clear()
 
 
 
-//================================================
-// Helpers
-//================================================
+
+
 
 bool NetworkMessage::isCommand() const
 {
-    return
-        m_type == MessageType::COMMAND;
+    return m_type ==
+        MessageType::COMMAND;
 }
+
+
+
+
+
+
+
+bool NetworkMessage::isCommandResult() const
+{
+    return m_type ==
+        MessageType::COMMAND_RESULT;
+}
+
+
 
 
 
@@ -225,9 +374,11 @@ bool NetworkMessage::isCommand() const
 
 bool NetworkMessage::isGameState() const
 {
-    return
-        m_type == MessageType::GAME_STATE;
+    return m_type ==
+        MessageType::GAME_STATE;
 }
+
+
 
 
 
@@ -236,9 +387,11 @@ bool NetworkMessage::isGameState() const
 
 bool NetworkMessage::isError() const
 {
-    return
-        m_type == MessageType::SYSTEM_ERROR;
+    return m_type ==
+        MessageType::SYSTEM_ERROR;
 }
+
+
 
 
 
@@ -247,9 +400,11 @@ bool NetworkMessage::isError() const
 
 bool NetworkMessage::isDisconnect() const
 {
-    return
-        m_type == MessageType::DISCONNECT;
+    return m_type ==
+        MessageType::DISCONNECT;
 }
+
+
 
 
 
@@ -258,6 +413,6 @@ bool NetworkMessage::isDisconnect() const
 
 bool NetworkMessage::isHeartbeat() const
 {
-    return
-        m_type == MessageType::HEARTBEAT;
+    return m_type ==
+        MessageType::HEARTBEAT;
 }

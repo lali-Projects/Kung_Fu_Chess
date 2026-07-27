@@ -3,16 +3,10 @@
 
 #include <string>
 #include <utility>
+#include <optional>
 
 
 
-/**
- * @brief Type of network message.
- *
- * Used only for routing.
- *
- * NetworkMessage does not interpret payload.
- */
 enum class MessageType
 {
 
@@ -36,24 +30,7 @@ enum class MessageType
 
 
 
-/**
- * @brief Transport independent message container.
- *
- * Responsibilities:
- *
- *  - Store message type.
- *  - Store raw payload.
- *  - Provide message state checks.
- *
- *
- * Does NOT know:
- *
- *  - JSON
- *  - WebSocket
- *  - TCP
- *  - Game logic
- *  - Authentication
- */
+
 class NetworkMessage
 {
 
@@ -61,6 +38,7 @@ public:
 
 
     NetworkMessage();
+
 
 
     NetworkMessage(
@@ -74,28 +52,6 @@ public:
         std::string&& payload);
 
 
-
-    ~NetworkMessage() = default;
-
-
-
-public:
-
-    NetworkMessage(
-        const NetworkMessage&) = default;
-
-
-    NetworkMessage& operator=(
-        const NetworkMessage&) = default;
-
-
-
-    NetworkMessage(
-        NetworkMessage&&) noexcept = default;
-
-
-    NetworkMessage& operator=(
-        NetworkMessage&&) noexcept = default;
 
 
 
@@ -116,6 +72,14 @@ public:
 
 
     std::string typeName() const;
+
+
+
+    static MessageType
+    typeFromString(
+        const std::string& name);
+
+
 
 
 
@@ -141,6 +105,30 @@ public:
 
 
 
+
+
+
+public:
+
+
+    //---------------------------------
+    // Serialization
+    //---------------------------------
+
+
+    std::string serialize() const;
+
+
+
+    static std::optional<NetworkMessage>
+    deserialize(
+        const std::string& data);
+
+
+
+
+
+
 public:
 
 
@@ -151,6 +139,7 @@ public:
     bool empty() const;
 
 
+
     bool valid() const;
 
 
@@ -159,14 +148,20 @@ public:
 
 
 
+
+
 public:
 
 
     //---------------------------------
-    // Type helpers
+    // Helpers
     //---------------------------------
 
     bool isCommand() const;
+
+
+
+    bool isCommandResult() const;
 
 
 
@@ -183,6 +178,8 @@ public:
 
 
     bool isHeartbeat() const;
+
+
 
 
 

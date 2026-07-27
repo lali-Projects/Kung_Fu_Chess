@@ -46,18 +46,8 @@ public:
 
 
 
-    void setUserId(
-        const std::string& id);
-
-
-
     const std::string&
     getUsername() const;
-
-
-
-    void setUsername(
-        const std::string& username);
 
 
 
@@ -68,6 +58,7 @@ public:
 //=================================
 
     bool isAuthenticated() const;
+
 
 
     bool hasUser() const;
@@ -81,6 +72,7 @@ public:
 
 
     void logout();
+
 
 
 
@@ -106,11 +98,13 @@ public:
 
 
 
+
 //=================================
 // Connection
 //=================================
 
-    ConnectionState getState() const;
+    ConnectionState
+    getState() const;
 
 
 
@@ -124,6 +118,7 @@ public:
 
 
     void disconnect();
+
 
 
 
@@ -152,11 +147,20 @@ public:
 
 
 
+    void leaveGame();
+
+
+
+    bool isInGame() const;
+
+
+
+
 
 
 
 //=================================
-// Connection
+// Connection ID
 //=================================
 
     void setConnectionId(
@@ -168,10 +172,22 @@ public:
 
 
 
-public:
+
+
+
+
+//=================================
+// State Helpers
+//=================================
+
+    bool canJoinRoom() const;
+
 
 
     void reset();
+
+
+
 
 
 
@@ -181,7 +197,9 @@ private:
     std::string m_sessionId;
 
 
+
     std::string m_userId;
+
 
 
     std::string m_username;
@@ -192,15 +210,18 @@ private:
 
 
 
+
     Side m_side{
         Side::NONE
     };
 
 
 
+
     ConnectionState m_state{
         ConnectionState::CONNECTED
     };
+
 
 
 

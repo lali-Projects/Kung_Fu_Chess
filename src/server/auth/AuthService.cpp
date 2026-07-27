@@ -3,6 +3,12 @@
 
 #include "UserRepository.hpp"
 #include "User.hpp"
+#include "PlayerSession.hpp"
+
+
+#include <utility>
+
+
 
 
 
@@ -22,6 +28,7 @@ m_repository(repository)
 
 
 
+
 //================================================
 // Register User
 //================================================
@@ -30,10 +37,6 @@ MoveResult AuthService::registerUser(
     const std::string& username,
     const std::string& password)
 {
-
-    //---------------------------------
-    // Validate username
-    //---------------------------------
 
     if(!validateUsername(username))
     {
@@ -45,10 +48,6 @@ MoveResult AuthService::registerUser(
     }
 
 
-
-    //---------------------------------
-    // Validate password
-    //---------------------------------
 
     if(!validatePassword(password))
     {
@@ -62,9 +61,6 @@ MoveResult AuthService::registerUser(
 
 
 
-    //---------------------------------
-    // Check existing user
-    //---------------------------------
 
     if(m_repository.exists(username))
     {
@@ -79,14 +75,12 @@ MoveResult AuthService::registerUser(
 
 
 
-    //---------------------------------
-    // Create user
-    //---------------------------------
 
     User user(
         "",
         username,
         password);
+
 
 
 
@@ -98,31 +92,6 @@ MoveResult AuthService::registerUser(
         {
             false,
             "user_creation_failed"
-        };
-    }
-
-
-
-
-
-
-
-    //---------------------------------
-    // Verify creation
-    //---------------------------------
-
-    auto createdUser =
-        m_repository.findByUsername(
-            username);
-
-
-
-    if(!createdUser)
-    {
-        return
-        {
-            false,
-            "user_not_found_after_creation"
         };
     }
 
@@ -149,41 +118,26 @@ MoveResult AuthService::registerUser(
 
 
 //================================================
-// Login User
+// Login
 //================================================
 
-MoveResult AuthService::login(
+std::shared_ptr<PlayerSession>
+AuthService::login(
     const std::string& username,
     const std::string& password)
 {
 
-    //---------------------------------
-    // Validate username
-    //---------------------------------
-
     if(!validateUsername(username))
     {
-        return
-        {
-            false,
-            "invalid_username"
-        };
+        return nullptr;
     }
 
 
 
-
-    //---------------------------------
-    // Validate password
-    //---------------------------------
 
     if(!validatePassword(password))
     {
-        return
-        {
-            false,
-            "invalid_password"
-        };
+        return nullptr;
     }
 
 
@@ -191,9 +145,6 @@ MoveResult AuthService::login(
 
 
 
-    //---------------------------------
-    // Find user
-    //---------------------------------
 
     auto user =
         m_repository.findByUsername(
@@ -205,11 +156,7 @@ MoveResult AuthService::login(
 
     if(!user)
     {
-        return
-        {
-            false,
-            "user_not_found"
-        };
+        return nullptr;
     }
 
 
@@ -217,20 +164,12 @@ MoveResult AuthService::login(
 
 
 
-
-    //---------------------------------
-    // Check password
-    //---------------------------------
 
     if(user->getPassword()
-        !=
+       !=
        password)
     {
-        return
-        {
-            false,
-            "wrong_password"
-        };
+        return nullptr;
     }
 
 
@@ -238,11 +177,16 @@ MoveResult AuthService::login(
 
 
 
-    return
-    {
-        true,
-        "login_success"
-    };
+
+    auto player =
+        std::make_shared<PlayerSession>(
+            username);
+
+
+
+
+
+    return player;
 
 }
 
@@ -262,10 +206,16 @@ bool AuthService::validateUsername(
     const std::string& username) const
 {
 
-    return
-        username.size() >= 3
-        &&
-        username.size() <= 20;
+    if(username.size() < 3)
+        return false;
+
+
+    if(username.size() > 20)
+        return false;
+
+
+
+    return true;
 
 }
 
@@ -285,9 +235,15 @@ bool AuthService::validatePassword(
     const std::string& password) const
 {
 
-    return
-        password.size() >= 4
-        &&
-        password.size() <= 64;
+    if(password.size() < 4)
+        return false;
+
+
+    if(password.size() > 64)
+        return false;
+
+
+
+    return true;
 
 }

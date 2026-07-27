@@ -34,26 +34,26 @@ m_eventBus(eventBus),
 m_networkServer(std::move(networkServer))
 {
 
-
     m_connectionManager =
         std::make_unique<ConnectionManager>(
             m_commandHandler);
 
 
 
-    //---------------------------------
-    // Outgoing flow
-    //
-    // GameSession
-    //      |
-    // EventBus
-    //      |
-    // Server
-    //      |
-    // ConnectionManager
-    //      |
-    // Network
-    //---------------------------------
+    /*
+        Outgoing flow:
+
+        Game
+          |
+        EventBus
+          |
+        Server
+          |
+        ConnectionManager
+          |
+        Network
+    */
+
 
     m_connectionManager->setSendCallback(
         [this]
@@ -75,9 +75,7 @@ m_networkServer(std::move(networkServer))
 
 
 
-    //---------------------------------
-    // Network callbacks
-    //---------------------------------
+
 
     if(m_networkServer)
     {
@@ -90,6 +88,7 @@ m_networkServer(std::move(networkServer))
 
 
 
+
         m_networkServer->setMessageCallback(
             [this]
             (
@@ -97,10 +96,14 @@ m_networkServer(std::move(networkServer))
                 const NetworkMessage& message
             )
             {
-                handleNetworkMessage(
+
+                return handleNetworkMessage(
                     id,
                     message);
+
             });
+
+
 
 
 
@@ -114,9 +117,7 @@ m_networkServer(std::move(networkServer))
 
 
 
-    //---------------------------------
-    // Game events
-    //---------------------------------
+
 
     m_eventBus.subscribe<GameStateChangedEvent>(
         [this]
@@ -124,7 +125,10 @@ m_networkServer(std::move(networkServer))
             std::shared_ptr<GameStateChangedEvent> event
         )
         {
-            onGameStateChanged(event);
+
+            onGameStateChanged(
+                event);
+
         });
 
 }
@@ -134,21 +138,54 @@ m_networkServer(std::move(networkServer))
 
 
 
+
+//================================================
+// Destructor
+//================================================
+
 Server::~Server()
 {
+
     stop();
+
+
+
+    if(m_connectionManager)
+    {
+        m_connectionManager->disconnectAll();
+    }
+
+
 
     if(m_networkServer)
     {
-        m_networkServer->setMessageCallback(nullptr);
-        m_networkServer->setConnectionCallback(nullptr);
-        m_networkServer->setDisconnectCallback(nullptr);
+
+        m_networkServer->setMessageCallback(
+            nullptr);
+
+
+        m_networkServer->setConnectionCallback(
+            nullptr);
+
+
+        m_networkServer->setDisconnectCallback(
+            nullptr);
+
     }
+
 }
 
 
 
 
+
+
+
+
+
+//================================================
+// Start
+//================================================
 
 void Server::start()
 {
@@ -159,7 +196,9 @@ void Server::start()
 
 
     if(m_networkServer)
+    {
         m_networkServer->start();
+    }
 
 
 
@@ -177,8 +216,19 @@ void Server::start()
 
 
 
+
+
+//================================================
+// Stop
+//================================================
+
 void Server::stop()
 {
+
+    if(!m_running)
+        return;
+
+
 
     if(m_networkServer)
     {
@@ -186,17 +236,34 @@ void Server::stop()
     }
 
 
+
+    if(m_connectionManager)
+    {
+        m_connectionManager->disconnectAll();
+    }
+
+
+
     m_running = false;
+
 
 
     std::cout
         << "[SERVER] Stopped\n";
+
 }
 
 
 
 
 
+
+
+
+
+//================================================
+// Running
+//================================================
 
 bool Server::isRunning() const
 {
@@ -207,6 +274,13 @@ bool Server::isRunning() const
 
 
 
+
+
+
+
+//================================================
+// Get Connection Manager
+//================================================
 
 ConnectionManager&
 Server::getConnectionManager()
@@ -219,6 +293,12 @@ Server::getConnectionManager()
 
 
 
+
+
+//================================================
+// Get Network Server
+//================================================
+
 INetworkServer&
 Server::getNetworkServer()
 {
@@ -230,7 +310,9 @@ Server::getNetworkServer()
     }
 
 
+
     return *m_networkServer;
+
 }
 
 
@@ -238,6 +320,12 @@ Server::getNetworkServer()
 
 
 
+
+
+
+//================================================
+// Connection Created
+//================================================
 
 void Server::handleConnection(
     int connectionId)
@@ -248,9 +336,8 @@ void Server::handleConnection(
 
 
 
-    if(
-        m_connectionManager->addConnection(
-            connectionId))
+    if(m_connectionManager->addConnection(
+        connectionId))
     {
 
         std::cout
@@ -266,6 +353,13 @@ void Server::handleConnection(
 
 
 
+
+
+
+
+//================================================
+// Disconnect
+//================================================
 
 void Server::handleDisconnect(
     int connectionId)
@@ -287,10 +381,29 @@ void Server::handleDisconnect(
 
 
 
-void Server::handleNetworkMessage(
+
+
+//================================================
+// Receive Message
+//================================================
+
+NetworkMessage Server::handleNetworkMessage(
     int connectionId,
     const NetworkMessage& message)
 {
+
+    if(!m_connectionManager)
+    {
+
+        return NetworkMessage(
+            MessageType::COMMAND_RESULT,
+            "RESULT FAILED connection_manager_missing");
+
+    }
+
+
+
+
 
     ClientConnection* client =
         m_connectionManager->getConnection(
@@ -298,8 +411,17 @@ void Server::handleNetworkMessage(
 
 
 
+
     if(!client)
-        return;
+    {
+
+        return NetworkMessage(
+            MessageType::COMMAND_RESULT,
+            "RESULT FAILED client_missing");
+
+    }
+
+
 
 
 
@@ -310,72 +432,27 @@ void Server::handleNetworkMessage(
 
 
 
-    std::string text;
-
 
 
     if(result.success)
     {
-        text =
-            "RESULT SUCCESS "
-            +
-            result.reason;
-    }
-    else
-    {
-        text =
-            "RESULT FAILED "
-            +
-            result.reason;
-    }
 
-
-
-    client->deliverMessage(
-        NetworkMessage(
+        return NetworkMessage(
             MessageType::COMMAND_RESULT,
-            text));
+            "RESULT SUCCESS " +
+            result.reason);
 
-}
-
-
-
-
-
-
-
-MoveResult Server::simulateClientCommand(
-    const std::string& message)
-{
-
-    int id =
-        createTestConnection();
-
-
-
-    if(id < 0)
-    {
-        return
-        {
-            false,
-            "connection_failed"
-        };
     }
 
 
 
-    MoveResult result =
-        simulateClientCommand(
-            id,
-            message);
 
 
+    return NetworkMessage(
+        MessageType::COMMAND_RESULT,
+        "RESULT FAILED " +
+        result.reason);
 
-    closeTestConnection(id);
-
-
-
-    return result;
 }
 
 
@@ -383,6 +460,12 @@ MoveResult Server::simulateClientCommand(
 
 
 
+
+
+
+//================================================
+// Game State Changed
+//================================================
 
 void Server::onGameStateChanged(
     std::shared_ptr<Event> event)
@@ -416,20 +499,29 @@ void Server::onGameStateChanged(
 
 }
 
+
+
+
+
+
+
+
+
 //================================================
-// Create Test Connection
+// Testing
 //================================================
 
 int Server::createTestConnection()
 {
+
     if(!m_connectionManager)
-    {
         return -1;
-    }
+
 
 
     return
         m_connectionManager->addConnection();
+
 }
 
 
@@ -437,19 +529,20 @@ int Server::createTestConnection()
 
 
 
-//================================================
-// Close Test Connection
-//================================================
+
 
 void Server::closeTestConnection(
     int connectionId)
 {
+
     if(!m_connectionManager)
         return;
 
 
+
     m_connectionManager->removeConnection(
         connectionId);
+
 }
 
 
@@ -457,9 +550,7 @@ void Server::closeTestConnection(
 
 
 
-//================================================
-// Simulate Command With Connection
-//================================================
+
 
 MoveResult Server::simulateClientCommand(
     int connectionId,
@@ -477,9 +568,12 @@ MoveResult Server::simulateClientCommand(
 
 
 
+
+
     ClientConnection* client =
         m_connectionManager->getConnection(
             connectionId);
+
 
 
 
@@ -494,9 +588,59 @@ MoveResult Server::simulateClientCommand(
 
 
 
+
+
+
     return
         client->receiveNetworkMessage(
             NetworkMessage(
                 MessageType::COMMAND,
                 message));
+
+}
+
+
+
+
+
+
+
+
+MoveResult Server::simulateClientCommand(
+    const std::string& message)
+{
+
+    int id =
+        createTestConnection();
+
+
+
+    if(id < 0)
+    {
+        return
+        {
+            false,
+            "connection_failed"
+        };
+    }
+
+
+
+
+    MoveResult result =
+        simulateClientCommand(
+            id,
+            message);
+
+
+
+
+    closeTestConnection(
+        id);
+
+
+
+
+    return result;
+
 }

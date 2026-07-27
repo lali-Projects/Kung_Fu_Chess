@@ -6,31 +6,12 @@
 
 
 class Command;
-class PlayerSession;
 class RoomManager;
 class AuthService;
+class ClientConnection;
 
 
 
-/**
- * @brief Routes parsed commands to application services.
- *
- * Responsibilities:
- *
- *  - Receive commands from server layer.
- *  - Route authentication commands.
- *  - Route room commands.
- *  - Route game commands.
- *
- *
- * Does NOT know:
- *
- *  - Network.
- *  - Database.
- *  - Game rules.
- *  - Board.
- *  - GameEngine.
- */
 class CommandHandler
 {
 
@@ -47,8 +28,9 @@ public:
 
 
     MoveResult handle(
-        PlayerSession* player,
+        ClientConnection& connection,
         const Command& command);
+
 
 
 
@@ -56,12 +38,13 @@ private:
 
 
     MoveResult handleClick(
-        PlayerSession* player,
+        ClientConnection& connection,
         const Command& command);
 
 
 
     MoveResult handleLogin(
+        ClientConnection& connection,
         const Command& command);
 
 
@@ -72,13 +55,15 @@ private:
 
 
     MoveResult handleCreateRoom(
+        ClientConnection& connection,
         const Command& command);
 
 
 
     MoveResult handleJoinRoom(
-        PlayerSession* player,
+        ClientConnection& connection,
         const Command& command);
+
 
 
 

@@ -7,16 +7,12 @@
 
 
 
+
+
 /**
  * @brief Abstract network server interface.
  *
  * Hides transport implementation.
- *
- * Implementations:
- *
- *      LocalNetworkServer
- *      WebSocketServer
- *
  *
  * Responsibilities:
  *
@@ -43,7 +39,7 @@ public:
 
 
     using MessageCallback =
-        std::function<void(
+        std::function<NetworkMessage(
             int connectionId,
             const NetworkMessage& message)>;
 
@@ -58,6 +54,8 @@ public:
     using DisconnectCallback =
         std::function<void(
             int connectionId)>;
+
+
 
 
 
@@ -82,106 +80,63 @@ public:
 
 
 
+
+
 public:
 
 
-    /**
-     * @brief Starts network service.
-     */
     virtual void start() = 0;
 
 
 
-    /**
-     * @brief Stops network service.
-     */
     virtual void stop() = 0;
 
 
 
-    /**
-     * @brief Checks server state.
-     */
     virtual bool isRunning() const = 0;
 
 
 
-    /**
-     * @brief Sends message to specific client.
-     */
+
+
     virtual void send(
         int connectionId,
         const NetworkMessage& message) = 0;
 
 
 
-    /**
-     * @brief Disconnects client.
-     */
+
+
     virtual void disconnect(
         int connectionId) = 0;
 
 
 
+
+
     /**
-     * @brief Called when client sends message.
+     * Client -> Server
      *
-     * Flow:
+     * Returns:
      *
-     * Client
-     *    |
-     *    v
-     * Network layer
-     *    |
-     *    v
-     * MessageCallback
-     *    |
-     *    v
-     * Server
+     * Server -> Client response
      */
     virtual void setMessageCallback(
         MessageCallback callback) = 0;
 
 
 
-    /**
-     * @brief Called when new client connects.
-     *
-     * Flow:
-     *
-     * Client
-     *    |
-     *    v
-     * Network layer
-     *    |
-     *    v
-     * ConnectionCallback
-     *    |
-     *    v
-     * Server
-     */
+
+
     virtual void setConnectionCallback(
         ConnectionCallback callback) = 0;
 
 
 
-    /**
-     * @brief Called when client disconnects.
-     *
-     * Flow:
-     *
-     * Client
-     *    |
-     *    v
-     * Network layer
-     *    |
-     *    v
-     * DisconnectCallback
-     *    |
-     *    v
-     * Server
-     */
+
+
     virtual void setDisconnectCallback(
         DisconnectCallback callback) = 0;
+
 
 };

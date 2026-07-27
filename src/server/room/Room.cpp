@@ -1,11 +1,13 @@
 #include "Room.hpp"
 
 
-#include <stdexcept>
-
-
 #include "GameContext.hpp"
 #include "GameSession.hpp"
+
+
+#include <stdexcept>
+#include <utility>
+
 
 
 
@@ -15,35 +17,19 @@
 //================================================
 
 Room::Room(
-    const std::string& id,
+    std::string id,
     std::unique_ptr<GameContext> context,
     std::unique_ptr<GameSession> session)
 :
-m_id(id),
+m_id(std::move(id)),
 m_context(std::move(context)),
 m_session(std::move(session))
 {
 
-    if(m_id.empty())
+    if(!valid())
     {
-        throw std::runtime_error(
-            "Room id cannot be empty");
-    }
-
-
-
-    if(!m_context)
-    {
-        throw std::runtime_error(
-            "Room requires GameContext");
-    }
-
-
-
-    if(!m_session)
-    {
-        throw std::runtime_error(
-            "Room requires GameSession");
+        throw std::invalid_argument(
+            "Invalid Room configuration");
     }
 
 }
@@ -53,21 +39,8 @@ m_session(std::move(session))
 
 
 
-
 //================================================
-// Destructor
-//================================================
-
-Room::~Room() = default;
-
-
-
-
-
-
-
-//================================================
-// ID
+// Identity
 //================================================
 
 const std::string&
@@ -81,7 +54,6 @@ Room::getId() const
 
 
 
-
 //================================================
 // Session
 //================================================
@@ -89,7 +61,9 @@ Room::getId() const
 GameSession&
 Room::getSession()
 {
+
     return *m_session;
+
 }
 
 
@@ -99,7 +73,9 @@ Room::getSession()
 const GameSession&
 Room::getSession() const
 {
+
     return *m_session;
+
 }
 
 
@@ -115,7 +91,9 @@ Room::getSession() const
 GameContext&
 Room::getContext()
 {
+
     return *m_context;
+
 }
 
 
@@ -125,8 +103,11 @@ Room::getContext()
 const GameContext&
 Room::getContext() const
 {
+
     return *m_context;
+
 }
+
 
 
 
@@ -141,16 +122,22 @@ Room::getContext() const
 bool Room::canJoin() const
 {
 
+    if(!m_session)
+        return false;
+
+
+
     return
         m_session->getState()
         ==
         GameSession::State::WAITING
         &&
         m_session->getPlayerCount()
-        < 
+        <
         2;
 
 }
+
 
 
 
@@ -166,11 +153,45 @@ bool Room::isEmpty() const
 {
 
     return
-        m_session->getPlayerCount()
+        getPlayerCount()
         ==
         0;
 
 }
+
+
+
+
+
+
+
+
+//================================================
+// Active
+//================================================
+
+bool Room::isActive() const
+{
+
+    if(!m_session)
+        return false;
+
+
+
+    auto state =
+        m_session->getState();
+
+
+
+    return
+        state ==
+        GameSession::State::RUNNING
+        ||
+        state ==
+        GameSession::State::WAITING;
+
+}
+
 
 
 
@@ -185,10 +206,18 @@ bool Room::isEmpty() const
 bool Room::isRunning() const
 {
 
+    if(!m_session)
+        return false;
+
+
+
     return
-        m_session->isRunning();
+        m_session->getState()
+        ==
+        GameSession::State::RUNNING;
 
 }
+
 
 
 
@@ -203,12 +232,18 @@ bool Room::isRunning() const
 bool Room::isFinished() const
 {
 
+    if(!m_session)
+        return false;
+
+
+
     return
         m_session->getState()
         ==
         GameSession::State::FINISHED;
 
 }
+
 
 
 
@@ -223,7 +258,35 @@ bool Room::isFinished() const
 size_t Room::getPlayerCount() const
 {
 
+    if(!m_session)
+        return 0;
+
+
+
     return
         m_session->getPlayerCount();
+
+}
+
+
+
+
+
+
+
+
+//================================================
+// Validation
+//================================================
+
+bool Room::valid() const
+{
+
+    return
+        !m_id.empty()
+        &&
+        m_context != nullptr
+        &&
+        m_session != nullptr;
 
 }

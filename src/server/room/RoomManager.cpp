@@ -50,22 +50,20 @@ bool RoomManager::createRoom(
     const std::string& id)
 {
 
-    if(id.empty())
+    if(!validateRoomId(id))
         return false;
 
 
 
     {
-
         std::lock_guard<std::mutex> lock(
             m_mutex);
 
 
-
         if(existsUnsafe(id))
             return false;
-
     }
+
 
 
 
@@ -79,23 +77,20 @@ bool RoomManager::createRoom(
 
 
 
-    {
 
-        std::lock_guard<std::mutex> lock(
-            m_mutex);
-
-
-
-        if(existsUnsafe(id))
-            return false;
+    std::lock_guard<std::mutex> lock(
+        m_mutex);
 
 
 
-        m_rooms.emplace(
-            id,
-            std::move(room));
+    if(existsUnsafe(id))
+        return false;
 
-    }
+
+
+    m_rooms.emplace(
+        id,
+        std::move(room));
 
 
 
@@ -230,37 +225,54 @@ RoomManager::getRoom(
 //================================================
 // Get Or Create
 //================================================
-
 std::shared_ptr<Room>
 RoomManager::getOrCreateRoom(
     const std::string& id)
 {
 
-    auto existing =
-        getRoom(id);
+    if(!validateRoomId(id))
+        return nullptr;
 
 
 
-    if(existing)
-        return existing;
+    std::lock_guard<std::mutex> lock(
+        m_mutex);
 
 
 
-    if(!createRoom(id))
+    auto iterator =
+        m_rooms.find(id);
+
+
+
+    if(iterator != m_rooms.end())
     {
-         return nullptr;
+        return iterator->second;
     }
 
 
 
-    return getRoom(id);
+
+
+    auto room =
+        m_factory.createRoom(id);
+
+
+
+    if(!room)
+        return nullptr;
+
+
+
+    m_rooms.emplace(
+        id,
+        room);
+
+
+
+    return room;
 
 }
-
-
-
-
-
 
 
 
@@ -355,4 +367,25 @@ RoomManager::getRoomIds() const
 
     return result;
 
+}
+
+bool RoomManager::validateRoomId(
+    const std::string& id) const
+{
+
+    if(id.empty())
+        return false;
+
+
+    for(char c : id)
+    {
+        if(!std::isspace(
+            static_cast<unsigned char>(c)))
+        {
+            return true;
+        }
+    }
+
+
+    return false;
 }

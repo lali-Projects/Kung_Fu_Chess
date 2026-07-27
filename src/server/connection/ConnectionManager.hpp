@@ -1,13 +1,18 @@
 #pragma once
 
-#include <cstddef>
+
+#include <atomic>
 #include <functional>
-#include <map>
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <string>
-#include <string>
+#include <unordered_map>
+#include <vector>
+
+
 #include "NetworkMessage.hpp"
+
 
 
 class ClientConnection;
@@ -24,8 +29,8 @@ public:
 
     using SendCallback =
         std::function<void(
-            int,
-            const NetworkMessage&)>;
+            int connectionId,
+            const NetworkMessage& message)>;
 
 
 
@@ -52,6 +57,7 @@ public:
 
 
 
+
 public:
 
 
@@ -65,16 +71,17 @@ public:
 
 
     bool addConnection(
-        int id);
+        int connectionId);
 
 
 
     void removeConnection(
-        int id);
+        int connectionId);
 
 
 
     void disconnectAll();
+
 
 
 
@@ -94,6 +101,7 @@ public:
 
 
 
+
 public:
 
 
@@ -102,32 +110,27 @@ public:
 //=================================
 
 
-    ClientConnection*
+    std::shared_ptr<ClientConnection>
     getConnection(
-        int id);
+        int connectionId);
 
 
 
-    const ClientConnection*
+    std::shared_ptr<const ClientConnection>
     getConnection(
-        int id) const;
+        int connectionId) const;
 
 
 
-    bool containsConnection(
-        int id) const;
-
-
-
-    ClientConnection*
+    std::shared_ptr<ClientConnection>
     findByPlayer(
         const PlayerSession& player);
 
 
 
-    const ClientConnection*
-    findByPlayer(
-        const PlayerSession& player) const;
+    bool containsConnection(
+        int connectionId) const;
+
 
 
 
@@ -152,6 +155,7 @@ public:
 
 
 
+
 public:
 
 
@@ -165,11 +169,12 @@ public:
 
 
 
+
 public:
 
 
 //=================================
-// Callback
+// Network
 //=================================
 
 
@@ -179,45 +184,50 @@ public:
 
 
 
-private:
-
-
-    ClientConnection*
-    findUnsafe(
-        int id);
-
-
-
-    const ClientConnection*
-    findUnsafe(
-        int id) const;
-
-
-
 
 private:
 
 
-    int m_nextId{1};
+    std::shared_ptr<ClientConnection>
+    findUnsafe(
+        int connectionId);
 
 
 
-    CommandHandler& m_commandHandler;
+    std::shared_ptr<const ClientConnection>
+    findUnsafe(
+        int connectionId) const;
 
 
 
-    SendCallback m_sendCallback;
+
+
+private:
+
+
+    std::atomic<int>
+        m_nextId{1};
 
 
 
-    mutable std::mutex
+    CommandHandler& 
+        m_commandHandler;
+
+
+
+    SendCallback
+        m_sendCallback;
+
+
+
+    mutable std::shared_mutex
         m_connectionsMutex;
 
 
 
-    std::map<
+    std::unordered_map<
         int,
-        std::unique_ptr<ClientConnection>>
+        std::shared_ptr<ClientConnection>>
         m_connections;
 
 };

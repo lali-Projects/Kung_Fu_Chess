@@ -505,7 +505,6 @@ void WebSocketServer::handleClientConnection(
 //================================================
 // Handle Message
 //================================================
-
 void WebSocketServer::handleMessage(
     int connectionId,
     const std::string& payload)
@@ -515,6 +514,7 @@ void WebSocketServer::handleMessage(
         << "[HANDLE MESSAGE BEGIN] "
         << payload
         << std::endl;
+
 
 
     if(!m_messageCallback)
@@ -527,20 +527,37 @@ void WebSocketServer::handleMessage(
     }
 
 
-    NetworkMessage message(
+
+
+    NetworkMessage request(
         MessageType::COMMAND,
         payload);
 
 
-    m_messageCallback(
+
+
+    NetworkMessage response =
+        m_messageCallback(
+            connectionId,
+            request);
+
+
+
+
+
+    send(
         connectionId,
-        message);
+        response);
+
+
+
 
 
     std::cout
         << "[HANDLE MESSAGE END] "
         << payload
         << std::endl;
+
 }
 
 
