@@ -48,6 +48,9 @@ SQLiteDatabase::~SQLiteDatabase()
 bool SQLiteDatabase::open()
 {
 
+    std::lock_guard<std::mutex> lock(
+        m_mutex);
+
     m_lastError.clear();
 
 
@@ -85,7 +88,14 @@ bool SQLiteDatabase::open()
 
 
 
-        close();
+        if(m_database)
+        {
+            sqlite3_close(
+                m_database);
+
+
+            m_database = nullptr;
+        }
 
 
 
@@ -111,6 +121,9 @@ bool SQLiteDatabase::open()
 void SQLiteDatabase::close()
 {
 
+    std::lock_guard<std::mutex> lock(
+        m_mutex);
+
     if(!m_database)
     {
         return;
@@ -131,6 +144,9 @@ void SQLiteDatabase::close()
         m_lastError =
             sqlite3_errmsg(
                 m_database);
+
+
+        return;
     }
 
 
@@ -153,6 +169,9 @@ void SQLiteDatabase::close()
 
 bool SQLiteDatabase::isOpen() const
 {
+    std::lock_guard<std::mutex> lock(
+        m_mutex);
+
     return
         m_database != nullptr;
 }
@@ -172,6 +191,9 @@ bool SQLiteDatabase::isOpen() const
 bool SQLiteDatabase::execute(
     const std::string& sql)
 {
+
+    std::lock_guard<std::mutex> lock(
+        m_mutex);
 
     m_lastError.clear();
 
@@ -251,6 +273,9 @@ bool SQLiteDatabase::execute(
     const std::string& sql,
     const std::vector<std::string>& params)
 {
+
+    std::lock_guard<std::mutex> lock(
+        m_mutex);
 
     m_lastError.clear();
 
@@ -367,6 +392,9 @@ SQLiteDatabase::queryOne(
     const std::string& sql,
     const std::vector<std::string>& params)
 {
+
+    std::lock_guard<std::mutex> lock(
+        m_mutex);
 
     m_lastError.clear();
 
@@ -596,8 +624,11 @@ bool SQLiteDatabase::bindParameters(
 // Last Error
 //================================================
 
-const std::string&
+std::string
 SQLiteDatabase::getLastError() const
 {
+    std::lock_guard<std::mutex> lock(
+        m_mutex);
+
     return m_lastError;
 }

@@ -11,6 +11,7 @@
 
 class UserRepository;
 class PlayerSession;
+class PlayerSessionManager;
 
 
 
@@ -21,7 +22,8 @@ public:
 
 
     explicit AuthService(
-        UserRepository& repository);
+        UserRepository& repository,
+        PlayerSessionManager& sessionManager);
 
 
 
@@ -57,5 +59,8 @@ private:
 
 
     UserRepository& m_repository;
+
+
+    PlayerSessionManager& m_sessionManager;
 
 };

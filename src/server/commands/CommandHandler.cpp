@@ -13,11 +13,32 @@
 #include "GameSession.hpp"
 
 #include "PlayerSession.hpp"
+#include "PlayerLifecycleService.hpp"
 
 #include "AuthService.hpp"
 
 
 #include <string>
+
+
+namespace
+{
+    std::string commandName(
+        CommandType type)
+    {
+        switch(type)
+        {
+            case CommandType::CLICK: return "CLICK";
+            case CommandType::LOGIN: return "LOGIN";
+            case CommandType::REGISTER: return "REGISTER";
+            case CommandType::CREATE_ROOM: return "CREATE_ROOM";
+            case CommandType::JOIN_ROOM: return "JOIN_ROOM";
+            case CommandType::LEAVE_ROOM: return "LEAVE_ROOM";
+            case CommandType::LOGOUT: return "LOGOUT";
+            default: return "UNKNOWN";
+        }
+    }
+}
 
 
 
@@ -28,10 +49,12 @@
 
 CommandHandler::CommandHandler(
     RoomManager& roomManager,
-    AuthService& authService)
+    AuthService& authService,
+    PlayerLifecycleService& playerLifecycle)
 :
 m_roomManager(roomManager),
-m_authService(authService)
+m_authService(authService),
+m_playerLifecycle(playerLifecycle)
 {
 }
 
@@ -44,10 +67,34 @@ m_authService(authService)
 // Main Dispatcher
 //================================================
 
-MoveResult CommandHandler::handle(
+CommandResponse CommandHandler::handle(
     ClientConnection& connection,
     const Command& command)
 {
+    CommandResponse response;
+    response.command =
+        commandName(command.getType());
+
+
+    auto playerBefore =
+        connection.getPlayer();
+
+
+    if(playerBefore)
+    {
+        if(playerBefore->hasUser())
+        {
+            response.userId = playerBefore->getUserId();
+            response.username = playerBefore->getUsername();
+        }
+
+
+        response.sessionId =
+            playerBefore->getSessionId();
+    }
+
+
+    MoveResult result;
 
     switch(command.getType())
     {
@@ -55,51 +102,131 @@ MoveResult CommandHandler::handle(
 
         case CommandType::REGISTER:
 
-            return handleRegister(
+            result = handleRegister(
                 command);
+            break;
 
 
 
         case CommandType::LOGIN:
 
-            return handleLogin(
+            result = handleLogin(
                 connection,
                 command);
+            break;
 
 
 
         case CommandType::CLICK:
 
-            return handleClick(
+            result = handleClick(
                 connection,
                 command);
+            break;
 
 
 
         case CommandType::CREATE_ROOM:
 
-            return handleCreateRoom(
+            result = handleCreateRoom(
                 connection,
                 command);
+            break;
 
 
 
         case CommandType::JOIN_ROOM:
 
-            return handleJoinRoom(
+            result = handleJoinRoom(
                 connection,
                 command);
+            break;
+
+
+        case CommandType::LEAVE_ROOM:
+
+            result = handleLeaveRoom(
+                connection);
+            break;
+
+
+        case CommandType::LOGOUT:
+
+            result = handleLogout(
+                connection);
+            break;
 
 
 
         default:
 
-            return
-            {
-                false,
-                "unknown_command"
-            };
+            result = {false, "unknown_command"};
+            break;
     }
+
+
+    response.success = result.success;
+    response.reason = result.reason;
+
+
+    auto playerAfter =
+        connection.getPlayer();
+
+
+    if(playerAfter)
+    {
+        if(playerAfter->hasUser())
+        {
+            response.userId = playerAfter->getUserId();
+            response.username = playerAfter->getUsername();
+        }
+
+
+        response.sessionId =
+            playerAfter->getSessionId();
+
+
+        if(playerAfter->hasRoom())
+        {
+            response.roomId = playerAfter->getRoomId();
+
+
+            if(playerAfter->getSide() != Side::NONE)
+            {
+                response.side = playerAfter->getSide();
+            }
+        }
+
+
+        if(command.getType() == CommandType::CLICK &&
+           playerAfter->hasRoom())
+        {
+            auto room =
+                m_roomManager.getRoom(
+                    playerAfter->getRoomId());
+
+
+            if(room)
+            {
+                response.selectedPosition =
+                    room->getSession()
+                        .getSelectedPosition(
+                            *playerAfter);
+            }
+        }
+    }
+
+
+    if(command.getType() == CommandType::CREATE_ROOM &&
+       result.success &&
+       !command.getArgs().empty())
+    {
+        response.roomId =
+            command.getArgs().front();
+    }
+
+
+    return response;
 
 }
 
@@ -156,6 +283,16 @@ MoveResult CommandHandler::handleLogin(
     ClientConnection& connection,
     const Command& command)
 {
+    if(connection.hasPlayer())
+    {
+        return
+        {
+            false,
+            "already_authenticated"
+        };
+    }
+
+
     const auto& args =
         command.getArgs();
 
@@ -189,8 +326,11 @@ MoveResult CommandHandler::handleLogin(
 
 
 
-    connection.attachPlayer(
-        player);
+    if(!connection.attachPlayer(player))
+    {
+        m_playerLifecycle.disconnect(player);
+        return {false, "session_attach_failed"};
+    }
 
 
 
@@ -218,7 +358,12 @@ MoveResult CommandHandler::handleClick(
     const Command& command)
 {
 
-    if(!connection.hasPlayer())
+    auto player =
+        connection.getPlayer();
+
+
+    if(!player ||
+       !player->isAuthenticated())
     {
         return
         {
@@ -226,17 +371,6 @@ MoveResult CommandHandler::handleClick(
             "authentication_required"
         };
     }
-
-
-
-
-
-    auto player =
-        connection.getPlayer();
-
-
-
-
 
     if(!player->hasRoom())
     {
@@ -368,7 +502,12 @@ MoveResult CommandHandler::handleCreateRoom(
     const Command& command)
 {
 
-    if(!connection.hasPlayer())
+    auto player =
+        connection.getPlayer();
+
+
+    if(!player ||
+       !player->isAuthenticated())
     {
         return
         {
@@ -442,106 +581,75 @@ MoveResult CommandHandler::handleJoinRoom(
     ClientConnection& connection,
     const Command& command)
 {
+    const auto& args =
+        command.getArgs();
 
-    if(!connection.hasPlayer())
+
+    if(args.size()!=1)
     {
-        return
-        {
-            false,
-            "authentication_required"
-        };
+        return {false, "invalid_room_arguments"};
     }
-
-
-
 
 
     auto player =
         connection.getPlayer();
 
 
-
-
-
-
-    const auto& args =
-        command.getArgs();
-
-
-
-
-
-    if(args.size()!=1)
+    if(!player ||
+       !player->isAuthenticated())
     {
-        return
-        {
-            false,
-            "invalid_room_arguments"
-        };
+        return {false, "authentication_required"};
     }
 
 
+    return m_playerLifecycle.joinRoom(
+        player,
+        args[0]);
+
+}
 
 
-
-    auto room =
-        m_roomManager.getRoom(
-            args[0]);
-
-
-
+MoveResult CommandHandler::handleLeaveRoom(
+    ClientConnection& connection)
+{
+    auto player =
+        connection.getPlayer();
 
 
-    if(!room)
+    if(!player ||
+       !player->isAuthenticated())
     {
-        return
-        {
-            false,
-            "room_not_found"
-        };
+        return {false, "authentication_required"};
     }
 
 
+    return m_playerLifecycle.leaveRoom(player);
+}
 
 
+MoveResult CommandHandler::handleLogout(
+    ClientConnection& connection)
+{
+    auto player =
+        connection.getPlayer();
 
-    if(!room->canJoin())
+
+    if(!player ||
+       !player->isAuthenticated())
     {
-        return
-        {
-            false,
-            "room_full"
-        };
+        return {false, "authentication_required"};
     }
 
 
+    MoveResult result =
+        m_playerLifecycle.logout(player);
 
 
-
-
-    if(
-        room->getSession()
-            .addPlayer(
-                player))
+    if(result.success)
     {
-
-        return
-        {
-            true,
-            "joined_room"
-        };
-
+        connection.clearPlayer();
     }
 
 
-
-
-
-
-    return
-    {
-        false,
-        "join_failed"
-    };
-
+    return result;
 }

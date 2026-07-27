@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <stdexcept>
+#include <utility>
 
 
 #include "EventBus.hpp"
@@ -17,6 +18,9 @@
 // Authentication
 #include "UserRepository.hpp"
 #include "AuthService.hpp"
+#include "PlayerSessionManager.hpp"
+#include "PlayerLifecycleService.hpp"
+#include "AuthoritativeGameLoop.hpp"
 
 
 // Rooms
@@ -41,8 +45,27 @@
 // Constructor
 //================================================
 
-Application::Application()
+Application::Application(
+    std::uint16_t port,
+    std::string databasePath)
+:
+m_port(port),
+m_databasePath(std::move(databasePath))
 {
+    if(m_port == 0)
+    {
+        throw std::invalid_argument(
+            "Server port cannot be zero");
+    }
+
+
+    if(m_databasePath.empty())
+    {
+        throw std::invalid_argument(
+            "Database path cannot be empty");
+    }
+
+
     initialize();
 }
 
@@ -94,7 +117,7 @@ void Application::initialize()
 
     m_database =
         std::make_unique<SQLiteDatabase>(
-            "kungfu_chess.db");
+            m_databasePath);
 
 
 
@@ -150,12 +173,17 @@ void Application::initialize()
             *m_database);
 
 
+    m_playerSessionManager =
+        std::make_unique<PlayerSessionManager>();
+
+
 
 
 
     m_authService =
         std::make_unique<AuthService>(
-            *m_userRepository);
+            *m_userRepository,
+            *m_playerSessionManager);
 
 
 
@@ -181,6 +209,12 @@ void Application::initialize()
     m_roomManager =
         std::make_unique<RoomManager>(
             *m_roomFactory);
+
+
+    m_playerLifecycleService =
+        std::make_unique<PlayerLifecycleService>(
+            *m_roomManager,
+            *m_playerSessionManager);
 
 
 
@@ -216,7 +250,8 @@ void Application::initialize()
     m_commandHandler =
         std::make_unique<CommandHandler>(
             *m_roomManager,
-            *m_authService);
+            *m_authService,
+            *m_playerLifecycleService);
 
 
 
@@ -232,7 +267,7 @@ void Application::initialize()
 
     auto network =
         std::make_unique<WebSocketServer>(
-            8080);
+            m_port);
 
 
 
@@ -250,7 +285,13 @@ void Application::initialize()
         std::make_unique<Server>(
             *m_commandHandler,
             *m_eventBus,
+            *m_playerLifecycleService,
             std::move(network));
+
+
+    m_gameLoop =
+        std::make_unique<AuthoritativeGameLoop>(
+            *m_roomManager);
 
 }
 
@@ -296,6 +337,17 @@ void Application::start()
     m_server->start();
 
 
+    try
+    {
+        m_gameLoop->start();
+    }
+    catch(...)
+    {
+        m_server->stop();
+        throw;
+    }
+
+
 
 
     m_running = true;
@@ -335,6 +387,16 @@ void Application::stop()
 
 
 
+
+
+    //---------------------------------
+    // Stop Authoritative Game Loop
+    //---------------------------------
+
+    if(m_gameLoop)
+    {
+        m_gameLoop->stop();
+    }
 
 
     //---------------------------------

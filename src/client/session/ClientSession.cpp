@@ -1,125 +1,136 @@
 #include "ClientSession.hpp"
 
 
-//================================================
-// Login
-//================================================
+void ClientSession::setConnected(bool connected)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_connected = connected;
+    if(!connected)
+    {
+        clearAuthenticatedStateUnsafe();
+    }
+}
+
+
+bool ClientSession::isConnected() const
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_connected;
+}
+
 
 void ClientSession::login(
     const std::string& userId,
     const std::string& username,
     const std::string& sessionId)
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     m_userId = userId;
-
     m_username = username;
-
     m_sessionId = sessionId;
-
-
     m_authenticated = true;
 }
 
 
-
-//================================================
-// Logout
-//================================================
-
 void ClientSession::logout()
 {
-    reset();
+    std::lock_guard<std::mutex> lock(m_mutex);
+    clearAuthenticatedStateUnsafe();
 }
 
 
-
-//================================================
-// Auth State
-//================================================
-
 bool ClientSession::isAuthenticated() const
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     return m_authenticated;
 }
 
 
-
-//================================================
-// Identity
-//================================================
-
-const std::string&
-ClientSession::getUserId() const
+std::string ClientSession::getUserId() const
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     return m_userId;
 }
 
 
-
-const std::string&
-ClientSession::getUsername() const
+std::string ClientSession::getUsername() const
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     return m_username;
 }
 
 
-
-const std::string&
-ClientSession::getSessionId() const
+std::string ClientSession::getSessionId() const
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     return m_sessionId;
 }
 
 
-
-//================================================
-// Room
-//================================================
-
-void ClientSession::setRoomId(
-    const std::string& roomId)
+void ClientSession::setRoomId(const std::string& roomId)
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     m_roomId = roomId;
 }
 
 
-
 void ClientSession::clearRoom()
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     m_roomId.clear();
+    m_side = Side::NONE;
 }
-
 
 
 bool ClientSession::hasRoom() const
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     return !m_roomId.empty();
 }
 
 
-
-const std::string&
-ClientSession::getRoomId() const
+std::string ClientSession::getRoomId() const
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     return m_roomId;
 }
 
 
+void ClientSession::setSide(Side side)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_side = side;
+}
 
-//================================================
-// Reset
-//================================================
+
+void ClientSession::clearSide()
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_side = Side::NONE;
+}
+
+
+Side ClientSession::getSide() const
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_side;
+}
+
 
 void ClientSession::reset()
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_connected = false;
+    clearAuthenticatedStateUnsafe();
+}
+
+
+void ClientSession::clearAuthenticatedStateUnsafe()
+{
     m_userId.clear();
-
     m_username.clear();
-
     m_sessionId.clear();
-
     m_roomId.clear();
-
-
+    m_side = Side::NONE;
     m_authenticated = false;
 }

@@ -237,9 +237,15 @@ void LocalNetworkServer::simulateIncomingMessage(
 
 
 
-    m_messageCallback(
+    NetworkMessage response =
+        m_messageCallback(
+            connectionId,
+            message);
+
+
+    send(
         connectionId,
-        message);
+        response);
 }
 
 void LocalNetworkServer::setDisconnectCallback(

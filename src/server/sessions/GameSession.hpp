@@ -2,12 +2,15 @@
 
 
 #include <memory>
+#include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
 
 #include "MoveResult.hpp"
 #include "PieceTypes.hpp"
+#include "Position.hpp"
 
 
 
@@ -15,6 +18,8 @@ class GameContext;
 class EventBus;
 class PlayerSession;
 class ClickCommand;
+class GameSnapshot;
+class PlayerInputCoordinator;
 
 
 
@@ -97,12 +102,12 @@ public:
 
 
 
-    const std::shared_ptr<PlayerSession>&
+    std::shared_ptr<PlayerSession>
     getWhitePlayer() const;
 
 
 
-    const std::shared_ptr<PlayerSession>&
+    std::shared_ptr<PlayerSession>
     getBlackPlayer() const;
 
 
@@ -117,6 +122,16 @@ public:
     MoveResult handleClick(
         PlayerSession& player,
         const ClickCommand& command);
+
+
+    std::optional<Position>
+    getSelectedPosition(
+        const PlayerSession& player) const;
+
+
+    void tick(
+        int milliseconds,
+        bool broadcastSnapshot);
 
 
 
@@ -157,11 +172,22 @@ public:
 private:
 
 
-    Side assignSide();
+    Side assignSideUnsafe() const;
 
 
 
-    void publishSnapshot();
+    bool containsPlayerUnsafe(
+        const PlayerSession& player) const;
+
+
+    size_t getPlayerCountUnsafe() const;
+
+
+    GameSnapshot buildSnapshotUnsafe() const;
+
+
+    void publishSnapshot(
+        const GameSnapshot& snapshot);
 
 
 
@@ -197,9 +223,19 @@ private:
         m_observers;
 
 
+    std::unique_ptr<PlayerInputCoordinator>
+        m_inputCoordinator;
+
+
 
     State m_state{
         State::WAITING
     };
+
+
+    mutable std::mutex m_mutex;
+
+
+    mutable std::mutex m_publishMutex;
 
 };

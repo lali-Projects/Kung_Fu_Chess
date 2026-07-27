@@ -97,6 +97,10 @@ public:
     getRoomIds() const;
 
 
+    std::vector<std::shared_ptr<Room>>
+    getRoomsSnapshot() const;
+
+
 
 
 private:

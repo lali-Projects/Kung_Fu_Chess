@@ -52,17 +52,15 @@ ClientConnection::~ClientConnection() = default;
 // Receive Network Message
 //================================================
 
-MoveResult ClientConnection::receiveNetworkMessage(
+CommandResponse ClientConnection::receiveNetworkMessage(
     const NetworkMessage& message)
 {
 
     if(!m_commandParser)
     {
-        return
-        {
-            false,
-            "parser_missing"
-        };
+        CommandResponse response;
+        response.reason = "parser_missing";
+        return response;
     }
 
 
@@ -75,11 +73,9 @@ MoveResult ClientConnection::receiveNetworkMessage(
 
     if(!command)
     {
-        return
-        {
-            false,
-            "invalid_command"
-        };
+        CommandResponse response;
+        response.reason = "invalid_command";
+        return response;
     }
 
 
@@ -125,6 +121,9 @@ void ClientConnection::setSendCallback(
     SendCallback callback)
 {
 
+    std::lock_guard<std::mutex> lock(
+        m_mutex);
+
     m_sendCallback =
         std::move(callback);
 
@@ -144,14 +143,25 @@ void ClientConnection::sendMessageToClient(
     const NetworkMessage& message)
 {
 
-    m_lastMessage =
-        message;
+    SendCallback sendCallback;
 
 
-
-    if(m_sendCallback)
     {
-        m_sendCallback(
+        std::lock_guard<std::mutex> lock(
+            m_mutex);
+
+
+        m_lastMessage =
+            message;
+
+
+        sendCallback =
+            m_sendCallback;
+    }
+
+    if(sendCallback)
+    {
+        sendCallback(
             message);
     }
 
@@ -186,6 +196,9 @@ int ClientConnection::getId() const
 bool ClientConnection::hasPlayer() const
 {
 
+    std::lock_guard<std::mutex> lock(
+        m_mutex);
+
     return
         m_player != nullptr;
 
@@ -197,12 +210,28 @@ bool ClientConnection::hasPlayer() const
 
 
 
-void ClientConnection::attachPlayer(
+bool ClientConnection::attachPlayer(
     std::shared_ptr<PlayerSession> player)
 {
 
     if(!player)
-        return;
+    {
+        return false;
+    }
+
+
+    player->setConnectionId(
+        m_id);
+
+
+    std::lock_guard<std::mutex> lock(
+        m_mutex);
+
+
+    if(m_player)
+    {
+        return false;
+    }
 
 
 
@@ -210,9 +239,7 @@ void ClientConnection::attachPlayer(
         std::move(player);
 
 
-
-    m_player->setConnectionId(
-        m_id);
+    return true;
 
 }
 
@@ -226,14 +253,22 @@ void ClientConnection::attachPlayer(
 void ClientConnection::clearPlayer()
 {
 
-    if(m_player)
+    std::shared_ptr<PlayerSession> player;
+
+
     {
-        m_player->disconnect();
+        std::lock_guard<std::mutex> lock(
+            m_mutex);
+
+
+        player =
+            std::move(m_player);
     }
 
-
-
-    m_player.reset();
+    if(player)
+    {
+        player->disconnect();
+    }
 
 }
 
@@ -246,6 +281,9 @@ void ClientConnection::clearPlayer()
 std::shared_ptr<PlayerSession>
 ClientConnection::getPlayer()
 {
+    std::lock_guard<std::mutex> lock(
+        m_mutex);
+
     return m_player;
 }
 
@@ -258,6 +296,9 @@ ClientConnection::getPlayer()
 std::shared_ptr<const PlayerSession>
 ClientConnection::getPlayer() const
 {
+    std::lock_guard<std::mutex> lock(
+        m_mutex);
+
     return m_player;
 }
 
@@ -270,6 +311,9 @@ ClientConnection::getPlayer() const
 PlayerSession&
 ClientConnection::getPlayerSession()
 {
+
+    std::lock_guard<std::mutex> lock(
+        m_mutex);
 
     if(!m_player)
     {
@@ -293,9 +337,12 @@ ClientConnection::getPlayerSession()
 // Last Message
 //================================================
 
-const std::optional<NetworkMessage>&
+std::optional<NetworkMessage>
 ClientConnection::getLastMessage() const
 {
+
+    std::lock_guard<std::mutex> lock(
+        m_mutex);
 
     return m_lastMessage;
 

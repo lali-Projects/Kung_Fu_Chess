@@ -24,6 +24,8 @@ public:
      */
     Window(const std::string& title);
 
+    ~Window();
+
     /**
      * @brief מציגה את התמונה בחלון ומעבדת אירועי מערכת (מקלדת/עכבר).
      * יש לקרוא לפונקציה זו בתוך הלולאה הראשית של התוכנית.
@@ -44,6 +46,9 @@ public:
     void setMouseCallback(std::function<void(int, int)> callback);
 
 private:
-   
+    void unregisterMouseCallback() noexcept;
+
     static void mouseHandler(int event, int x, int y, int flags, void* userdata);
+
+    bool nativeMouseCallbackRegistered{false};
 };

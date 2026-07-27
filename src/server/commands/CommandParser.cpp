@@ -1,6 +1,7 @@
 #include "CommandParser.hpp"
 
 
+#include <cctype>
 #include <sstream>
 
 
@@ -114,6 +115,14 @@ bool CommandParser::validateArguments(
                 args.size() == 1;
 
 
+        case CommandType::LEAVE_ROOM:
+
+        case CommandType::LOGOUT:
+
+            return
+                args.empty();
+
+
 
         default:
 
@@ -153,12 +162,19 @@ bool CommandParser::validateClickArguments(
 
 
 
-    int row =
-        std::stoi(args[0]);
+    int row;
+    int col;
 
 
-    int col =
-        std::stoi(args[1]);
+    try
+    {
+        row = std::stoi(args[0]);
+        col = std::stoi(args[1]);
+    }
+    catch(...)
+    {
+        return false;
+    }
 
 
 
@@ -244,6 +260,14 @@ CommandParser::convertCommandType(
 
     if(command == "JOIN_ROOM")
         return CommandType::JOIN_ROOM;
+
+
+    if(command == "LEAVE_ROOM")
+        return CommandType::LEAVE_ROOM;
+
+
+    if(command == "LOGOUT")
+        return CommandType::LOGOUT;
 
 
 

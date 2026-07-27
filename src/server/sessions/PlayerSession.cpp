@@ -29,9 +29,10 @@ m_sessionId(std::move(sessionId))
 // Identity
 //================================================
 
-const std::string&
+std::string
 PlayerSession::getSessionId() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     return m_sessionId;
 }
 
@@ -40,9 +41,10 @@ PlayerSession::getSessionId() const
 
 
 
-const std::string&
+std::string
 PlayerSession::getUserId() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     return m_userId;
 }
 
@@ -51,9 +53,10 @@ PlayerSession::getUserId() const
 
 
 
-const std::string&
+std::string
 PlayerSession::getUsername() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     return m_username;
 }
 
@@ -70,6 +73,7 @@ PlayerSession::getUsername() const
 
 bool PlayerSession::isAuthenticated() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     return m_authenticated;
 }
 
@@ -80,6 +84,7 @@ bool PlayerSession::isAuthenticated() const
 
 bool PlayerSession::hasUser() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     return
         !m_userId.empty();
 }
@@ -93,6 +98,8 @@ void PlayerSession::authenticate(
     const std::string& userId,
     const std::string& username)
 {
+
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
     m_userId =
         userId;
@@ -113,6 +120,8 @@ void PlayerSession::authenticate(
 
 void PlayerSession::logout()
 {
+
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
     m_authenticated = false;
 
@@ -138,6 +147,7 @@ void PlayerSession::logout()
 
 Side PlayerSession::getSide() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     return m_side;
 }
 
@@ -149,6 +159,7 @@ Side PlayerSession::getSide() const
 void PlayerSession::setSide(
     Side side)
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     m_side = side;
 }
 
@@ -159,6 +170,7 @@ void PlayerSession::setSide(
 
 void PlayerSession::clearSide()
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     m_side = Side::NONE;
 }
 
@@ -177,6 +189,7 @@ void PlayerSession::clearSide()
 PlayerSession::ConnectionState
 PlayerSession::getState() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     return m_state;
 }
 
@@ -188,6 +201,7 @@ PlayerSession::getState() const
 void PlayerSession::setState(
     ConnectionState state)
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     m_state = state;
 }
 
@@ -198,6 +212,7 @@ void PlayerSession::setState(
 
 bool PlayerSession::isConnected() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     return
         m_state ==
         ConnectionState::CONNECTED;
@@ -210,6 +225,8 @@ bool PlayerSession::isConnected() const
 
 void PlayerSession::disconnect()
 {
+
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
     m_state =
         ConnectionState::DISCONNECTED;
@@ -231,6 +248,7 @@ void PlayerSession::disconnect()
 void PlayerSession::setRoomId(
     const std::string& roomId)
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     m_roomId = roomId;
 }
 
@@ -239,9 +257,10 @@ void PlayerSession::setRoomId(
 
 
 
-const std::string&
+std::string
 PlayerSession::getRoomId() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     return m_roomId;
 }
 
@@ -252,6 +271,7 @@ PlayerSession::getRoomId() const
 
 bool PlayerSession::hasRoom() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     return
         !m_roomId.empty();
 }
@@ -263,6 +283,7 @@ bool PlayerSession::hasRoom() const
 
 void PlayerSession::clearRoom()
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     m_roomId.clear();
 }
 
@@ -273,6 +294,8 @@ void PlayerSession::clearRoom()
 
 void PlayerSession::leaveGame()
 {
+
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
     clearRoom();
 
@@ -288,6 +311,7 @@ void PlayerSession::leaveGame()
 
 bool PlayerSession::isInGame() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     return
         hasRoom()
         &&
@@ -309,6 +333,7 @@ bool PlayerSession::isInGame() const
 void PlayerSession::setConnectionId(
     int id)
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     m_connectionId = id;
 }
 
@@ -319,6 +344,7 @@ void PlayerSession::setConnectionId(
 
 int PlayerSession::getConnectionId() const
 {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     return m_connectionId;
 }
 
@@ -336,6 +362,8 @@ int PlayerSession::getConnectionId() const
 
 bool PlayerSession::canJoinRoom() const
 {
+
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
     return
         isConnected()
@@ -356,6 +384,8 @@ bool PlayerSession::canJoinRoom() const
 
 void PlayerSession::reset()
 {
+
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
     logout();
 

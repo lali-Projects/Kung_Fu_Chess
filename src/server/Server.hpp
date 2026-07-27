@@ -16,6 +16,7 @@ class EventBus;
 class Event;
 class INetworkServer;
 class NetworkMessage;
+class PlayerLifecycleService;
 
 
 
@@ -48,6 +49,7 @@ public:
     Server(
         CommandHandler& commandHandler,
         EventBus& eventBus,
+        PlayerLifecycleService& playerLifecycle,
         std::unique_ptr<INetworkServer> networkServer);
 
 

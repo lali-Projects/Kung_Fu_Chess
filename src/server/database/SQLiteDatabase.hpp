@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <string>
 #include <vector>
 #include <optional>
@@ -99,7 +100,7 @@ public:
 // Error
 //=================================
 
-    const std::string&
+    std::string
     getLastError() const override;
 
 
@@ -115,6 +116,9 @@ private:
 
 
 private:
+
+
+    mutable std::mutex m_mutex;
 
 
     sqlite3* m_database{

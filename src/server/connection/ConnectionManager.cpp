@@ -203,7 +203,27 @@ void ConnectionManager::removeConnection(
 
         if(player)
         {
-            player->disconnect();
+            PlayerDisconnectCallback callback;
+
+
+            {
+                std::shared_lock lock(
+                    m_connectionsMutex);
+
+
+                callback =
+                    m_playerDisconnectCallback;
+            }
+
+
+            if(callback)
+            {
+                callback(player);
+            }
+            else
+            {
+                player->disconnect();
+            }
         }
 
     }
@@ -228,6 +248,9 @@ void ConnectionManager::disconnectAll()
         connections;
 
 
+    PlayerDisconnectCallback callback;
+
+
 
     {
 
@@ -246,6 +269,10 @@ void ConnectionManager::disconnectAll()
 
 
         m_connections.clear();
+
+
+        callback =
+            m_playerDisconnectCallback;
 
     }
 
@@ -270,7 +297,14 @@ void ConnectionManager::disconnectAll()
 
         if(player)
         {
-            player->disconnect();
+            if(callback)
+            {
+                callback(player);
+            }
+            else
+            {
+                player->disconnect();
+            }
         }
 
     }
@@ -313,8 +347,11 @@ bool ConnectionManager::attachPlayer(
 
 
 
-    connection->attachPlayer(
-        std::move(player));
+    if(!connection->attachPlayer(
+            std::move(player)))
+    {
+        return false;
+    }
 
 
 
@@ -679,4 +716,16 @@ void ConnectionManager::setSendCallback(
     m_sendCallback =
         std::move(callback);
 
+}
+
+
+void ConnectionManager::setPlayerDisconnectCallback(
+    PlayerDisconnectCallback callback)
+{
+    std::unique_lock lock(
+        m_connectionsMutex);
+
+
+    m_playerDisconnectCallback =
+        std::move(callback);
 }

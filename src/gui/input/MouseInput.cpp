@@ -1,16 +1,18 @@
 #include "MouseInput.hpp"
 
 
-
-MouseInput::MouseInput(GameController& controller, Layout& layout)
-:
-controller(controller), layout(layout)
+MouseInput::MouseInput(
+    IBoardClickSink& clickSink,
+    const Layout& layout)
+    : m_clickSink(clickSink),
+      m_layout(layout)
 {
 }
 
+
 void MouseInput::click(int x, int y)
 {
-    Position position = layout.pixelToBoard(x, y);
-    MoveResult result = controller.click(position);
-    std::cout << "MouseInput::click: " << x << ", " << y << " -> Board Position: (" << position.getRow() << ", " << position.getCol() << ") Result: " << (result.success ? "Success" : "Failure") << ", Reason: " << result.reason << std::endl;    
+    const Position position =
+        m_layout.pixelToBoard(x, y);
+    m_clickSink.click(position);
 }

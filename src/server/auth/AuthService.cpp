@@ -4,6 +4,7 @@
 #include "UserRepository.hpp"
 #include "User.hpp"
 #include "PlayerSession.hpp"
+#include "PlayerSessionManager.hpp"
 
 
 #include <utility>
@@ -17,9 +18,11 @@
 //================================================
 
 AuthService::AuthService(
-    UserRepository& repository)
+    UserRepository& repository,
+    PlayerSessionManager& sessionManager)
 :
-m_repository(repository)
+m_repository(repository),
+m_sessionManager(sessionManager)
 {
 }
 
@@ -178,9 +181,38 @@ AuthService::login(
 
 
 
+    auto existing =
+        m_sessionManager.findByUserId(
+            user->getId());
+
+
+    if(existing)
+    {
+        if(existing->isConnected())
+        {
+            return nullptr;
+        }
+
+
+        m_sessionManager.removeSession(
+            existing->getSessionId());
+    }
+
+
     auto player =
-        std::make_shared<PlayerSession>(
-            username);
+        m_sessionManager.createSession(
+            user->getId());
+
+
+    if(!player)
+    {
+        return nullptr;
+    }
+
+
+    player->authenticate(
+        user->getId(),
+        user->getUsername());
 
 
 

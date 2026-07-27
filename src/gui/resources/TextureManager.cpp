@@ -90,6 +90,15 @@ Animation TextureManager::loadAnimation(const std::string& animationPath, int ce
 
 void TextureManager::loadAllPieceAnimations(int cellSize)
 {
+    loadAllPieceAnimations(
+        cellSize,
+        GuiConfig::PIECES_PATH);
+}
+
+void TextureManager::loadAllPieceAnimations(
+    int cellSize,
+    const std::string& piecesPath)
+{
     std::vector<std::string> pieces = {
         "WK", "WQ", "WR", "WB", "WN", "WP",
         "BK", "BQ", "BR", "BB", "BN", "BP"
@@ -103,7 +112,7 @@ void TextureManager::loadAllPieceAnimations(int cellSize)
     {
         for (auto& state : states)
         {
-            std::string path = GuiConfig::PIECES_PATH + "/" + piece + "/states/" + state;
+            std::string path = piecesPath + "/" + piece + "/states/" + state;
             animations[piece + "_" + state] = loadAnimation(path, cellSize);
         }
     }

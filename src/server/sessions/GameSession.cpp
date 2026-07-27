@@ -1,29 +1,21 @@
 #include "GameSession.hpp"
 
 
-#include "GameContext.hpp"
-
-#include "GameController.hpp"
-#include "GameSnapshotBuilder.hpp"
-
-#include "GameSnapshot.hpp"
-#include "GameStateChangedEvent.hpp"
-
-#include "EventBus.hpp"
-
-#include "PlayerSession.hpp"
 #include "ClickCommand.hpp"
+#include "EventBus.hpp"
+#include "GameContext.hpp"
+#include "GameEngine.hpp"
+#include "GameSnapshot.hpp"
+#include "GameSnapshotBuilder.hpp"
+#include "GameStateChangedEvent.hpp"
+#include "PlayerInputCoordinator.hpp"
+#include "PlayerSession.hpp"
 
 
 #include <algorithm>
+#include <optional>
+#include <utility>
 
-
-
-
-
-//=================================
-// Constructor
-//=================================
 
 GameSession::GameSession(
     const std::string& id,
@@ -32,409 +24,465 @@ GameSession::GameSession(
 :
 m_id(id),
 m_context(context),
-m_eventBus(eventBus)
+m_eventBus(eventBus),
+m_inputCoordinator(
+    std::make_unique<PlayerInputCoordinator>(context))
 {
 }
-
-
-
 
 
 GameSession::~GameSession() = default;
 
 
-
-
-
-
-
-//=================================
-// Add Player
-//=================================
-
 bool GameSession::addPlayer(
     std::shared_ptr<PlayerSession> player)
 {
-
     if(!player)
-        return false;
-
-
-    if(player->hasRoom())
-        return false;
-
-
-
-    Side side =
-        assignSide();
-
-
-
-    player->setSide(side);
-
-    player->setRoomId(
-        m_id);
-
-
-
-    switch(side)
     {
+        return false;
+    }
 
-        case Side::WHITE:
+
+    std::optional<GameSnapshot> snapshot;
+    std::unique_lock<std::mutex> publication;
+
+
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+
+        if((m_state != State::WAITING &&
+            m_state != State::RUNNING) ||
+           !player->isAuthenticated() ||
+           !player->isConnected() ||
+           player->hasRoom())
+        {
+            return false;
+        }
+
+
+        const Side side =
+            assignSideUnsafe();
+
+
+        if(side == Side::NONE)
+        {
+            return false;
+        }
+
+
+        player->setSide(side);
+        player->setRoomId(m_id);
+
+
+        if(side == Side::WHITE)
+        {
             m_whitePlayer = player;
-            break;
-
-
-
-        case Side::BLACK:
+        }
+        else if(side == Side::BLACK)
+        {
             m_blackPlayer = player;
-            break;
-
-
-
-        case Side::OBSERVER:
+        }
+        else
+        {
             m_observers.push_back(player);
-            break;
+        }
 
+
+        if(side != Side::OBSERVER)
+        {
+            m_inputCoordinator->addPlayer(*player);
+        }
+
+
+        if(m_whitePlayer &&
+           m_blackPlayer)
+        {
+            m_state = State::RUNNING;
+        }
+
+
+        snapshot = buildSnapshotUnsafe();
+        publication =
+            std::unique_lock<std::mutex>(
+                m_publishMutex);
     }
 
 
-
-    if(m_whitePlayer &&
-       m_blackPlayer)
-    {
-        m_state =
-            State::RUNNING;
-    }
-
-
-
+    publishSnapshot(*snapshot);
     return true;
 }
 
 
-
-
-
-
-
-//=================================
-// Remove Player
-//=================================
-
 bool GameSession::removePlayer(
     const PlayerSession& player)
 {
+    std::shared_ptr<PlayerSession> removedPlayer;
+    bool removedActivePlayer = false;
+    std::optional<GameSnapshot> snapshot;
+    std::unique_lock<std::mutex> publication;
 
-    if(m_whitePlayer &&
-       m_whitePlayer.get() == &player)
+
     {
-        m_whitePlayer.reset();
-        return true;
-    }
+        std::lock_guard<std::mutex> lock(m_mutex);
 
 
+        if(m_whitePlayer &&
+           m_whitePlayer.get() == &player)
+        {
+            removedPlayer = m_whitePlayer;
+            m_whitePlayer.reset();
+            removedActivePlayer = true;
+        }
+        else if(m_blackPlayer &&
+                m_blackPlayer.get() == &player)
+        {
+            removedPlayer = m_blackPlayer;
+            m_blackPlayer.reset();
+            removedActivePlayer = true;
+        }
+        else
+        {
+            auto iterator =
+                std::find_if(
+                    m_observers.begin(),
+                    m_observers.end(),
+                    [&player](const auto& observer)
+                    {
+                        return observer &&
+                               observer.get() == &player;
+                    });
 
-    if(m_blackPlayer &&
-       m_blackPlayer.get() == &player)
-    {
-        m_blackPlayer.reset();
-        return true;
-    }
 
-
-
-    auto oldSize =
-        m_observers.size();
-
-
-
-    m_observers.erase(
-        std::remove_if(
-            m_observers.begin(),
-            m_observers.end(),
-            [&](const auto& observer)
+            if(iterator != m_observers.end())
             {
-                return observer &&
-                       observer.get() == &player;
-            }),
-        m_observers.end());
+                removedPlayer = *iterator;
+                m_observers.erase(iterator);
+            }
+        }
 
 
+        if(!removedPlayer)
+        {
+            return false;
+        }
 
-    return
-        oldSize != m_observers.size();
+
+        m_inputCoordinator->removePlayer(
+            *removedPlayer);
+
+
+        removedPlayer->leaveGame();
+
+
+        if(removedActivePlayer &&
+           m_state != State::FINISHED)
+        {
+            m_state = State::WAITING;
+        }
+
+
+        snapshot = buildSnapshotUnsafe();
+        publication =
+            std::unique_lock<std::mutex>(
+                m_publishMutex);
+    }
+
+
+    publishSnapshot(*snapshot);
+    return true;
 }
 
-
-
-
-
-
-
-//=================================
-// Assign Side
-//=================================
-
-Side GameSession::assignSide()
-{
-
-    if(!m_whitePlayer)
-        return Side::WHITE;
-
-
-
-    if(!m_blackPlayer)
-        return Side::BLACK;
-
-
-
-    return Side::OBSERVER;
-}
-
-
-
-
-
-
-
-//=================================
-// Handle Click
-//=================================
 
 MoveResult GameSession::handleClick(
     PlayerSession& player,
     const ClickCommand& command)
 {
+    MoveResult result;
+    std::optional<GameSnapshot> snapshot;
+    std::unique_lock<std::mutex> publication;
 
-    if(m_state != State::RUNNING)
+
     {
-        return
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+
+        if(!player.isConnected())
         {
-            false,
-            "game_not_running"
-        };
-    }
+            return {false, "player_disconnected"};
+        }
 
 
-
-    if(!player.isConnected())
-    {
-        return
+        if(!player.isAuthenticated())
         {
-            false,
-            "player_disconnected"
-        };
-    }
+            return {false, "authentication_required"};
+        }
 
 
-
-    if(!containsPlayer(player))
-    {
-        return
+        if(!containsPlayerUnsafe(player))
         {
-            false,
-            "player_not_in_session"
-        };
-    }
+            return {false, "player_not_in_session"};
+        }
 
 
-
-    if(isObserver(player))
-    {
-        return
+        if(player.getSide() == Side::OBSERVER ||
+           player.getSide() == Side::NONE)
         {
-            false,
-            "observer_cannot_play"
-        };
+            return {false, "observer_cannot_play"};
+        }
+
+
+        if(m_state != State::RUNNING)
+        {
+            return {false, "game_not_running"};
+        }
+
+
+        result =
+            m_inputCoordinator->handleClick(
+                player,
+                command);
+
+
+        if(result.success)
+        {
+            snapshot = buildSnapshotUnsafe();
+            publication =
+                std::unique_lock<std::mutex>(
+                    m_publishMutex);
+        }
     }
 
 
-
-
-
-    MoveResult result =
-        m_context.getController()
-            .click(
-                command.getPosition());
-
-
-
-    if(result.success)
+    if(snapshot)
     {
-        publishSnapshot();
+        publishSnapshot(*snapshot);
     }
-
 
 
     return result;
 }
 
 
-
-
-
-
-
-//=================================
-// Snapshot
-//=================================
-
-void GameSession::publishSnapshot()
+std::optional<Position>
+GameSession::getSelectedPosition(
+    const PlayerSession& player) const
 {
-
-    GameSnapshot snapshot =
-        m_context.getSnapshotBuilder()
-            .build();
+    std::lock_guard<std::mutex> lock(m_mutex);
 
 
-
-    m_eventBus.publish(
-        std::make_shared<GameStateChangedEvent>(
-            m_id,
-            snapshot));
+    return m_inputCoordinator->getSelectedPosition(
+        player);
 }
 
 
+void GameSession::tick(
+    int milliseconds,
+    bool broadcastSnapshot)
+{
+    if(milliseconds <= 0)
+    {
+        return;
+    }
 
 
+    std::optional<GameSnapshot> snapshot;
+    std::unique_lock<std::mutex> publication;
 
 
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
 
-//=================================
-// Contains
-//=================================
+
+        if(m_state != State::RUNNING)
+        {
+            return;
+        }
+
+
+        m_context.getEngine().wait(milliseconds);
+
+
+        const bool gameFinished =
+            m_context.getEngine().gameOver();
+
+
+        if(gameFinished)
+        {
+            m_state = State::FINISHED;
+        }
+
+
+        if(broadcastSnapshot ||
+           gameFinished)
+        {
+            snapshot = buildSnapshotUnsafe();
+            publication =
+                std::unique_lock<std::mutex>(
+                    m_publishMutex);
+        }
+    }
+
+
+    if(snapshot)
+    {
+        publishSnapshot(*snapshot);
+    }
+}
+
 
 bool GameSession::containsPlayer(
     const PlayerSession& player) const
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return containsPlayerUnsafe(player);
+}
 
+
+bool GameSession::containsPlayerUnsafe(
+    const PlayerSession& player) const
+{
     if(m_whitePlayer &&
        m_whitePlayer.get() == &player)
+    {
         return true;
-
+    }
 
 
     if(m_blackPlayer &&
        m_blackPlayer.get() == &player)
-        return true;
-
-
-
-    for(const auto& observer :
-        m_observers)
     {
-        if(observer &&
-           observer.get() == &player)
-            return true;
+        return true;
     }
 
 
-
-    return false;
+    return std::any_of(
+        m_observers.begin(),
+        m_observers.end(),
+        [&player](const auto& observer)
+        {
+            return observer &&
+                   observer.get() == &player;
+        });
 }
-
-
-
-
-
 
 
 bool GameSession::isObserver(
     const PlayerSession& player) const
 {
-    return
-        player.getSide()
-        ==
-        Side::OBSERVER;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return player.getSide() == Side::OBSERVER;
 }
 
 
-
-
-
-
-
-//=================================
-// Getters
-//=================================
-
-const std::string&
-GameSession::getId() const
+Side GameSession::assignSideUnsafe() const
 {
-    return m_id;
-}
+    if(!m_whitePlayer)
+    {
+        return Side::WHITE;
+    }
 
+
+    if(!m_blackPlayer)
+    {
+        return Side::BLACK;
+    }
+
+
+    return Side::OBSERVER;
+}
 
 
 size_t GameSession::getPlayerCount() const
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return getPlayerCountUnsafe();
+}
 
-    size_t count = 0;
+
+size_t GameSession::getPlayerCountUnsafe() const
+{
+    size_t count = m_observers.size();
 
 
     if(m_whitePlayer)
-        count++;
+    {
+        ++count;
+    }
 
 
     if(m_blackPlayer)
-        count++;
-
-
-    count +=
-        m_observers.size();
-
+    {
+        ++count;
+    }
 
 
     return count;
 }
 
 
-
 size_t GameSession::getObserverCount() const
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     return m_observers.size();
 }
 
 
-
-
-const std::shared_ptr<PlayerSession>&
+std::shared_ptr<PlayerSession>
 GameSession::getWhitePlayer() const
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     return m_whitePlayer;
 }
 
 
-
-const std::shared_ptr<PlayerSession>&
+std::shared_ptr<PlayerSession>
 GameSession::getBlackPlayer() const
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     return m_blackPlayer;
 }
 
 
-
-
-
-GameSession::State
-GameSession::getState() const
+GameSession::State GameSession::getState() const
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     return m_state;
 }
-
 
 
 void GameSession::setState(
     State state)
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     m_state = state;
 }
 
 
-
 bool GameSession::isRunning() const
 {
-    return
-        m_state == State::RUNNING;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_state == State::RUNNING;
+}
+
+
+const std::string& GameSession::getId() const
+{
+    return m_id;
+}
+
+
+GameSnapshot GameSession::buildSnapshotUnsafe() const
+{
+    return m_context.getSnapshotBuilder().build();
+}
+
+
+void GameSession::publishSnapshot(
+    const GameSnapshot& snapshot)
+{
+    m_eventBus.publish(
+        std::make_shared<GameStateChangedEvent>(
+            m_id,
+            snapshot));
 }

@@ -18,6 +18,9 @@ set(USE_TLS OFF CACHE BOOL "" FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(ixwebsocket)
+
+# Keep third-party tests disabled while registering this project's tests.
+enable_testing()
 # ---------------------------------------------------------
 
 # ---------------------------------------------------------
@@ -119,6 +122,98 @@ target_link_libraries(client PRIVATE
     ixwebsocket
 )
 
+# Mirror runtime assets beside the client executable. Removing the destination
+# first prevents deleted or renamed source assets from lingering in build output.
+add_custom_command(TARGET client POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E remove_directory
+        "$<TARGET_FILE_DIR:client>/assets"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+        "$<TARGET_FILE_DIR:client>/assets"
+    COMMENT "Deploying client assets"
+    VERBATIM
+)
+
+# Focused protocol/snapshot round-trip coverage without either application main.
+add_executable(protocol_codec_tests
+    src/client/snapshot/tests/ProtocolCodecRoundTripTests.cc
+    src/client/snapshot/SnapshotDeserializer.cpp
+    src/common/CommandResponseCodec.cpp
+    src/common/NetworkMessage.cpp
+    src/logic/snapshot/GameSnapshot.cpp
+    src/server/network/SnapshotSerializer.cpp
+)
+
+target_include_directories(protocol_codec_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/client/snapshot"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/logic/model"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/logic/snapshot"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/server/network"
+)
+
+add_test(NAME protocol_codec_tests COMMAND protocol_codec_tests)
+
+# Real localhost transport coverage. Reuse the production server sources
+# without its executable entry point and only the headless client services
+# needed to drive independent client stacks.
+set(INTEGRATION_SERVER_SOURCES ${SERVER_SOURCES})
+list(FILTER INTEGRATION_SERVER_SOURCES
+    EXCLUDE REGEX "[/\\\\]main\\.cpp$")
+
+file(GLOB_RECURSE INTEGRATION_CLIENT_SOURCES CONFIGURE_DEPENDS
+    "src/client/auth/*.cpp"
+    "src/client/commands/*.cpp"
+    "src/client/network/*.cpp"
+    "src/client/room/*.cpp"
+    "src/client/session/*.cpp"
+    "src/client/snapshot/*.cpp"
+    "src/client/state/*.cpp"
+)
+
+add_executable(two_client_websocket_integration_tests
+    src/integration/tests/TwoClientWebSocketIntegrationTests.cc
+    src/client/game/RemoteBoardClickSink.cpp
+    src/client/game/RemoteGameFrameSource.cpp
+    src/gui/animation/AnimationPlayer.cpp
+    src/gui/config/GuiConfig.cpp
+    src/gui/config/Layout.cpp
+    src/gui/graphics/Img.cpp
+    src/gui/rendering/BoardRenderer.cpp
+    src/gui/rendering/GameRenderer.cpp
+    src/gui/rendering/PieceRenderer.cpp
+    src/gui/rendering/SelectionRenderer.cpp
+    src/gui/resources/Animation.cpp
+    src/gui/resources/Sprite.cpp
+    src/gui/resources/SpriteKey.cpp
+    src/gui/resources/TextureManager.cpp
+    ${INTEGRATION_SERVER_SOURCES}
+    ${INTEGRATION_CLIENT_SOURCES}
+    ${COMMON_SOURCES}
+    ${sqlite3_SOURCE_DIR}/sqlite3.c
+)
+
+target_include_directories(two_client_websocket_integration_tests PRIVATE
+    ${COMMON_INCLUDES}
+)
+
+target_link_libraries(two_client_websocket_integration_tests PRIVATE
+    ${OpenCV_LIBS}
+    ixwebsocket
+)
+
+target_compile_definitions(two_client_websocket_integration_tests PRIVATE
+    KFC_TEST_ASSET_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/assets"
+)
+
+add_test(
+    NAME two_client_websocket_integration_tests
+    COMMAND two_client_websocket_integration_tests
+)
+set_tests_properties(two_client_websocket_integration_tests PROPERTIES
+    TIMEOUT 60
+)
+
 # ---------------------------------------------------------
 # העתקת DLLs של OpenCV ו-Qt6 עבור שני הקבצים
 # ---------------------------------------------------------
@@ -166,6 +261,7 @@ if(WIN32)
         # Copy Qt6 platform plugin
         file(GLOB Qt6_PLUGINS 
             "${Qt6_BIN_DIR}/../plugins/platforms/qwindows.dll"
+            "${Qt6_BIN_DIR}/../share/qt6/plugins/platforms/qwindows.dll"
         )
         
         foreach(PLUGIN ${Qt6_PLUGINS})
@@ -185,4 +281,6 @@ endif()
 if(MSVC)
     target_compile_options(server PRIVATE /EHsc /MD)
     target_compile_options(client PRIVATE /EHsc /MD)
+    target_compile_options(protocol_codec_tests PRIVATE /EHsc /MD)
+    target_compile_options(two_client_websocket_integration_tests PRIVATE /EHsc /MD)
 endif()

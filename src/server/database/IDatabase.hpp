@@ -85,7 +85,7 @@ public:
 // Error
 //=================================
 
-    virtual const std::string&
+    virtual std::string
     getLastError() const = 0;
 
 

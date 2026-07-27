@@ -33,6 +33,11 @@ public:
             const NetworkMessage& message)>;
 
 
+    using PlayerDisconnectCallback =
+        std::function<void(
+            const std::shared_ptr<PlayerSession>& player)>;
+
+
 
 public:
 
@@ -182,6 +187,10 @@ public:
         SendCallback callback);
 
 
+    void setPlayerDisconnectCallback(
+        PlayerDisconnectCallback callback);
+
+
 
 
 
@@ -217,6 +226,10 @@ private:
 
     SendCallback
         m_sendCallback;
+
+
+    PlayerDisconnectCallback
+        m_playerDisconnectCallback;
 
 
 

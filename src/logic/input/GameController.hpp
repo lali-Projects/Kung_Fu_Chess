@@ -38,6 +38,15 @@ public:
     MoveResult click(const Position& pos);
 
     /**
+     * Executes the same click behavior using caller-owned selection state.
+     * Server sessions use this overload to isolate each player's two-click
+     * interaction without changing move or rule behavior.
+     */
+    MoveResult click(
+        const Position& pos,
+        std::optional<Position>& selection);
+
+    /**
      * @brief מאפס את הבחירה הנוכחית של המשבצת.
      */
     void clearSelection();

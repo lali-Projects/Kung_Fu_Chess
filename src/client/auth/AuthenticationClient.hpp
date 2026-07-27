@@ -5,57 +5,33 @@
 #include "MoveResult.hpp"
 
 
-class ClientSocket;
+class ClientSession;
+
+namespace client
+{
+    class IClientCommandGateway;
+}
 
 
-/**
- * @brief Client side authentication service.
- *
- * Responsible for:
- *
- *  - Sending register requests.
- *  - Sending login requests.
- *
- *
- * Does NOT know:
- *
- *  - GUI.
- *  - Game logic.
- *  - Server implementation.
- *  - Database.
- */
+/** Sends authentication commands and commits only confirmed session state. */
 class AuthenticationClient
 {
-
 public:
-
-    explicit AuthenticationClient(
-        ClientSocket& socket);
-
-
-
-public:
-
+    AuthenticationClient(
+        client::IClientCommandGateway& commandGateway,
+        ClientSession& session);
 
     MoveResult registerUser(
         const std::string& username,
         const std::string& password);
 
-
-
     MoveResult login(
         const std::string& username,
         const std::string& password);
 
-
-
     MoveResult logout();
 
-
-
 private:
-
-
-    ClientSocket& m_socket;
-
+    client::IClientCommandGateway& m_commandGateway;
+    ClientSession& m_session;
 };

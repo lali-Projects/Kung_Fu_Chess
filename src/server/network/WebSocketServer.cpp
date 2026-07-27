@@ -2,7 +2,9 @@
 
 
 #include <iostream>
+#include <stdexcept>
 #include <utility>
+#include <vector>
 
 
 
@@ -66,13 +68,9 @@ void WebSocketServer::start()
 
     if(!result.first)
     {
-
-        std::cout
-            << "WebSocket listen failed: "
-            << result.second
-            << std::endl;
-
-        return;
+        throw std::runtime_error(
+            "WebSocket listen failed: " +
+            result.second);
     }
 
 
@@ -110,6 +108,9 @@ void WebSocketServer::stop()
 
 
 
+    std::vector<std::shared_ptr<ix::WebSocket>> sockets;
+
+
     {
         std::lock_guard<std::mutex> lock(
             m_connectionsMutex);
@@ -121,7 +122,7 @@ void WebSocketServer::stop()
 
             if(socket)
             {
-                socket->close();
+                sockets.push_back(socket);
             }
 
         }
@@ -133,14 +134,14 @@ void WebSocketServer::stop()
     }
 
 
+    for(const auto& socket : sockets)
+    {
+        socket->close();
+    }
+
+
 
     m_server->stop();
-
-
-
-    m_messageCallback = nullptr;
-    m_connectionCallback = nullptr;
-    m_disconnectCallback = nullptr;
 
 
 
@@ -215,7 +216,18 @@ void WebSocketServer::send(
     if(socket)
     {
         socket->send(
-            message.getPayload());
+            /*
+                Wire framing:
+
+                Always send the fully framed
+                "TYPE|payload" form so the client
+                can tell a COMMAND_RESULT reply
+                apart from an async GAME_STATE
+                broadcast. Both arrive on the same
+                socket, interleaved.
+            */
+
+            message.serialize());
     }
 
 }
@@ -233,6 +245,7 @@ void WebSocketServer::disconnect(
 {
 
     std::shared_ptr<ix::WebSocket> socket;
+    DisconnectCallback disconnectCallback;
 
 
 
@@ -275,11 +288,37 @@ void WebSocketServer::disconnect(
     }
 
 
-
-    if(m_disconnectCallback)
     {
-        m_disconnectCallback(
-            connectionId);
+        std::lock_guard<std::mutex> lock(
+            m_callbackMutex);
+
+
+        disconnectCallback =
+            m_disconnectCallback;
+    }
+
+
+
+    if(disconnectCallback)
+    {
+        try
+        {
+            disconnectCallback(
+                connectionId);
+        }
+        catch(const std::exception& exception)
+        {
+            std::cerr
+                << "Disconnect callback failed: "
+                << exception.what()
+                << std::endl;
+        }
+        catch(...)
+        {
+            std::cerr
+                << "Disconnect callback failed"
+                << std::endl;
+        }
     }
 
 
@@ -303,6 +342,9 @@ void WebSocketServer::setMessageCallback(
     MessageCallback callback)
 {
 
+    std::lock_guard<std::mutex> lock(
+        m_callbackMutex);
+
     m_messageCallback =
         std::move(callback);
 
@@ -319,6 +361,9 @@ void WebSocketServer::setMessageCallback(
 void WebSocketServer::setConnectionCallback(
     ConnectionCallback callback)
 {
+
+    std::lock_guard<std::mutex> lock(
+        m_callbackMutex);
 
     m_connectionCallback =
         std::move(callback);
@@ -416,9 +461,6 @@ void WebSocketServer::handleClientConnection(
             const ix::WebSocketMessagePtr& msg
         )
         {
- std::cout
-        << "[WEBSOCKET CALLBACK ENTER]"
-        << std::endl;
             if(!msg)
             {
                 return;
@@ -432,14 +474,6 @@ void WebSocketServer::handleClientConnection(
 
                 case ix::WebSocketMessageType::Message:
                 {
-
-                    std::cout
-                        << "[WEBSOCKET] Message: "
-                        << msg->str
-                        << std::endl;
-
-
-
                     handleMessage(
                         connectionId,
                         msg->str);
@@ -479,11 +513,67 @@ void WebSocketServer::handleClientConnection(
         socket is ready.
     */
 
-    if(m_connectionCallback)
-    {
+    ConnectionCallback connectionCallback;
 
-        m_connectionCallback(
-            connectionId);
+
+    {
+        std::lock_guard<std::mutex> lock(
+            m_callbackMutex);
+
+
+        connectionCallback =
+            m_connectionCallback;
+    }
+
+
+    if(connectionCallback)
+    {
+        try
+        {
+            connectionCallback(
+                connectionId);
+        }
+        catch(const std::exception& exception)
+        {
+            std::cerr
+                << "Connection callback failed: "
+                << exception.what()
+                << std::endl;
+
+
+            send(
+                connectionId,
+                NetworkMessage(
+                    MessageType::SYSTEM_ERROR,
+                    "internal_server_error"));
+
+
+            removeConnection(
+                connectionId);
+
+
+            return;
+        }
+        catch(...)
+        {
+            std::cerr
+                << "Connection callback failed"
+                << std::endl;
+
+
+            send(
+                connectionId,
+                NetworkMessage(
+                    MessageType::SYSTEM_ERROR,
+                    "internal_server_error"));
+
+
+            removeConnection(
+                connectionId);
+
+
+            return;
+        }
 
     }
 
@@ -510,53 +600,101 @@ void WebSocketServer::handleMessage(
     const std::string& payload)
 {
 
-    std::cout
-        << "[HANDLE MESSAGE BEGIN] "
-        << payload
-        << std::endl;
-
-
-
-    if(!m_messageCallback)
+    try
     {
-        std::cout
-            << "[NO MESSAGE CALLBACK]"
+        MessageCallback messageCallback;
+
+
+        {
+            std::lock_guard<std::mutex> lock(
+                m_callbackMutex);
+
+
+            messageCallback =
+                m_messageCallback;
+        }
+
+
+        if(!messageCallback)
+        {
+            std::cout
+                << "[NO MESSAGE CALLBACK]"
+                << std::endl;
+
+            return;
+        }
+
+
+
+        /*
+            Wire framing:
+
+            The client now always sends a
+            fully framed "TYPE|payload" string
+            (see AuthenticationClient / any future
+            gameplay client). Reject anything that
+            does not parse as a well-formed COMMAND
+            instead of silently treating raw bytes
+            as a command payload.
+        */
+
+        auto parsed =
+            NetworkMessage::deserialize(payload);
+
+
+        if(!parsed ||
+           parsed->getType() != MessageType::COMMAND)
+        {
+
+            send(
+                connectionId,
+                NetworkMessage(
+                    MessageType::SYSTEM_ERROR,
+                    "malformed_message"));
+
+            return;
+        }
+
+
+        NetworkMessage response =
+            messageCallback(
+                connectionId,
+                *parsed);
+
+
+        send(
+            connectionId,
+            response);
+
+
+    }
+    catch(const std::exception& exception)
+    {
+        std::cerr
+            << "Message handling failed: "
+            << exception.what()
             << std::endl;
 
-        return;
-    }
 
-
-
-
-    NetworkMessage request(
-        MessageType::COMMAND,
-        payload);
-
-
-
-
-    NetworkMessage response =
-        m_messageCallback(
+        send(
             connectionId,
-            request);
+            NetworkMessage(
+                MessageType::SYSTEM_ERROR,
+                "internal_server_error"));
+    }
+    catch(...)
+    {
+        std::cerr
+            << "Message handling failed"
+            << std::endl;
 
 
-
-
-
-    send(
-        connectionId,
-        response);
-
-
-
-
-
-    std::cout
-        << "[HANDLE MESSAGE END] "
-        << payload
-        << std::endl;
+        send(
+            connectionId,
+            NetworkMessage(
+                MessageType::SYSTEM_ERROR,
+                "internal_server_error"));
+    }
 
 }
 
@@ -573,6 +711,7 @@ void WebSocketServer::removeConnection(
 {
 
     bool removed = false;
+    DisconnectCallback disconnectCallback;
 
 
 
@@ -618,11 +757,36 @@ void WebSocketServer::removeConnection(
 
 
 
-    if(m_disconnectCallback)
     {
+        std::lock_guard<std::mutex> lock(
+            m_callbackMutex);
 
-        m_disconnectCallback(
-            connectionId);
+
+        disconnectCallback =
+            m_disconnectCallback;
+    }
+
+
+    if(disconnectCallback)
+    {
+        try
+        {
+            disconnectCallback(
+                connectionId);
+        }
+        catch(const std::exception& exception)
+        {
+            std::cerr
+                << "Disconnect callback failed: "
+                << exception.what()
+                << std::endl;
+        }
+        catch(...)
+        {
+            std::cerr
+                << "Disconnect callback failed"
+                << std::endl;
+        }
 
     }
 
@@ -639,6 +803,9 @@ void WebSocketServer::removeConnection(
 void WebSocketServer::setDisconnectCallback(
     DisconnectCallback callback)
 {
+
+    std::lock_guard<std::mutex> lock(
+        m_callbackMutex);
 
     m_disconnectCallback =
         std::move(callback);

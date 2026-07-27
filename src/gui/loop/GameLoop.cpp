@@ -2,14 +2,23 @@
 #include "GameLoop.hpp"
 #include "GuiConfig.hpp"
 
-GameLoop::GameLoop(GameEngine& engine, GameSnapshotBuilder& snapshotBuilder, GameRenderer& renderer, Window& window, int width, int height, int fps)
-    : gameEngine(engine), snapshotBuilder(snapshotBuilder), renderer(renderer), window(window), canvas(width, height), running(false), fps(fps)
+GameLoop::GameLoop(IGameFrameSource& frameSource, GameRenderer& renderer, Window& window, int width, int height, int fps)
+    : frameSource(frameSource), renderer(renderer), window(window), canvas(width, height), running(false), stopRequested(false), fps(fps)
 {
 }
 
 void GameLoop::run()
 {
+    if(stopRequested.load())
+    {
+        return;
+    }
     running = true;
+    if(stopRequested.load())
+    {
+        running = false;
+        return;
+    }
     const int frameTime = GuiConfig::MS_PER_SECOND / fps;
     auto previousFrame = std::chrono::steady_clock::now();
     
@@ -19,11 +28,11 @@ void GameLoop::run()
         int deltaTime = static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(currentFrame - previousFrame).count());
         previousFrame = currentFrame;
 
-        gameEngine.wait(deltaTime);
-        
-        GameSnapshot snapshot = snapshotBuilder.build();
-
-        renderer.render(canvas, snapshot);
+        const auto snapshot = frameSource.getFrame(deltaTime);
+        if(snapshot)
+        {
+            renderer.render(canvas, *snapshot);
+        }
 
         window.show(canvas);
 
@@ -35,9 +44,11 @@ void GameLoop::run()
             cv::waitKey(frameTime - elapsed);
         }
     }
+    running.store(false);
 }
 
 void GameLoop::stop()
 {
-    running = false;
+    stopRequested.store(true);
+    running.store(false);
 }

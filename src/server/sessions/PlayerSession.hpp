@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include <mutex>
 #include <string>
 
 #include "PieceTypes.hpp"
@@ -36,17 +37,17 @@ public:
 // Identity
 //=================================
 
-    const std::string&
+    std::string
     getSessionId() const;
 
 
 
-    const std::string&
+    std::string
     getUserId() const;
 
 
 
-    const std::string&
+    std::string
     getUsername() const;
 
 
@@ -134,7 +135,7 @@ public:
 
 
 
-    const std::string&
+    std::string
     getRoomId() const;
 
 
@@ -192,6 +193,9 @@ public:
 
 
 private:
+
+
+    mutable std::recursive_mutex m_mutex;
 
 
     std::string m_sessionId;

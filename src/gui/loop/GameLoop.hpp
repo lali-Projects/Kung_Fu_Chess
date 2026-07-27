@@ -1,10 +1,10 @@
 #pragma once
 
-#include "GameEngine.hpp"
-#include "GameSnapshotBuilder.hpp"
 #include "GameRenderer.hpp"
+#include "IGameFrameSource.hpp"
 #include "Window.hpp"
 #include "Img.hpp"
+#include <atomic>
 #include <chrono>
 
 /**
@@ -14,20 +14,19 @@
 class GameLoop
 {
 private:
-    GameEngine& gameEngine;              
-    GameSnapshotBuilder& snapshotBuilder; 
+    IGameFrameSource& frameSource;
     GameRenderer& renderer;               
     Window& window;                      
     Img canvas;                           
-    bool running;                        
+    std::atomic<bool> running;
+    std::atomic<bool> stopRequested;
     int fps;                              
 public:
     /**
      * @brief בנאי לאתחול הלולאה והרכיבים הדרושים לה.
      */
     GameLoop(
-        GameEngine& engine,
-        GameSnapshotBuilder& snapshotBuilder,
+        IGameFrameSource& frameSource,
         GameRenderer& renderer,
         Window& window,
         int width,

@@ -127,14 +127,14 @@ bool Room::canJoin() const
 
 
 
+    const auto state =
+        m_session->getState();
+
+
     return
-        m_session->getState()
-        ==
-        GameSession::State::WAITING
-        &&
-        m_session->getPlayerCount()
-        <
-        2;
+        state == GameSession::State::WAITING
+        ||
+        state == GameSession::State::RUNNING;
 
 }
 
@@ -290,3 +290,7 @@ bool Room::valid() const
         m_session != nullptr;
 
 }
+
+
+
+Room::~Room() = default;

@@ -8,6 +8,7 @@
 #include "INetworkServer.hpp"
 #include "ConnectionManager.hpp"
 #include "ClientConnection.hpp"
+#include "PlayerLifecycleService.hpp"
 
 
 #include "EventBus.hpp"
@@ -16,6 +17,7 @@
 
 #include "SnapshotSerializer.hpp"
 #include "NetworkMessage.hpp"
+#include "CommandResponseCodec.hpp"
 
 
 
@@ -27,6 +29,7 @@
 Server::Server(
     CommandHandler& commandHandler,
     EventBus& eventBus,
+    PlayerLifecycleService& playerLifecycle,
     std::unique_ptr<INetworkServer> networkServer)
 :
 m_commandHandler(commandHandler),
@@ -71,6 +74,16 @@ m_networkServer(std::move(networkServer))
                 connectionId,
                 message);
 
+        });
+
+
+    m_connectionManager->setPlayerDisconnectCallback(
+        [&playerLifecycle]
+        (
+            const std::shared_ptr<PlayerSession>& player
+        )
+        {
+            playerLifecycle.disconnect(player);
         });
 
 
@@ -198,6 +211,13 @@ void Server::start()
     if(m_networkServer)
     {
         m_networkServer->start();
+
+
+        if(!m_networkServer->isRunning())
+        {
+            throw std::runtime_error(
+                "Network server failed to start");
+        }
     }
 
 
@@ -394,10 +414,13 @@ NetworkMessage Server::handleNetworkMessage(
 
     if(!m_connectionManager)
     {
-
+        CommandResponse response;
+        response.reason =
+            "connection_manager_missing";
         return NetworkMessage(
             MessageType::COMMAND_RESULT,
-            "RESULT FAILED connection_manager_missing");
+            CommandResponseCodec::serialize(
+                response));
 
     }
 
@@ -405,7 +428,7 @@ NetworkMessage Server::handleNetworkMessage(
 
 
 
-    ClientConnection* client =
+    auto client =
         m_connectionManager->getConnection(
             connectionId);
 
@@ -414,10 +437,13 @@ NetworkMessage Server::handleNetworkMessage(
 
     if(!client)
     {
-
+        CommandResponse response;
+        response.reason =
+            "client_missing";
         return NetworkMessage(
             MessageType::COMMAND_RESULT,
-            "RESULT FAILED client_missing");
+            CommandResponseCodec::serialize(
+                response));
 
     }
 
@@ -425,7 +451,7 @@ NetworkMessage Server::handleNetworkMessage(
 
 
 
-    MoveResult result =
+    CommandResponse response =
         client->receiveNetworkMessage(
             message);
 
@@ -434,24 +460,10 @@ NetworkMessage Server::handleNetworkMessage(
 
 
 
-    if(result.success)
-    {
-
-        return NetworkMessage(
-            MessageType::COMMAND_RESULT,
-            "RESULT SUCCESS " +
-            result.reason);
-
-    }
-
-
-
-
-
     return NetworkMessage(
         MessageType::COMMAND_RESULT,
-        "RESULT FAILED " +
-        result.reason);
+        CommandResponseCodec::serialize(
+            response));
 
 }
 
@@ -570,7 +582,7 @@ MoveResult Server::simulateClientCommand(
 
 
 
-    ClientConnection* client =
+    auto client =
         m_connectionManager->getConnection(
             connectionId);
 
@@ -591,11 +603,18 @@ MoveResult Server::simulateClientCommand(
 
 
 
-    return
+    CommandResponse response =
         client->receiveNetworkMessage(
             NetworkMessage(
                 MessageType::COMMAND,
                 message));
+
+
+    return
+    {
+        response.success,
+        response.reason
+    };
 
 }
 

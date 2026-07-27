@@ -49,7 +49,7 @@ public:
 
 
 
-    ~Room() = default;
+    ~Room();
 
 
 

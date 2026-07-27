@@ -1,159 +1,88 @@
 #include "AuthenticationClient.hpp"
 
-#include "ClientSocket.hpp"
-
 #include <sstream>
 
+#include "ClientSession.hpp"
+#include "CommandResponse.hpp"
+#include "IClientCommandGateway.hpp"
 
-
-
-//================================================
-// Constructor
-//================================================
 
 AuthenticationClient::AuthenticationClient(
-    ClientSocket& socket)
-:
-m_socket(socket)
+    client::IClientCommandGateway& commandGateway,
+    ClientSession& session)
+    : m_commandGateway(commandGateway),
+      m_session(session)
 {
 }
 
-
-
-
-
-//================================================
-// Register
-//================================================
 
 MoveResult AuthenticationClient::registerUser(
     const std::string& username,
     const std::string& password)
 {
-
-    std::ostringstream message;
-
-
-    message
+    std::ostringstream command;
+    command
         << "REGISTER "
         << username
         << " "
         << password;
 
+    const CommandResponse response =
+        m_commandGateway.sendCommandAndWait(
+            command.str());
 
-
-    bool sent =
-        m_socket.send(
-            message.str());
-
-
-
-    if(!sent)
-    {
-        return
-        {
-            false,
-            "send_failed"
-        };
-    }
-
-
-
-    return
-    {
-        true,
-        "register_request_sent"
-    };
-
+    return {response.success, response.reason};
 }
 
-
-
-
-
-
-
-
-//================================================
-// Login
-//================================================
 
 MoveResult AuthenticationClient::login(
     const std::string& username,
     const std::string& password)
 {
-
-    std::ostringstream message;
-
-
-    message
+    std::ostringstream command;
+    command
         << "LOGIN "
         << username
         << " "
         << password;
 
+    const CommandResponse response =
+        m_commandGateway.sendCommandAndWait(
+            command.str());
 
-
-    bool sent =
-        m_socket.send(
-            message.str());
-
-
-
-    if(!sent)
+    if(response.success &&
+       response.userId &&
+       response.username &&
+       response.sessionId)
     {
-        return
-        {
-            false,
-            "send_failed"
-        };
+        m_session.login(
+            *response.userId,
+            *response.username,
+            *response.sessionId);
     }
 
-
-
-    return
+    if(response.success &&
+       (!response.userId ||
+        !response.username ||
+        !response.sessionId))
     {
-        true,
-        "login_request_sent"
-    };
+        return {false, "invalid_login_response"};
+    }
 
+    return {response.success, response.reason};
 }
 
 
-
-
-
-
-
-
-//================================================
-// Logout
-//================================================
-
 MoveResult AuthenticationClient::logout()
 {
-
-    bool sent =
-        m_socket.send(
+    const CommandResponse response =
+        m_commandGateway.sendCommandAndWait(
             "LOGOUT");
 
-
-
-    if(!sent)
+    if(response.success)
     {
-        return
-        {
-            false,
-            "send_failed"
-        };
+        m_session.logout();
     }
 
-
-
-    return
-    {
-        true,
-        "logout_request_sent"
-    };
-
+    return {response.success, response.reason};
 }

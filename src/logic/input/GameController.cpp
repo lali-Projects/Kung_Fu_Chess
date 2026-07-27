@@ -18,6 +18,12 @@ MoveResult GameController::jump(const Position& pos) {
 }
 
 MoveResult GameController::click(const Position& pos) {
+    return click(pos, selectedPosition);
+}
+
+MoveResult GameController::click(
+    const Position& pos,
+    std::optional<Position>& selection) {
     std::cout
     << "[CONTROLLER] click "
     << pos.row
@@ -30,39 +36,39 @@ MoveResult GameController::click(const Position& pos) {
 
     auto clickedPiece = board.getPieceAt(pos);
 
-    if (!selectedPosition.has_value()) {
+    if (!selection.has_value()) {
         if (clickedPiece) {
-            selectedPosition = pos;
+            selection = pos;
             return {true, "piece_selected"};
         }
         return {false, "empty_square"};
     }
 
-    auto selectedPiece = board.getPieceAt(selectedPosition.value());
+    auto selectedPiece = board.getPieceAt(selection.value());
 
-    if (clickedPiece && selectedPiece && pos == selectedPosition.value()) {
+    if (clickedPiece && selectedPiece && pos == selection.value()) {
         MoveResult result = gameEngine.requestJump(pos);
-        clearSelection();
+        selection = std::nullopt;
         return result;
     }
 
     if (clickedPiece && selectedPiece && clickedPiece->getSide() == selectedPiece->getSide()) {
-        selectedPosition = pos;
+        selection = pos;
         return {true, "change_selection"};
     }
 std::cout
     << "[CONTROLLER] calling requestMove from "
-    << selectedPosition->row
+    << selection->row
     << ","
-    << selectedPosition->col
+    << selection->col
     << " to "
     << pos.row
     << ","
     << pos.col
     << std::endl;
     // ניסיון תנועה רגילה
-    MoveResult result = gameEngine.requestMove(selectedPosition.value(), pos);
-    clearSelection();
+    MoveResult result = gameEngine.requestMove(selection.value(), pos);
+    selection = std::nullopt;
 
     return result;
 }

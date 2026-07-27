@@ -10,6 +10,20 @@
 using json = nlohmann::json;
 
 
+namespace
+{
+    json positionToJson(
+        const Position& position)
+    {
+        return
+        {
+            {"row", position.row},
+            {"col", position.col}
+        };
+    }
+}
+
+
 
 //================================================
 // Serialize
@@ -127,6 +141,32 @@ std::string SnapshotSerializer::toJson(
 
         item["animation_start_time"] =
             piece.animationStartTime;
+
+
+        item["has_active_animation"] =
+            piece.hasActiveAnimation;
+
+
+        item["has_motion"] =
+            piece.hasMotion;
+
+
+        item["motion_start"] =
+            positionToJson(
+                piece.motionStart);
+
+
+        item["motion_destination"] =
+            positionToJson(
+                piece.motionDestination);
+
+
+        item["motion_start_time"] =
+            piece.motionStartTime;
+
+
+        item["motion_end_time"] =
+            piece.motionEndTime;
 
 
 

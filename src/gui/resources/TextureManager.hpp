@@ -110,6 +110,11 @@ public:
      */
     void loadAllPieceAnimations(int cellSize);
 
+    /** Loads all piece animations from an explicit executable-relative root. */
+    void loadAllPieceAnimations(
+        int cellSize,
+        const std::string& piecesPath);
+
     /**
      * @brief Retrieves a reference to a loaded animation.
      * @param key The unique identifier for the animation.

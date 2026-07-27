@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include <cstdint>
 #include <memory>
 #include <string>
 
@@ -17,6 +18,9 @@ class DatabaseInitializer;
 
 class UserRepository;
 class AuthService;
+class PlayerSessionManager;
+class PlayerLifecycleService;
+class AuthoritativeGameLoop;
 
 class RoomFactory;
 class RoomManager;
@@ -51,7 +55,9 @@ class Application
 public:
 
 
-    Application();
+    explicit Application(
+        std::uint16_t port = 8080,
+        std::string databasePath = "kungfu_chess.db");
 
 
     ~Application();
@@ -167,6 +173,11 @@ private:
 
 
 
+    std::unique_ptr<PlayerSessionManager>
+        m_playerSessionManager;
+
+
+
     std::unique_ptr<AuthService>
         m_authService;
 
@@ -185,6 +196,11 @@ private:
 
     std::unique_ptr<RoomManager>
         m_roomManager;
+
+
+
+    std::unique_ptr<PlayerLifecycleService>
+        m_playerLifecycleService;
 
 
 
@@ -209,10 +225,20 @@ private:
         m_server;
 
 
+    std::unique_ptr<AuthoritativeGameLoop>
+        m_gameLoop;
+
+
 
 
 
 private:
+
+
+    std::uint16_t m_port;
+
+
+    std::string m_databasePath;
 
 
     bool m_running{

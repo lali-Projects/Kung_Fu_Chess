@@ -10,7 +10,7 @@
 
 
 class CommandHandler;
-class PlayerSession;
+class ClientConnection;
 
 
 
@@ -63,7 +63,7 @@ public:
 
     MoveResult receive(
         const std::string& message,
-        PlayerSession* player = nullptr);
+        ClientConnection& connection);
 
 
 

@@ -5,6 +5,7 @@
 #include "RoomFactory.hpp"
 
 
+#include <cctype>
 #include <stdexcept>
 
 
@@ -264,13 +265,17 @@ RoomManager::getOrCreateRoom(
 
 
 
+    std::shared_ptr<Room> sharedRoom(
+        std::move(room));
+
+
     m_rooms.emplace(
         id,
-        room);
+        sharedRoom);
 
 
 
-    return room;
+    return sharedRoom;
 
 }
 
@@ -367,6 +372,31 @@ RoomManager::getRoomIds() const
 
     return result;
 
+}
+
+
+std::vector<std::shared_ptr<Room>>
+RoomManager::getRoomsSnapshot() const
+{
+    std::vector<std::shared_ptr<Room>> result;
+
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+
+    result.reserve(m_rooms.size());
+
+
+    for(const auto& [id, room] : m_rooms)
+    {
+        if(room)
+        {
+            result.push_back(room);
+        }
+    }
+
+
+    return result;
 }
 
 bool RoomManager::validateRoomId(

@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "CommandResponse.hpp"
 #include "MoveResult.hpp"
 
 
@@ -9,6 +10,7 @@ class Command;
 class RoomManager;
 class AuthService;
 class ClientConnection;
+class PlayerLifecycleService;
 
 
 
@@ -20,14 +22,15 @@ public:
 
     CommandHandler(
         RoomManager& roomManager,
-        AuthService& authService);
+        AuthService& authService,
+        PlayerLifecycleService& playerLifecycle);
 
 
 
 public:
 
 
-    MoveResult handle(
+    CommandResponse handle(
         ClientConnection& connection,
         const Command& command);
 
@@ -65,6 +68,14 @@ private:
         const Command& command);
 
 
+    MoveResult handleLeaveRoom(
+        ClientConnection& connection);
+
+
+    MoveResult handleLogout(
+        ClientConnection& connection);
+
+
 
 
 private:
@@ -74,5 +85,8 @@ private:
 
 
     AuthService& m_authService;
+
+
+    PlayerLifecycleService& m_playerLifecycle;
 
 };

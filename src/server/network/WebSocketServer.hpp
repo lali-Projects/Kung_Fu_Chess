@@ -163,6 +163,10 @@ private:
         m_connectionsMutex;
 
 
+    std::mutex
+        m_callbackMutex;
+
+
 
 
     std::unordered_map<

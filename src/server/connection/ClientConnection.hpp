@@ -2,11 +2,13 @@
 
 
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <functional>
 
 
 #include "NetworkMessage.hpp"
+#include "CommandResponse.hpp"
 #include "MoveResult.hpp"
 
 
@@ -60,7 +62,7 @@ public:
 //=================================
 
 
-    MoveResult receiveNetworkMessage(
+    CommandResponse receiveNetworkMessage(
         const NetworkMessage& message);
 
 
@@ -85,7 +87,7 @@ public:
 //=================================
 
 
-    void attachPlayer(
+    bool attachPlayer(
         std::shared_ptr<PlayerSession> player);
 
 
@@ -127,7 +129,7 @@ public:
 
 
 
-    const std::optional<NetworkMessage>&
+    std::optional<NetworkMessage>
     getLastMessage() const;
 
 
@@ -143,6 +145,9 @@ private:
 
 
 private:
+
+
+    mutable std::mutex m_mutex;
 
 
     int m_id;

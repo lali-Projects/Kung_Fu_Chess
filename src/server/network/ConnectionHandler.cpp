@@ -2,7 +2,7 @@
 
 
 #include "CommandHandler.hpp"
-#include "PlayerSession.hpp"
+#include "ClientConnection.hpp"
 
 
 
@@ -30,7 +30,7 @@ m_commandHandler(commandHandler)
 
 MoveResult ConnectionHandler::receive(
     const std::string& message,
-    PlayerSession* player)
+    ClientConnection& connection)
 {
 
     //---------------------------------
@@ -78,9 +78,16 @@ MoveResult ConnectionHandler::receive(
     // Forward command
     //---------------------------------
 
-    return
+    auto response =
         m_commandHandler.handle(
-            player,
+            connection,
             *command);
+
+
+    return
+    {
+        response.success,
+        response.reason
+    };
 
 }
