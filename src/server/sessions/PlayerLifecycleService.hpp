@@ -1,17 +1,13 @@
 #pragma once
 
-
 #include <memory>
 #include <string>
 
-
 #include "MoveResult.hpp"
-
 
 class PlayerSession;
 class PlayerSessionManager;
 class RoomManager;
-
 
 /**
  * Coordinates player membership cleanup across the session and room
@@ -23,30 +19,22 @@ class PlayerLifecycleService
 public:
     PlayerLifecycleService(
         RoomManager& roomManager,
-        PlayerSessionManager& sessionManager);
-
+        PlayerSessionManager& sessionManager
+    );
 
     MoveResult joinRoom(
         const std::shared_ptr<PlayerSession>& player,
-        const std::string& roomId);
+        const std::string& roomId
+    );
 
+    MoveResult leaveRoom(const std::shared_ptr<PlayerSession>& player);
 
-    MoveResult leaveRoom(
-        const std::shared_ptr<PlayerSession>& player);
+    MoveResult logout(const std::shared_ptr<PlayerSession>& player);
 
-
-    MoveResult logout(
-        const std::shared_ptr<PlayerSession>& player);
-
-
-    void disconnect(
-        const std::shared_ptr<PlayerSession>& player);
-
+    void disconnect(const std::shared_ptr<PlayerSession>& player);
 
 private:
-    bool removeFromRoom(
-        const std::shared_ptr<PlayerSession>& player);
-
+    bool removeFromRoom(const std::shared_ptr<PlayerSession>& player);
 
 private:
     RoomManager& m_roomManager;
