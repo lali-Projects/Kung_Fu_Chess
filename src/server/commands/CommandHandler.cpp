@@ -1,19 +1,13 @@
 #include "CommandHandler.hpp"
 
-
 #include "ClientConnection.hpp"
 #include "Command.hpp"
-
 #include "ClickCommand.hpp"
-
 #include "RoomManager.hpp"
 #include "Room.hpp"
-
 #include "GameSession.hpp"
-
 #include "PlayerSession.hpp"
 #include "PlayerLifecycleService.hpp"
-
 #include "AuthService.hpp"
 
 //================================================
@@ -23,502 +17,263 @@
 CommandHandler::CommandHandler(
     RoomManager& roomManager,
     AuthService& authService,
-    PlayerLifecycleService& playerLifecycle)
-:
-m_roomManager(roomManager),
-m_authService(authService),
-m_playerLifecycle(playerLifecycle)
+    PlayerLifecycleService& playerLifecycle
+)
+    : m_roomManager(roomManager)
+    , m_authService(authService)
+    , m_playerLifecycle(playerLifecycle)
 {
 }
-
-
-
-
-
 
 //================================================
 // Main Dispatcher
 //================================================
 
-CommandResponse CommandHandler::handle(
-    ClientConnection& connection,
-    const Command& command)
+CommandResponse CommandHandler::handle(ClientConnection& connection, const Command& command)
 {
     CommandResponse response;
-    response.command =
-        commandTypeToString(command.getType());
+    response.command = commandTypeToString(command.getType());
 
+    auto playerBefore = connection.getPlayer();
 
-    auto playerBefore =
-        connection.getPlayer();
-
-
-    if(playerBefore)
+    if (playerBefore)
     {
-        if(playerBefore->hasUser())
+        if (playerBefore->hasUser())
         {
             response.userId = playerBefore->getUserId();
             response.username = playerBefore->getUsername();
         }
 
-
-        response.sessionId =
-            playerBefore->getSessionId();
+        response.sessionId = playerBefore->getSessionId();
     }
-
 
     MoveResult result;
 
-    switch(command.getType())
+    switch (command.getType())
     {
-
-
         case CommandType::REGISTER:
-
-            result = handleRegister(
-                command);
+            result = handleRegister(command);
             break;
-
-
 
         case CommandType::LOGIN:
-
-            result = handleLogin(
-                connection,
-                command);
+            result = handleLogin(connection, command);
             break;
-
-
 
         case CommandType::CLICK:
-
-            result = handleClick(
-                connection,
-                command);
+            result = handleClick(connection, command);
             break;
-
-
 
         case CommandType::CREATE_ROOM:
-
-            result = handleCreateRoom(
-                connection,
-                command);
+            result = handleCreateRoom(connection, command);
             break;
-
-
 
         case CommandType::JOIN_ROOM:
-
-            result = handleJoinRoom(
-                connection,
-                command);
+            result = handleJoinRoom(connection, command);
             break;
-
 
         case CommandType::LEAVE_ROOM:
-
-            result = handleLeaveRoom(
-                connection);
+            result = handleLeaveRoom(connection);
             break;
-
 
         case CommandType::LOGOUT:
-
-            result = handleLogout(
-                connection);
+            result = handleLogout(connection);
             break;
 
-
-
         default:
-
             result = {false, "unknown_command"};
             break;
     }
 
-
     response.success = result.success;
     response.reason = result.reason;
 
+    auto playerAfter = connection.getPlayer();
 
-    auto playerAfter =
-        connection.getPlayer();
-
-
-    if(playerAfter)
+    if (playerAfter)
     {
-        if(playerAfter->hasUser())
+        if (playerAfter->hasUser())
         {
             response.userId = playerAfter->getUserId();
             response.username = playerAfter->getUsername();
         }
 
+        response.sessionId = playerAfter->getSessionId();
 
-        response.sessionId =
-            playerAfter->getSessionId();
-
-
-        if(playerAfter->hasRoom())
+        if (playerAfter->hasRoom())
         {
             response.roomId = playerAfter->getRoomId();
 
-
-            if(playerAfter->getSide() != Side::NONE)
+            if (playerAfter->getSide() != Side::NONE)
             {
                 response.side = playerAfter->getSide();
             }
         }
 
-
-        if(command.getType() == CommandType::CLICK &&
-           playerAfter->hasRoom())
+        if (command.getType() == CommandType::CLICK && playerAfter->hasRoom())
         {
-            auto room =
-                m_roomManager.getRoom(
-                    playerAfter->getRoomId());
+            auto room = m_roomManager.getRoom(playerAfter->getRoomId());
 
-
-            if(room)
+            if (room)
             {
-                response.selectedPosition =
-                    room->getSession()
-                        .getSelectedPosition(
-                            *playerAfter);
+                response.selectedPosition = room->getSession().getSelectedPosition(*playerAfter);
             }
         }
     }
 
-
-    if(command.getType() == CommandType::CREATE_ROOM &&
-       result.success)
+    if (command.getType() == CommandType::CREATE_ROOM && result.success)
     {
-        response.roomId =
-            command.getArgs().front();
+        response.roomId = command.getArgs().front();
     }
 
-
     return response;
-
 }
-
-
-
-
-
-
-
 
 //================================================
 // REGISTER
 //================================================
 
-MoveResult CommandHandler::handleRegister(
-    const Command& command)
+MoveResult CommandHandler::handleRegister(const Command& command)
 {
+    const auto& args = command.getArgs();
 
-    const auto& args =
-        command.getArgs();
-
-
-
-    return
-        m_authService.registerUser(
-            args[0],
-            args[1]);
-
+    return m_authService.registerUser(args[0], args[1]);
 }
-
-
-
-
-
-
-
 
 //================================================
 // LOGIN
 //================================================
-MoveResult CommandHandler::handleLogin(
-    ClientConnection& connection,
-    const Command& command)
+
+MoveResult CommandHandler::handleLogin(ClientConnection& connection, const Command& command)
 {
-    if(connection.hasPlayer())
+    if (connection.hasPlayer())
     {
-        return
-        {
-            false,
-            "already_authenticated"
-        };
+        return {false, "already_authenticated"};
     }
 
+    const auto& args = command.getArgs();
 
-    const auto& args =
-        command.getArgs();
+    auto player = m_authService.login(args[0], args[1]);
 
-
-    auto player =
-        m_authService.login(
-            args[0],
-            args[1]);
-
-
-
-    if(!player)
+    if (!player)
     {
-        return
-        {
-            false,
-            "login_failed"
-        };
+        return {false, "login_failed"};
     }
 
-
-
-    if(!connection.attachPlayer(player))
+    if (!connection.attachPlayer(player))
     {
         m_playerLifecycle.disconnect(player);
         return {false, "session_attach_failed"};
     }
 
-
-
-    return
-    {
-        true,
-        "login_success"
-    };
+    return {true, "login_success"};
 }
-
-
-
-
-
-
-
-
 
 //================================================
 // CLICK
 //================================================
 
-MoveResult CommandHandler::handleClick(
-    ClientConnection& connection,
-    const Command& command)
+MoveResult CommandHandler::handleClick(ClientConnection& connection, const Command& command)
 {
+    auto player = connection.getPlayer();
 
-    auto player =
-        connection.getPlayer();
-
-
-    if(!player ||
-       !player->isAuthenticated())
+    if (!player || !player->isAuthenticated())
     {
-        return
-        {
-            false,
-            "authentication_required"
-        };
+        return {false, "authentication_required"};
     }
 
-    if(!player->hasRoom())
+    if (!player->hasRoom())
     {
-        return
-        {
-            false,
-            "player_has_no_room"
-        };
+        return {false, "player_has_no_room"};
     }
 
+    ClickCommand click(command.getClickPosition());
 
+    auto room = m_roomManager.getRoom(player->getRoomId());
 
-
-
-    ClickCommand click(
-        command.getClickPosition());
-
-
-
-
-
-
-    auto room =
-        m_roomManager.getRoom(
-            player->getRoomId());
-
-
-
-
-
-
-    if(!room)
+    if (!room)
     {
-        return
-        {
-            false,
-            "room_not_found"
-        };
+        return {false, "room_not_found"};
     }
 
-
-
-
-
-
-
-    return
-        room->getSession()
-            .handleClick(
-                *player,
-                click);
-
+    return room->getSession().handleClick(*player, click);
 }
-
-
-
-
-
-
-
-
 
 //================================================
 // CREATE ROOM
 //================================================
 
-MoveResult CommandHandler::handleCreateRoom(
-    ClientConnection& connection,
-    const Command& command)
+MoveResult CommandHandler::handleCreateRoom(ClientConnection& connection, const Command& command)
 {
+    auto player = connection.getPlayer();
 
-    auto player =
-        connection.getPlayer();
-
-
-    if(!player ||
-       !player->isAuthenticated())
+    if (!player || !player->isAuthenticated())
     {
-        return
-        {
-            false,
-            "authentication_required"
-        };
+        return {false, "authentication_required"};
     }
 
+    const auto& args = command.getArgs();
 
-
-
-    const auto& args =
-        command.getArgs();
-
-
-
-
-    if(
-        m_roomManager.createRoom(
-            args[0]))
+    if (m_roomManager.createRoom(args[0]))
     {
-
-        return
-        {
-            true,
-            "room_created"
-        };
-
+        return {true, "room_created"};
     }
 
-
-
-
-
-
-    return
-    {
-        false,
-        "room_creation_failed"
-    };
-
+    return {false, "room_creation_failed"};
 }
-
-
-
-
-
-
-
-
 
 //================================================
 // JOIN ROOM
 //================================================
 
-MoveResult CommandHandler::handleJoinRoom(
-    ClientConnection& connection,
-    const Command& command)
+MoveResult CommandHandler::handleJoinRoom(ClientConnection& connection, const Command& command)
 {
-    const auto& args =
-        command.getArgs();
+    const auto& args = command.getArgs();
 
+    auto player = connection.getPlayer();
 
-    auto player =
-        connection.getPlayer();
-
-
-    if(!player ||
-       !player->isAuthenticated())
+    if (!player || !player->isAuthenticated())
     {
         return {false, "authentication_required"};
     }
 
-
-    return m_playerLifecycle.joinRoom(
-        player,
-        args[0]);
-
+    return m_playerLifecycle.joinRoom(player, args[0]);
 }
 
+//================================================
+// LEAVE ROOM
+//================================================
 
-MoveResult CommandHandler::handleLeaveRoom(
-    ClientConnection& connection)
+MoveResult CommandHandler::handleLeaveRoom(ClientConnection& connection)
 {
-    auto player =
-        connection.getPlayer();
+    auto player = connection.getPlayer();
 
-
-    if(!player ||
-       !player->isAuthenticated())
+    if (!player || !player->isAuthenticated())
     {
         return {false, "authentication_required"};
     }
-
 
     return m_playerLifecycle.leaveRoom(player);
 }
 
+//================================================
+// LOGOUT
+//================================================
 
-MoveResult CommandHandler::handleLogout(
-    ClientConnection& connection)
+MoveResult CommandHandler::handleLogout(ClientConnection& connection)
 {
-    auto player =
-        connection.getPlayer();
+    auto player = connection.getPlayer();
 
-
-    if(!player ||
-       !player->isAuthenticated())
+    if (!player || !player->isAuthenticated())
     {
         return {false, "authentication_required"};
     }
 
+    MoveResult result = m_playerLifecycle.logout(player);
 
-    MoveResult result =
-        m_playerLifecycle.logout(player);
-
-
-    if(result.success)
+    if (result.success)
     {
         connection.clearPlayer();
     }
-
 
     return result;
 }
