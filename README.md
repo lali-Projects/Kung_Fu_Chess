@@ -36,7 +36,7 @@ Powered by **IXWebSocket** for network communication.
 - **Player 2** -> BLACK
 - **Additional players** -> OBSERVER
 
-**Main Components:** `GameSession`, `SessionManager`, `PlayerSession`
+**Main Components:** `GameSession`, `RoomManager`, `PlayerSession`
 
 ---
 
