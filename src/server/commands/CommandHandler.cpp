@@ -4,7 +4,6 @@
 #include "ClientConnection.hpp"
 #include "Command.hpp"
 
-#include "Position.hpp"
 #include "ClickCommand.hpp"
 
 #include "RoomManager.hpp"
@@ -16,32 +15,6 @@
 #include "PlayerLifecycleService.hpp"
 
 #include "AuthService.hpp"
-
-
-#include <string>
-
-
-namespace
-{
-    std::string commandName(
-        CommandType type)
-    {
-        switch(type)
-        {
-            case CommandType::CLICK: return "CLICK";
-            case CommandType::LOGIN: return "LOGIN";
-            case CommandType::REGISTER: return "REGISTER";
-            case CommandType::CREATE_ROOM: return "CREATE_ROOM";
-            case CommandType::JOIN_ROOM: return "JOIN_ROOM";
-            case CommandType::LEAVE_ROOM: return "LEAVE_ROOM";
-            case CommandType::LOGOUT: return "LOGOUT";
-            default: return "UNKNOWN";
-        }
-    }
-}
-
-
-
 
 //================================================
 // Constructor
@@ -73,7 +46,7 @@ CommandResponse CommandHandler::handle(
 {
     CommandResponse response;
     response.command =
-        commandName(command.getType());
+        commandTypeToString(command.getType());
 
 
     auto playerBefore =
@@ -218,8 +191,7 @@ CommandResponse CommandHandler::handle(
 
 
     if(command.getType() == CommandType::CREATE_ROOM &&
-       result.success &&
-       !command.getArgs().empty())
+       result.success)
     {
         response.roomId =
             command.getArgs().front();
@@ -247,18 +219,6 @@ MoveResult CommandHandler::handleRegister(
 
     const auto& args =
         command.getArgs();
-
-
-
-    if(args.size()!=2)
-    {
-        return
-        {
-            false,
-            "invalid_register_arguments"
-        };
-    }
-
 
 
 
@@ -295,17 +255,6 @@ MoveResult CommandHandler::handleLogin(
 
     const auto& args =
         command.getArgs();
-
-
-    if(args.size()!=2)
-    {
-        return
-        {
-            false,
-            "invalid_login_arguments"
-        };
-    }
-
 
 
     auto player =
@@ -385,68 +334,8 @@ MoveResult CommandHandler::handleClick(
 
 
 
-    const auto& args =
-        command.getArgs();
-
-
-
-
-
-    if(args.size()!=2)
-    {
-        return
-        {
-            false,
-            "invalid_click_arguments"
-        };
-    }
-
-
-
-
-
-    int row;
-    int col;
-
-
-
-    try
-    {
-
-        row =
-            std::stoi(args[0]);
-
-
-        col =
-            std::stoi(args[1]);
-
-    }
-    catch(...)
-    {
-
-        return
-        {
-            false,
-            "invalid_position"
-        };
-
-    }
-
-
-
-
-
-
-    Position position(
-        row,
-        col);
-
-
-
-
-
     ClickCommand click(
-        position);
+        command.getClickPosition());
 
 
 
@@ -525,20 +414,6 @@ MoveResult CommandHandler::handleCreateRoom(
 
 
 
-    if(args.size()!=1)
-    {
-        return
-        {
-            false,
-            "invalid_room_arguments"
-        };
-    }
-
-
-
-
-
-
     if(
         m_roomManager.createRoom(
             args[0]))
@@ -583,12 +458,6 @@ MoveResult CommandHandler::handleJoinRoom(
 {
     const auto& args =
         command.getArgs();
-
-
-    if(args.size()!=1)
-    {
-        return {false, "invalid_room_arguments"};
-    }
 
 
     auto player =

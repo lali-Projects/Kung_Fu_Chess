@@ -25,6 +25,8 @@
 #include "ClientCommandDispatcher.hpp"
 #include "ClientSession.hpp"
 #include "ClientSocket.hpp"
+#include "Command.hpp"
+#include "CommandParser.hpp"
 #include "CommandResponse.hpp"
 #include "GameRenderer.hpp"
 #include "GameSnapshot.hpp"
@@ -83,6 +85,175 @@ namespace
                 operation +
                 " failed: " +
                 response.reason);
+        }
+    }
+
+
+    Command requireParsedCommand(
+        CommandParser& parser,
+        const std::string& input)
+    {
+        const auto command = parser.parse(input);
+        require(
+            command.has_value(),
+            "CommandParser rejected valid input: " + input);
+        return *command;
+    }
+
+
+    void requireTextCommand(
+        CommandParser& parser,
+        const std::string& input,
+        CommandType expectedType,
+        const std::vector<std::string>& expectedArguments)
+    {
+        const Command command =
+            requireParsedCommand(parser, input);
+        require(
+            command.isValid() &&
+            command.getType() == expectedType &&
+            command.getArgs() == expectedArguments,
+            "CommandParser produced unexpected command data for: " + input);
+    }
+
+
+    void verifyCommandParsingContract()
+    {
+        CommandParser parser;
+
+
+        const std::array<
+            std::pair<CommandType, std::string>,
+            7> commandTypeNames{{
+                {CommandType::CLICK, "CLICK"},
+                {CommandType::LOGIN, "LOGIN"},
+                {CommandType::REGISTER, "REGISTER"},
+                {CommandType::CREATE_ROOM, "CREATE_ROOM"},
+                {CommandType::JOIN_ROOM, "JOIN_ROOM"},
+                {CommandType::LEAVE_ROOM, "LEAVE_ROOM"},
+                {CommandType::LOGOUT, "LOGOUT"}
+            }};
+
+
+        for(const auto& [type, name] : commandTypeNames)
+        {
+            require(
+                commandTypeFromString(name) == type &&
+                commandTypeToString(type) == name &&
+                commandTypeFromString(
+                    commandTypeToString(type)) == type,
+                "CommandType wire-name mapping failed for: " + name);
+        }
+
+
+        require(
+            commandTypeFromString("") == CommandType::UNKNOWN &&
+            commandTypeFromString("UNKNOWN") == CommandType::UNKNOWN &&
+            commandTypeFromString("click") == CommandType::UNKNOWN &&
+            commandTypeFromString("DOES_NOT_EXIST") ==
+                CommandType::UNKNOWN &&
+            commandTypeToString(CommandType::UNKNOWN) == "UNKNOWN" &&
+            commandTypeToString(
+                static_cast<CommandType>(999)) == "UNKNOWN",
+            "CommandType unknown-name mapping contract changed");
+
+
+        requireTextCommand(
+            parser,
+            "REGISTER alice secret",
+            CommandType::REGISTER,
+            {"alice", "secret"});
+        requireTextCommand(
+            parser,
+            "LOGIN alice secret",
+            CommandType::LOGIN,
+            {"alice", "secret"});
+        requireTextCommand(
+            parser,
+            "CREATE_ROOM room_a",
+            CommandType::CREATE_ROOM,
+            {"room_a"});
+        requireTextCommand(
+            parser,
+            "JOIN_ROOM room_a",
+            CommandType::JOIN_ROOM,
+            {"room_a"});
+        requireTextCommand(
+            parser,
+            "LEAVE_ROOM",
+            CommandType::LEAVE_ROOM,
+            {});
+        requireTextCommand(
+            parser,
+            "LOGOUT",
+            CommandType::LOGOUT,
+            {});
+
+
+        const Command click =
+            requireParsedCommand(parser, "CLICK 6 0");
+        require(
+            click.getType() == CommandType::CLICK &&
+            click.getArgs() ==
+                std::vector<std::string>{"6", "0"} &&
+            click.getClickPosition() == Position(6, 0),
+            "CommandParser did not retain typed CLICK coordinates");
+
+
+        const Command whitespaceClick =
+            requireParsedCommand(
+                parser,
+                " \tCLICK\t6\r\n0  ");
+        require(
+            whitespaceClick.getType() == CommandType::CLICK &&
+            whitespaceClick.getClickPosition() == Position(6, 0),
+            "CommandParser whitespace contract changed");
+
+
+        const Command leadingZeroClick =
+            requireParsedCommand(parser, "CLICK 01 07");
+        require(
+            leadingZeroClick.getClickPosition() == Position(1, 7),
+            "CommandParser leading-zero contract changed");
+
+
+        const std::vector<std::string> malformedCommands{
+            "",
+            " \t\r\n ",
+            "DOES_NOT_EXIST",
+            "UNKNOWN",
+            "click 6 0",
+            "REGISTER user",
+            "REGISTER user password extra",
+            "LOGIN user",
+            "LOGIN user password extra",
+            "CREATE_ROOM",
+            "CREATE_ROOM room extra",
+            "JOIN_ROOM",
+            "JOIN_ROOM room extra",
+            "LEAVE_ROOM extra",
+            "LOGOUT extra",
+            "CLICK 6",
+            "CLICK 6 0 extra",
+            "CLICK abc 3",
+            "CLICK 3 abc",
+            "CLICK +1 0",
+            "CLICK 1x 0",
+            "CLICK -1 3",
+            "CLICK 3 -1",
+            "CLICK 8 3",
+            "CLICK 3 8",
+            "CLICK 999999999999999999999999 3",
+            "CLICK 3 999999999999999999999999",
+            "CLICK 6 0\nLOGOUT"
+        };
+
+
+        for(const std::string& input : malformedCommands)
+        {
+            require(
+                !parser.parse(input).has_value(),
+                "CommandParser accepted malformed input: " + input);
         }
     }
 
@@ -686,6 +857,18 @@ namespace
                 spectatorTwo.connect(url);
 
 
+                const CommandResponse unauthenticatedCreate =
+                    white.command(
+                        "CREATE_ROOM " + roomId);
+                require(
+                    !unauthenticatedCreate.success &&
+                    unauthenticatedCreate.reason ==
+                        "authentication_required" &&
+                    unauthenticatedCreate.command == "CREATE_ROOM",
+                    "syntactically valid unauthenticated CREATE_ROOM did not "
+                    "reach authoritative handler validation");
+
+
                 registerAndLogin(
                     white,
                     "ws_a_" + suffix,
@@ -890,7 +1073,8 @@ namespace
                         white,
                         Position(1, 0));
                 require(
-                    !wrongSide.success,
+                    !wrongSide.success &&
+                    wrongSide.command == "CLICK",
                     "white client unexpectedly selected a black pawn");
                 require(
                     wrongSide.reason ==
@@ -916,6 +1100,7 @@ namespace
                 require(
                     !spectatorWhiteClick.success &&
                     spectatorWhiteClick.reason == "observer_cannot_play" &&
+                    spectatorWhiteClick.command == "CLICK" &&
                     !spectatorWhiteClick.selectedPosition,
                     "spectator unexpectedly selected a WHITE piece");
 
@@ -927,6 +1112,7 @@ namespace
                 require(
                     !spectatorBlackClick.success &&
                     spectatorBlackClick.reason == "observer_cannot_play" &&
+                    spectatorBlackClick.command == "CLICK" &&
                     !spectatorBlackClick.selectedPosition,
                     "spectator unexpectedly selected a BLACK piece");
 
@@ -1468,6 +1654,7 @@ int main()
 {
     try
     {
+        verifyCommandParsingContract();
         runFourClientWebSocketScenario();
         return 0;
     }

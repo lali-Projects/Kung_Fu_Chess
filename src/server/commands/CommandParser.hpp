@@ -24,12 +24,6 @@ public:
 private:
 
 
-    static CommandType
-    convertCommandType(
-        const std::string& command);
-
-
-
     static bool
     validateArguments(
         CommandType type,
@@ -37,14 +31,14 @@ private:
 
 
 
-    static bool
-    validateClickArguments(
+    static std::optional<Position>
+    parseClickArguments(
         const std::vector<std::string>& args);
 
 
 
-    static bool
-    isInteger(
+    static std::optional<int>
+    parseBoardCoordinate(
         const std::string& value);
 
 };

@@ -1,8 +1,9 @@
 #include "CommandParser.hpp"
 
 
-#include <cctype>
+#include <charconv>
 #include <sstream>
+#include <system_error>
 
 
 
@@ -27,7 +28,7 @@ CommandParser::parse(
 
 
     CommandType type =
-        convertCommandType(commandName);
+        commandTypeFromString(commandName);
 
 
 
@@ -49,6 +50,27 @@ CommandParser::parse(
         args.push_back(value);
     }
 
+
+
+
+
+    if(type == CommandType::CLICK)
+    {
+        const auto clickPosition =
+            parseClickArguments(args);
+
+
+        if(!clickPosition)
+        {
+            return std::nullopt;
+        }
+
+
+        return Command(
+            type,
+            args,
+            *clickPosition);
+    }
 
 
 
@@ -90,13 +112,6 @@ bool CommandParser::validateArguments(
 
     switch(type)
     {
-
-        case CommandType::CLICK:
-
-            return
-                validateClickArguments(args);
-
-
 
         case CommandType::LOGIN:
 
@@ -140,51 +155,34 @@ bool CommandParser::validateArguments(
 
 
 //================================================
-// Validate CLICK
+// Parse CLICK
 //================================================
 
-bool CommandParser::validateClickArguments(
+std::optional<Position>
+CommandParser::parseClickArguments(
     const std::vector<std::string>& args)
 {
 
     if(args.size() != 2)
-        return false;
+        return std::nullopt;
 
 
 
-    if(!isInteger(args[0]) ||
-       !isInteger(args[1]))
+    const auto row =
+        parseBoardCoordinate(args[0]);
+
+
+    const auto col =
+        parseBoardCoordinate(args[1]);
+
+
+    if(!row || !col)
     {
-        return false;
+        return std::nullopt;
     }
 
 
-
-
-
-    int row;
-    int col;
-
-
-    try
-    {
-        row = std::stoi(args[0]);
-        col = std::stoi(args[1]);
-    }
-    catch(...)
-    {
-        return false;
-    }
-
-
-
-
-
-    return
-        row >= 0 &&
-        row < 8 &&
-        col >= 0 &&
-        col < 8;
+    return Position(*row, *col);
 
 }
 
@@ -197,80 +195,46 @@ bool CommandParser::validateClickArguments(
 
 
 //================================================
-// Integer Check
+// Coordinate Parsing
 //================================================
 
-bool CommandParser::isInteger(
+std::optional<int>
+CommandParser::parseBoardCoordinate(
     const std::string& value)
 {
 
     if(value.empty())
-        return false;
+        return std::nullopt;
 
 
 
     for(char c : value)
     {
-        if(!std::isdigit(c))
-            return false;
+        if(c < '0' || c > '9')
+            return std::nullopt;
     }
 
 
 
-    return true;
-
-}
-
-
-
-
-
-
-
+    int coordinate = 0;
+    const char* begin = value.data();
+    const char* end = begin + value.size();
+    const auto result =
+        std::from_chars(
+            begin,
+            end,
+            coordinate);
 
 
-//================================================
-// Convert Command
-//================================================
-
-CommandType
-CommandParser::convertCommandType(
-    const std::string& command)
-{
-
-    if(command == "CLICK")
-        return CommandType::CLICK;
+    if(result.ec != std::errc{} ||
+       result.ptr != end ||
+       coordinate < 0 ||
+       coordinate >= 8)
+    {
+        return std::nullopt;
+    }
 
 
-
-    if(command == "LOGIN")
-        return CommandType::LOGIN;
-
-
-
-    if(command == "REGISTER")
-        return CommandType::REGISTER;
-
-
-
-    if(command == "CREATE_ROOM")
-        return CommandType::CREATE_ROOM;
-
-
-
-    if(command == "JOIN_ROOM")
-        return CommandType::JOIN_ROOM;
-
-
-    if(command == "LEAVE_ROOM")
-        return CommandType::LEAVE_ROOM;
-
-
-    if(command == "LOGOUT")
-        return CommandType::LOGOUT;
-
-
-
-    return CommandType::UNKNOWN;
+    return coordinate;
 
 }

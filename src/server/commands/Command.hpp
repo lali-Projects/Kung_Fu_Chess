@@ -2,9 +2,11 @@
 
 
 #include <string>
+#include <optional>
 #include <vector>
 #include <utility>
 
+#include "Position.hpp"
 
 
 
@@ -29,6 +31,14 @@ enum class CommandType
 };
 
 
+CommandType commandTypeFromString(
+    const std::string& command);
+
+
+std::string commandTypeToString(
+    CommandType type);
+
+
 
 
 
@@ -46,6 +56,19 @@ public:
     :
     m_type(type),
     m_args(std::move(args))
+    {
+    }
+
+
+
+    Command(
+        CommandType type,
+        std::vector<std::string> args,
+        const Position& clickPosition)
+    :
+    m_type(type),
+    m_args(std::move(args)),
+    m_clickPosition(clickPosition)
     {
     }
 
@@ -69,6 +92,14 @@ public:
     getArgs() const
     {
         return m_args;
+    }
+
+
+
+    const Position&
+    getClickPosition() const
+    {
+        return m_clickPosition.value();
     }
 
 
@@ -98,5 +129,8 @@ private:
 
 
     std::vector<std::string> m_args;
+
+
+    std::optional<Position> m_clickPosition;
 
 };
