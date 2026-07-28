@@ -1,248 +1,91 @@
 #pragma once
 
-
 #include <cstdint>
 #include <memory>
 #include <string>
-
-
 #include "MoveResult.hpp"
 
-
-
 class EventBus;
-
 class IDatabase;
 class SQLiteDatabase;
 class DatabaseInitializer;
-
 class UserRepository;
 class AuthService;
 class PlayerSessionManager;
 class PlayerLifecycleService;
 class AuthoritativeGameLoop;
-
 class RoomFactory;
 class RoomManager;
-
 class CommandHandler;
 class Server;
 
-
-
-
 /**
- * @brief Main application composition root.
- *
- * Responsible for:
- *
- *  - Creating application services.
- *  - Connecting dependencies.
- *  - Managing lifetime of components.
- *  - Starting and stopping server.
- *
- *
- * Does NOT know:
- *
- *  - Game rules.
- *  - Board implementation.
- *  - Network protocol details.
- *  - Database SQL logic.
+ * @brief Represents the main application composition root responsible for instantiating services, managing dependencies, controlling component lifecycles, and driving server execution.
  */
 class Application
 {
-
 public:
-
-
-    explicit Application(
-        std::uint16_t port = 8080,
-        std::string databasePath = "kungfu_chess.db");
-
-
-    ~Application();
-
-
-
-    Application(
-        const Application&) = delete;
-
-
-
-    Application& operator=(
-        const Application&) = delete;
-
-
-
-
-public:
-
+    /**
+     * @brief Constructs an Application instance with specified port and database file path.
+     * @param port The network port number to listen on.
+     * @param databasePath The file path to the database file.
+     */
+    explicit Application(std::uint16_t port = 8080, std::string databasePath = "kungfu_chess.db");
 
     /**
-     * @brief Starts application.
+     * @brief Destroys the Application instance and releases owned resources.
+     */
+    ~Application();
+
+    Application(const Application&) = delete;
+    Application& operator=(const Application&) = delete;
+
+public:
+    /**
+     * @brief Initializes application dependencies and starts network server execution.
      */
     void start();
 
-
-
-
     /**
-     * @brief Stops application.
+     * @brief Stops network server execution and shuts down active loops.
      */
     void stop();
 
-
-
-
-
     /**
-     * @brief Sends command directly for testing.
+     * @brief Direct command execution method intended for internal testing.
+     * @param message Raw string payload representing the incoming command.
+     * @return Result status of the executed action.
      */
-    MoveResult sendCommand(
-        const std::string& message);
-
-
-
-
+    MoveResult sendCommand(const std::string& message);
 
     /**
-     * @brief Access server.
+     * @brief Retrieves a reference to the active Server component.
+     * @return Reference to the internal Server instance.
      */
     Server& getServer();
 
-
-
-
     /**
-     * @brief Access room manager.
+     * @brief Retrieves a reference to the active RoomManager component.
+     * @return Reference to the internal RoomManager instance.
      */
     RoomManager& getRoomManager();
 
-
-
-
-
 private:
-
-
-    /**
-     * @brief Builds dependency graph.
-     */
     void initialize();
 
-
-
-
-
-private:
-
-
-    //---------------------------------
-    // Events
-    //---------------------------------
-
-    std::unique_ptr<EventBus>
-        m_eventBus;
-
-
-
-
-
-    //---------------------------------
-    // Database
-    //---------------------------------
-
-    std::unique_ptr<IDatabase>
-        m_database;
-
-
-
-    std::unique_ptr<DatabaseInitializer>
-        m_databaseInitializer;
-
-
-
-
-
-    //---------------------------------
-    // Authentication
-    //---------------------------------
-
-    std::unique_ptr<UserRepository>
-        m_userRepository;
-
-
-
-    std::unique_ptr<PlayerSessionManager>
-        m_playerSessionManager;
-
-
-
-    std::unique_ptr<AuthService>
-        m_authService;
-
-
-
-
-
-    //---------------------------------
-    // Rooms
-    //---------------------------------
-
-    std::unique_ptr<RoomFactory>
-        m_roomFactory;
-
-
-
-    std::unique_ptr<RoomManager>
-        m_roomManager;
-
-
-
-    std::unique_ptr<PlayerLifecycleService>
-        m_playerLifecycleService;
-
-
-
-
-
-    //---------------------------------
-    // Commands
-    //---------------------------------
-
-    std::unique_ptr<CommandHandler>
-        m_commandHandler;
-
-
-
-
-
-    //---------------------------------
-    // Server
-    //---------------------------------
-
-    std::unique_ptr<Server>
-        m_server;
-
-
-    std::unique_ptr<AuthoritativeGameLoop>
-        m_gameLoop;
-
-
-
-
-
-private:
-
-
+    std::unique_ptr<EventBus> m_eventBus;
+    std::unique_ptr<IDatabase> m_database;
+    std::unique_ptr<DatabaseInitializer> m_databaseInitializer;
+    std::unique_ptr<UserRepository> m_userRepository;
+    std::unique_ptr<PlayerSessionManager> m_playerSessionManager;
+    std::unique_ptr<AuthService> m_authService;
+    std::unique_ptr<RoomFactory> m_roomFactory;
+    std::unique_ptr<RoomManager> m_roomManager;
+    std::unique_ptr<PlayerLifecycleService> m_playerLifecycleService;
+    std::unique_ptr<CommandHandler> m_commandHandler;
+    std::unique_ptr<Server> m_server;
+    std::unique_ptr<AuthoritativeGameLoop> m_gameLoop;
     std::uint16_t m_port;
-
-
     std::string m_databasePath;
-
-
-    bool m_running{
-        false
-    };
-
+    bool m_running{false};
 };
