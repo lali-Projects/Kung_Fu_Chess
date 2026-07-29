@@ -31,22 +31,6 @@ void EventBus::publish(
             return;
         }
 
-
-        /*
-            Copy listeners before execution.
-
-            We do not execute callbacks while holding
-            the mutex.
-
-            Reason:
-            A callback may:
-             - Publish another event.
-             - Register another listener.
-             - Execute long operations.
-
-            Holding the lock could cause deadlocks
-            or block other threads.
-        */
         listeners = iterator->second;
     }
 
