@@ -13,7 +13,12 @@ namespace client
         FAILED
     };
 
-    /** Byte-oriented client transport boundary. */
+   
+    /**
+     *
+     * Defines the communication interface used by the client without
+     * depending on a specific transport implementation such as WebSocket.
+     */
     class ITransport
     {
     public:

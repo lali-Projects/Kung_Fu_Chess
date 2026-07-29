@@ -16,7 +16,6 @@ namespace client
 }
 
 
-/** Coordinates confirmed client workflows without exposing protocol details. */
 class ClientApplicationController
 {
 public:

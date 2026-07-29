@@ -13,7 +13,6 @@ namespace client
 }
 
 
-/** Client-side room command service. */
 class RoomClient
 {
 public:

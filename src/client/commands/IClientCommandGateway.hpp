@@ -9,7 +9,6 @@
 
 namespace client
 {
-    /** Application-facing asynchronous/synchronous text-command boundary. */
     class IClientCommandGateway
     {
     public:

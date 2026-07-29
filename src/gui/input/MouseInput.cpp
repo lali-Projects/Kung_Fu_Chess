@@ -12,7 +12,6 @@ MouseInput::MouseInput(
 
 void MouseInput::click(int x, int y)
 {
-    const Position position =
-        m_layout.pixelToBoard(x, y);
+    const Position position = m_layout.pixelToBoard(x, y);
     m_clickSink.click(position);
 }

@@ -6,7 +6,6 @@
 class AuthoritativeGameState;
 
 
-/** Exposes only the latest server-authored snapshot to the renderer. */
 class RemoteGameFrameSource : public IGameFrameSource
 {
 public:

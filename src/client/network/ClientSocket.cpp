@@ -7,8 +7,6 @@
 
 ClientSocket::ClientSocket()
 {
-    // Session state and command replay are owned by the client layer. An
-    // implicit reconnect could otherwise revive a socket with stale identity.
     m_socket.disableAutomaticReconnection();
 }
 

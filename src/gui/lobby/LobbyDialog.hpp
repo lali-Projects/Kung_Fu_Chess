@@ -16,7 +16,6 @@ class QPushButton;
 class QTimer;
 
 
-/** Qt presentation for connection, authentication and room selection. */
 class LobbyDialog : public QDialog
 {
 public:

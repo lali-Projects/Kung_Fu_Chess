@@ -13,7 +13,6 @@ namespace client
 }
 
 
-/** Sends authentication commands and commits only confirmed session state. */
 class AuthenticationClient
 {
 public:
