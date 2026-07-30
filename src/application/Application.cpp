@@ -18,8 +18,13 @@
 #include "Server.hpp"
 #include "WebSocketServer.hpp"
 
-Application::Application(std::uint16_t port, std::string databasePath)
-    : m_port(port), m_databasePath(std::move(databasePath))
+Application::Application(
+    std::uint16_t port,
+    std::string databasePath,
+    std::string bindAddress)
+    : m_port(port),
+      m_databasePath(std::move(databasePath)),
+      m_bindAddress(std::move(bindAddress))
 {
     if (m_port == 0)
     {
@@ -29,6 +34,11 @@ Application::Application(std::uint16_t port, std::string databasePath)
     if (m_databasePath.empty())
     {
         throw std::invalid_argument("Database path cannot be empty");
+    }
+
+    if (m_bindAddress.empty())
+    {
+        throw std::invalid_argument("Server bind address cannot be empty");
     }
 
     initialize();
@@ -57,6 +67,8 @@ void Application::initialize()
         throw std::runtime_error("Database initialization failed");
     }
 
+    std::cout << "[APPLICATION] Database initialized\n";
+
     m_userRepository = std::make_unique<UserRepository>(*m_database);
     m_playerSessionManager = std::make_unique<PlayerSessionManager>();
 
@@ -73,7 +85,7 @@ void Application::initialize()
 
     m_commandHandler = std::make_unique<CommandHandler>(*m_roomManager, *m_authService, *m_playerLifecycleService);
 
-    auto network = std::make_unique<WebSocketServer>(m_port);
+    auto network = std::make_unique<WebSocketServer>(m_port, m_bindAddress);
 
     m_server = std::make_unique<Server>(*m_commandHandler, *m_eventBus, *m_playerLifecycleService, std::move(network));
     m_gameLoop = std::make_unique<AuthoritativeGameLoop>(*m_roomManager);
@@ -118,6 +130,7 @@ void Application::stop()
     if (m_gameLoop)
     {
         m_gameLoop->stop();
+        std::cout << "[APPLICATION] Game loop stopped\n";
     }
 
     if (m_server)
@@ -128,6 +141,15 @@ void Application::stop()
     if (m_database && m_database->isOpen())
     {
         m_database->close();
+
+        if (m_database->isOpen())
+        {
+            std::cerr << "[APPLICATION] Database close failed\n";
+        }
+        else
+        {
+            std::cout << "[APPLICATION] Database closed\n";
+        }
     }
 
     m_running = false;

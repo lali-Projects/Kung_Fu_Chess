@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <unordered_map>
 
 #include <ixwebsocket/IXWebSocketServer.h>
@@ -23,7 +24,9 @@ class WebSocketServer : public INetworkServer
 {
 public:
    
-    explicit WebSocketServer(uint16_t port = 8080);
+    explicit WebSocketServer(
+        uint16_t port = 8080,
+        std::string bindAddress = "127.0.0.1");
 
     ~WebSocketServer() override;
 
@@ -51,6 +54,7 @@ private:
     void removeConnection(int connectionId);
 
     uint16_t m_port;
+    std::string m_bindAddress;
     std::unique_ptr<ix::WebSocketServer> m_server;
 
     std::atomic<bool> m_running{false};

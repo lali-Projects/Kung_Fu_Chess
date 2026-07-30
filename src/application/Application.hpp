@@ -26,11 +26,15 @@ class Application
 {
 public:
     /**
-     * @brief Constructs an Application instance with specified port and database file path.
+     * @brief Constructs an Application instance with specified port, database file path, and bind address.
      * @param port The network port number to listen on.
      * @param databasePath The file path to the database file.
+     * @param bindAddress The network address on which the server listens.
      */
-    explicit Application(std::uint16_t port = 8080, std::string databasePath = "kungfu_chess.db");
+    explicit Application(
+        std::uint16_t port = 8080,
+        std::string databasePath = "kungfu_chess.db",
+        std::string bindAddress = "127.0.0.1");
 
     /**
      * @brief Destroys the Application instance and releases owned resources.
@@ -87,5 +91,6 @@ private:
     std::unique_ptr<AuthoritativeGameLoop> m_gameLoop;
     std::uint16_t m_port;
     std::string m_databasePath;
+    std::string m_bindAddress;
     bool m_running{false};
 };

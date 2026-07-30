@@ -5,10 +5,16 @@
 #include <utility>
 #include <vector>
 
-WebSocketServer::WebSocketServer(uint16_t port)
-    : m_port(port)
+WebSocketServer::WebSocketServer(uint16_t port, std::string bindAddress)
+    : m_port(port),
+      m_bindAddress(std::move(bindAddress))
 {
-    m_server = std::make_unique<ix::WebSocketServer>(port);
+    if (m_bindAddress.empty())
+    {
+        throw std::invalid_argument("WebSocket bind address cannot be empty");
+    }
+
+    m_server = std::make_unique<ix::WebSocketServer>(m_port, m_bindAddress);
 }
 
 WebSocketServer::~WebSocketServer()
@@ -39,7 +45,8 @@ void WebSocketServer::start()
     m_server->start();
     m_running = true;
 
-    std::cout << "WebSocket server started on port " << m_port << std::endl;
+    std::cout << "WebSocket server started on "
+              << m_bindAddress << ':' << m_port << std::endl;
 }
 
 void WebSocketServer::stop()

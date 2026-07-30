@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(KungFuChess LANGUAGES CXX C)
+
+option(KFC_SERVER_ONLY "Build only the authoritative server" OFF)
+
 set(CMAKE_TLS_VERIFY OFF CACHE BOOL "" FORCE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(FetchContent)
@@ -34,21 +37,27 @@ FetchContent_MakeAvailable(sqlite3)
 # ---------------------------------------------------------
 
 # הגדרת נתיבי חיפוש מפורשים עבור Qt6 ב-MSYS2 UCRT64
-list(APPEND CMAKE_PREFIX_PATH 
-    "C:/msys64/ucrt64"
-    "C:/msys64/ucrt64/lib/cmake"
-    "C:/msys64/ucrt64/lib/cmake/Qt6"
-)
+if(WIN32 AND NOT KFC_SERVER_ONLY)
+    list(APPEND CMAKE_PREFIX_PATH
+        "C:/msys64/ucrt64"
+        "C:/msys64/ucrt64/lib/cmake"
+        "C:/msys64/ucrt64/lib/cmake/Qt6"
+    )
+endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# מציאת ספריית OpenCV שהותקנה דרך MSYS2
-find_package(OpenCV REQUIRED)
+find_package(Threads REQUIRED)
 
-# Find Qt6
-find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
+if(NOT KFC_SERVER_ONLY)
+    # מציאת ספריית OpenCV שהותקנה דרך MSYS2
+    find_package(OpenCV REQUIRED)
+
+    # Find Qt6
+    find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
+endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
@@ -66,9 +75,12 @@ list(REMOVE_DUPLICATES SRC_INCLUDE_DIRS)
 set(COMMON_INCLUDES
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
     ${SRC_INCLUDE_DIRS}
-    ${OpenCV_INCLUDE_DIRS}
     ${sqlite3_SOURCE_DIR}
 )
+
+if(NOT KFC_SERVER_ONLY)
+    list(APPEND COMMON_INCLUDES ${OpenCV_INCLUDE_DIRS})
+endif()
 
 # ---------------------------------------------------------
 # חלוקת קובצי המקור לפי התיקיות
@@ -99,17 +111,24 @@ add_executable(server ${SERVER_SOURCES} ${COMMON_SOURCES} ${sqlite3_SOURCE_DIR}/
 
 target_include_directories(server PRIVATE ${COMMON_INCLUDES})
 
-target_link_libraries(server PRIVATE 
-    ${OpenCV_LIBS}
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Widgets
+target_link_libraries(server PRIVATE
     ixwebsocket
+    Threads::Threads
 )
+
+if(NOT KFC_SERVER_ONLY)
+    target_link_libraries(server PRIVATE
+        ${OpenCV_LIBS}
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Widgets
+    )
+endif()
 
 # ---------------------------------------------------------
 # הגדרת יעד הלקוח (Client Target)
 # ---------------------------------------------------------
+if(NOT KFC_SERVER_ONLY)
 add_executable(client ${CLIENT_SOURCES} ${COMMON_SOURCES})
 
 target_include_directories(client PRIVATE ${COMMON_INCLUDES})
@@ -213,11 +232,12 @@ add_test(
 set_tests_properties(two_client_websocket_integration_tests PROPERTIES
     TIMEOUT 60
 )
+endif()
 
 # ---------------------------------------------------------
 # העתקת DLLs של OpenCV ו-Qt6 עבור שני הקבצים
 # ---------------------------------------------------------
-if(WIN32)
+if(WIN32 AND NOT KFC_SERVER_ONLY)
     set(ALL_TARGETS server client)
 
     foreach(TARGET_NAME ${ALL_TARGETS})
@@ -280,7 +300,9 @@ endif()
 
 if(MSVC)
     target_compile_options(server PRIVATE /EHsc /MD)
-    target_compile_options(client PRIVATE /EHsc /MD)
-    target_compile_options(protocol_codec_tests PRIVATE /EHsc /MD)
-    target_compile_options(two_client_websocket_integration_tests PRIVATE /EHsc /MD)
+    if(NOT KFC_SERVER_ONLY)
+        target_compile_options(client PRIVATE /EHsc /MD)
+        target_compile_options(protocol_codec_tests PRIVATE /EHsc /MD)
+        target_compile_options(two_client_websocket_integration_tests PRIVATE /EHsc /MD)
+    endif()
 endif()
