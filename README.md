@@ -94,9 +94,12 @@ Kung_Fu_Chess_updated/
 │       ├── context/
 │       │   └── GameContext.{hpp,cpp}
 │       ├── database/
+│       │   ├── DatabaseConfiguration.hpp
 │       │   ├── DatabaseInitializer.{hpp,cpp}
 │       │   ├── IDatabase.hpp
-│       │   └── SQLiteDatabase.{hpp,cpp}
+│       │   ├── PostgreSQLDatabase.{hpp,cpp}
+│       │   ├── SQLiteDatabase.{hpp,cpp}
+│       │   └── tests/PostgreSQLDatabaseTests.cc
 │       ├── events/
 │       │   ├── Event.hpp
 │       │   ├── EventBus.{hpp,cpp}
@@ -120,12 +123,19 @@ Kung_Fu_Chess_updated/
 │           ├── PlayerLifecycleService.{hpp,cpp}
 │           ├── PlayerSession.{hpp,cpp}
 │           └── PlayerSessionManager.{hpp,cpp}
-├── CMakeLists.txt
+├── docker/
+│   ├── nginx/nginx.conf
+│   └── postgres/init-app-user.sh
+├── .dockerignore
+├── .env.example
 ├── .gitignore
+├── CMakeLists.txt
+├── Dockerfile
+├── docker-compose.yml
 └── README.md
 ```
 
-The `build/` directory and `kungfu_chess.db` are generated locally by the build and server runtime and are not part of the source layout above.
+The `build/` directory, local `.env`, SQLite database files, and Docker named-volume contents are generated locally and are not part of the tracked source layout above.
 
 ## Features Implemented
 
@@ -323,6 +333,8 @@ Observer gameplay commands are rejected by the server before reaching `GameContr
 * OpenCV
 * Qt6 development packages for Core, Gui, and Widgets
 * Git and network access during the first configure so CMake can fetch IXWebSocket v11.4.5 and SQLite 3.45.2
+* Docker Desktop and Docker Compose for the PostgreSQL + NGINX deployment
+* A native libpq installation is required only when explicitly building PostgreSQL support on Windows with `KFC_ENABLE_POSTGRESQL=ON`
 
 IXWebSocket and the SQLite amalgamation are fetched automatically by the current `CMakeLists.txt`; they do not need to be installed separately.
 
@@ -370,23 +382,64 @@ The WebSocket integration test verifies the complete production communication fl
 
 ---
 
-# Build & Run Instructions
+## Choose a Runtime Mode
+
+The project supports two valid runtime modes. They use the same client and the same WebSocket endpoint, but they use different server and persistence setups.
+
+| Mode | Server process | Persistence | Infrastructure | Recommended use |
+|---|---|---|---|---|
+| **Native Windows** | `build/server.exe` | SQLite (`kungfu_chess.db`) | No Docker required | Local development, debugging, and native tests |
+| **Docker Compose** | Dockerized `game-server` behind NGINX | PostgreSQL named volume | PostgreSQL + game-server + NGINX containers | Full current deployment and end-to-end multiplayer operation |
+
+Both modes expose the client endpoint:
+
+```text
+ws://127.0.0.1:8080
+```
+
+> [!IMPORTANT]
+> Run only one server mode at a time. The native server and NGINX both use port `8080`, so starting both simultaneously causes a port conflict.
+
+### Native Windows Summary
+
+```powershell
+.\build\server.exe
+Start-Process .\build\client.exe
+Start-Process .\build\client.exe
+```
+
+This mode uses SQLite by default and does not require `.env`, PostgreSQL, NGINX, or Docker Compose.
+
+### Docker Compose Summary
+
+```powershell
+docker compose up -d
+docker compose ps
+Start-Process .\build\client.exe
+Start-Process .\build\client.exe
+```
+
+This mode requires a local `.env` with PostgreSQL passwords and is the recommended full deployment. Use `docker compose up --build -d` after server, CMake, Dockerfile, or dependency changes.
+
+## Runtime Option 1 — Native Windows Server with SQLite
+
+This mode runs the authoritative server directly on Windows and uses SQLite by default. It is independent from the Docker Compose deployment. Stop Compose before starting the native server.
 
 From the project root directory, run:
 
-## Configure Project
+### Configure Project
 
 ```powershell
 cmake -S . -B build -G Ninja
 ```
 
-## Build Server and Client
+### Build Server and Client
 
 ```powershell
 cmake --build build --target server client --parallel 4
 ```
 
-## Build Server, Client, and Tests
+### Build Server, Client, and Tests
 
 ```powershell
 cmake --build build --target server client protocol_codec_tests two_client_websocket_integration_tests --parallel 4
@@ -396,7 +449,7 @@ The client build copies the current `assets/` directory beside the client execut
 
 ---
 
-## Run the Server
+### Run the Native SQLite Server
 
 Open the first PowerShell / terminal window from the project root:
 
@@ -404,11 +457,11 @@ Open the first PowerShell / terminal window from the project root:
 .\build\server.exe
 ```
 
-Keep the server running while clients are connected.
+When `KFC_DATABASE_TYPE` is omitted, the native server uses SQLite and stores data in `kungfu_chess.db`. Keep the server running while clients are connected. Do not run Docker Compose at the same time because both modes use port `8080`.
 
 ---
 
-## Run the First Client
+### Run the First Client
 
 Open a second PowerShell / terminal window:
 
@@ -428,7 +481,7 @@ WHITE
 
 ---
 
-## Run the Second Client
+### Run the Second Client
 
 Open another PowerShell / terminal window:
 
@@ -446,7 +499,7 @@ BLACK
 
 ---
 
-## Run an Observer
+### Run an Observer
 
 Open another PowerShell / terminal window:
 
@@ -468,7 +521,7 @@ Observers see the live game and animations but cannot perform gameplay actions.
 
 ---
 
-## Recommended Runtime Setup
+### Recommended Native Runtime Setup
 
 ```text
 Terminal 1:
@@ -493,7 +546,7 @@ Terminal 5+:
 
 ---
 
-## Console Mode
+### Console Mode
 
 The GUI is the default client mode.
 
@@ -505,7 +558,7 @@ To launch the previous console workflow:
 
 ---
 
-## Run Tests
+### Run Tests
 
 After building the test targets:
 
@@ -521,7 +574,7 @@ ctest --test-dir build -R two_client_websocket_integration_tests --output-on-fai
 
 ---
 
-## Find Executables
+### Find Executables
 
 If the executable location is different in your environment:
 
@@ -535,7 +588,7 @@ Get-ChildItem -Recurse build -Filter client.exe
 
 ---
 
-## Manual Multiplayer Verification
+### Manual Native Multiplayer Verification
 
 1. Start the server.
 2. Start Client 1 and join as WHITE.
@@ -551,9 +604,9 @@ Get-ChildItem -Recurse build -Filter client.exe
 
 ---
 
-## Docker Compose Deployment
+## Runtime Option 2 — Docker Compose with PostgreSQL and NGINX
 
-The Docker deployment runs PostgreSQL, the authoritative server, and NGINX in containers while the existing GUI client remains a native Windows application.
+This is the recommended full deployment. It runs PostgreSQL, the authoritative server, and NGINX in containers while the existing GUI client remains a native Windows application. Stop any native `server.exe` process before starting Compose.
 
 ### Deployment Architecture
 
@@ -604,10 +657,24 @@ docker info
 
 ### Quick Start
 
-From the project root:
+For the first local Compose setup, create `.env`, open it, and replace both password placeholders with different local values:
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+Start the deployment from the project root:
 
 ```powershell
 docker compose up --build -d
+docker compose ps
+```
+
+For later runs, when the image does not need rebuilding:
+
+```powershell
+docker compose up -d
 docker compose ps
 ```
 
@@ -686,6 +753,15 @@ Rebuild the game-server image before starting after source changes:
 docker compose up --build -d
 ```
 
+Normal end-of-session sequence:
+
+```powershell
+Get-Process client -ErrorAction SilentlyContinue | Stop-Process
+docker compose down
+```
+
+This closes the native clients and removes the Compose containers and network while preserving PostgreSQL data.
+
 ### PostgreSQL and SQLite Persistence
 
 Docker Compose uses PostgreSQL as its persistence backend. PostgreSQL stores its data at the image-managed path:
@@ -754,11 +830,15 @@ docker compose exec postgres pg_isready -U kfc_admin -d kungfu_chess
 
 2. **Port 8080 is already in use**
 
-   Find the Windows process holding the configured public port and stop it before starting Compose:
+   The native server and the Compose NGINX service both use port `8080`. Ensure that only one runtime mode is active. Inspect the listener, native server process, and running containers:
 
    ```powershell
    Get-NetTCPConnection -LocalPort 8080 -State Listen
+   Get-Process server -ErrorAction SilentlyContinue
+   docker ps
    ```
+
+   Stop the native server process or the conflicting container before starting the other mode.
 
 3. **A service remains unhealthy**
 
