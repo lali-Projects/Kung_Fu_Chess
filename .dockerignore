@@ -1,6 +1,7 @@
 .git/
 .vscode/
 .vs/
+.env
 
 build/
 build-*/

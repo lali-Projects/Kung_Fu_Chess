@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(KungFuChess LANGUAGES CXX C)
 
 option(KFC_SERVER_ONLY "Build only the authoritative server" OFF)
+option(KFC_ENABLE_POSTGRESQL "Build the server with PostgreSQL support" OFF)
 
 set(CMAKE_TLS_VERIFY OFF CACHE BOOL "" FORCE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -51,6 +52,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Threads REQUIRED)
 
+if(KFC_ENABLE_POSTGRESQL)
+    find_package(PostgreSQL REQUIRED)
+endif()
+
 if(NOT KFC_SERVER_ONLY)
     # מציאת ספריית OpenCV שהותקנה דרך MSYS2
     find_package(OpenCV REQUIRED)
@@ -98,6 +103,15 @@ file(GLOB_RECURSE SERVER_SOURCES CONFIGURE_DEPENDS
     "src/application/*.cpp"
 )
 
+# PostgreSQL remains an optional server-only dependency. Its implementation is
+# not compiled unless support is explicitly enabled.
+list(FILTER SERVER_SOURCES
+    EXCLUDE REGEX "[/\\]PostgreSQLDatabase\\.cpp$")
+if(KFC_ENABLE_POSTGRESQL)
+    list(APPEND SERVER_SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/server/database/PostgreSQLDatabase.cpp")
+endif()
+
 # 3. קוד ייעודי ללקוח (כולל gui)
 file(GLOB_RECURSE CLIENT_SOURCES CONFIGURE_DEPENDS 
     "src/client/*.cpp"
@@ -115,6 +129,39 @@ target_link_libraries(server PRIVATE
     ixwebsocket
     Threads::Threads
 )
+
+if(KFC_ENABLE_POSTGRESQL)
+    target_link_libraries(server PRIVATE PostgreSQL::PostgreSQL)
+    target_compile_definitions(server PRIVATE KFC_HAS_POSTGRESQL=1)
+endif()
+
+if(KFC_ENABLE_POSTGRESQL)
+    add_executable(postgresql_database_tests
+        src/server/database/tests/PostgreSQLDatabaseTests.cc
+        src/server/database/PostgreSQLDatabase.cpp
+        src/server/database/DatabaseInitializer.cpp
+        src/server/repository/UserRepository.cpp
+        src/server/model/User.cpp
+    )
+
+    target_include_directories(postgresql_database_tests PRIVATE
+        ${COMMON_INCLUDES}
+    )
+
+    target_link_libraries(postgresql_database_tests PRIVATE
+        PostgreSQL::PostgreSQL
+        Threads::Threads
+    )
+
+    add_test(
+        NAME postgresql_database_tests
+        COMMAND postgresql_database_tests
+    )
+    set_tests_properties(postgresql_database_tests PROPERTIES
+        LABELS "postgresql;integration"
+        TIMEOUT 30
+    )
+endif()
 
 if(NOT KFC_SERVER_ONLY)
     target_link_libraries(server PRIVATE
@@ -221,6 +268,15 @@ target_link_libraries(two_client_websocket_integration_tests PRIVATE
     ixwebsocket
 )
 
+if(KFC_ENABLE_POSTGRESQL)
+    target_link_libraries(two_client_websocket_integration_tests PRIVATE
+        PostgreSQL::PostgreSQL
+    )
+    target_compile_definitions(two_client_websocket_integration_tests PRIVATE
+        KFC_HAS_POSTGRESQL=1
+    )
+endif()
+
 target_compile_definitions(two_client_websocket_integration_tests PRIVATE
     KFC_TEST_ASSET_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/assets"
 )
@@ -300,6 +356,9 @@ endif()
 
 if(MSVC)
     target_compile_options(server PRIVATE /EHsc /MD)
+    if(KFC_ENABLE_POSTGRESQL)
+        target_compile_options(postgresql_database_tests PRIVATE /EHsc /MD)
+    endif()
     if(NOT KFC_SERVER_ONLY)
         target_compile_options(client PRIVATE /EHsc /MD)
         target_compile_options(protocol_codec_tests PRIVATE /EHsc /MD)

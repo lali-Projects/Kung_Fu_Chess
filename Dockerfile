@@ -6,6 +6,7 @@ RUN apt-get update \
         ca-certificates \
         cmake \
         git \
+        libpq-dev \
         ninja-build \
         zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -16,15 +17,19 @@ COPY . .
 RUN cmake -S . -B /build -G Ninja \
         -DCMAKE_BUILD_TYPE=Release \
         -DKFC_SERVER_ONLY=ON \
+        -DKFC_ENABLE_POSTGRESQL=ON \
         -DUSE_TLS=OFF \
         -DUSE_ZLIB=ON \
-    && cmake --build /build --target server --parallel
+    && cmake --build /build \
+        --target server postgresql_database_tests \
+        --parallel
 
 FROM debian:12.11-slim AS runtime
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libstdc++6 \
+        libpq5 \
         netcat-openbsd \
         zlib1g \
     && rm -rf /var/lib/apt/lists/* \
@@ -37,7 +42,8 @@ COPY --from=builder --chown=kfc:kfc /build/server /app/server
 
 WORKDIR /app
 
-ENV KFC_SERVER_PORT=8080 \
+ENV KFC_DATABASE_TYPE=sqlite \
+    KFC_SERVER_PORT=8080 \
     KFC_SERVER_BIND_ADDRESS=0.0.0.0 \
     KFC_DATABASE_PATH=/data/kungfu_chess.db
 

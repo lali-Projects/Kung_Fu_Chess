@@ -6,6 +6,9 @@
 #include "EventBus.hpp"
 #include "IDatabase.hpp"
 #include "SQLiteDatabase.hpp"
+#ifdef KFC_HAS_POSTGRESQL
+#include "PostgreSQLDatabase.hpp"
+#endif
 #include "DatabaseInitializer.hpp"
 #include "UserRepository.hpp"
 #include "AuthService.hpp"
@@ -22,8 +25,22 @@ Application::Application(
     std::uint16_t port,
     std::string databasePath,
     std::string bindAddress)
+    : Application(
+          port,
+          DatabaseConfiguration{
+              DatabaseType::SQLITE,
+              std::move(databasePath),
+              {}},
+          std::move(bindAddress))
+{
+}
+
+Application::Application(
+    std::uint16_t port,
+    DatabaseConfiguration databaseConfiguration,
+    std::string bindAddress)
     : m_port(port),
-      m_databasePath(std::move(databasePath)),
+      m_databaseConfiguration(std::move(databaseConfiguration)),
       m_bindAddress(std::move(bindAddress))
 {
     if (m_port == 0)
@@ -31,9 +48,25 @@ Application::Application(
         throw std::invalid_argument("Server port cannot be zero");
     }
 
-    if (m_databasePath.empty())
+    if (m_databaseConfiguration.type == DatabaseType::SQLITE &&
+        m_databaseConfiguration.sqlitePath.empty())
     {
         throw std::invalid_argument("Database path cannot be empty");
+    }
+
+    if (m_databaseConfiguration.type == DatabaseType::POSTGRESQL)
+    {
+        const auto& postgresql = m_databaseConfiguration.postgresql;
+
+        if (postgresql.host.empty() ||
+            postgresql.port == 0 ||
+            postgresql.database.empty() ||
+            postgresql.user.empty() ||
+            postgresql.password.empty())
+        {
+            throw std::invalid_argument(
+                "PostgreSQL configuration is incomplete");
+        }
     }
 
     if (m_bindAddress.empty())
@@ -53,18 +86,40 @@ void Application::initialize()
 {
     m_eventBus = std::make_unique<EventBus>();
 
-    m_database = std::make_unique<SQLiteDatabase>(m_databasePath);
+    DatabaseDialect databaseDialect = DatabaseDialect::SQLITE;
+
+    if (m_databaseConfiguration.type == DatabaseType::SQLITE)
+    {
+        m_database = std::make_unique<SQLiteDatabase>(
+            m_databaseConfiguration.sqlitePath);
+    }
+    else
+    {
+#ifdef KFC_HAS_POSTGRESQL
+        m_database = std::make_unique<PostgreSQLDatabase>(
+            m_databaseConfiguration.postgresql);
+        databaseDialect = DatabaseDialect::POSTGRESQL;
+#else
+        throw std::runtime_error(
+            "PostgreSQL backend selected, but this server was built "
+            "without PostgreSQL support");
+#endif
+    }
 
     if (!m_database->open())
     {
         throw std::runtime_error("Database open failed: " + m_database->getLastError());
     }
 
-    m_databaseInitializer = std::make_unique<DatabaseInitializer>(*m_database);
+    m_databaseInitializer = std::make_unique<DatabaseInitializer>(
+        *m_database,
+        databaseDialect);
 
     if (!m_databaseInitializer->initialize())
     {
-        throw std::runtime_error("Database initialization failed");
+        throw std::runtime_error(
+            "Database initialization failed: " +
+            m_database->getLastError());
     }
 
     std::cout << "[APPLICATION] Database initialized\n";

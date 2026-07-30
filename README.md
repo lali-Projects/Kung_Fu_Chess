@@ -553,7 +553,7 @@ Get-ChildItem -Recurse build -Filter client.exe
 
 ## Docker Compose Deployment
 
-The Docker deployment runs the authoritative server and NGINX in containers while the existing GUI client remains a native Windows application.
+The Docker deployment runs PostgreSQL, the authoritative server, and NGINX in containers while the existing GUI client remains a native Windows application.
 
 ### Deployment Architecture
 
@@ -563,18 +563,19 @@ Windows GUI Clients
 NGINX Container
         -> private Docker network
 Authoritative Game Server Container (game-server:8080)
-        -> /data/kungfu_chess.db
-Persistent SQLite Named Volume
+        -> PostgreSQL (postgres:5432)
+Persistent PostgreSQL Named Volume
 ```
 
-NGINX is the only host-accessible entry point. It forwards WebSocket traffic to the private `game-server:8080` service without parsing commands, changing JSON, or interpreting game state. The game server remains authoritative, and the existing `TYPE|payload` command and snapshot protocol is unchanged.
+NGINX is the only host-accessible entry point. It forwards WebSocket traffic to the private `game-server:8080` service without parsing commands, changing JSON, or interpreting game state. The game server remains authoritative, and the existing `TYPE|payload` command and snapshot protocol is unchanged. PostgreSQL stores persistent application data such as users; active boards, pieces, sessions, motion, timers, and snapshots remain in memory in the authoritative game server.
 
 The Compose deployment uses these images and persistent resources:
 
 * Local game-server image: `kung-fu-chess-server:compose`
 * NGINX image: `nginx:1.28.0-alpine`
+* PostgreSQL image: `postgres:17.10-bookworm`
 * Private application network: `kung-fu-chess-private`
-* SQLite volume: `kung-fu-chess-sqlite-data`
+* PostgreSQL volume: `kung-fu-chess-postgres-data`
 
 ### Prerequisites
 
@@ -584,6 +585,14 @@ The Compose deployment uses these images and persistent resources:
 * The native Windows GUI prerequisites listed in the existing [Requirements](#requirements) section
 
 The GUI client is built and executed on Windows; it is not built or run inside the Docker deployment.
+
+Create an untracked local environment file before using Compose, then replace both PostgreSQL password placeholders with different values:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Do not commit `.env` or use the example passwords outside local development. The bootstrap administrator initializes PostgreSQL, while the game server receives only the dedicated non-superuser application's credentials.
 
 Verify Docker before starting:
 
@@ -602,13 +611,13 @@ docker compose up --build -d
 docker compose ps
 ```
 
-Both `game-server` and `nginx` should report `healthy`. Native clients connect through NGINX at:
+`postgres` must become healthy before `game-server` starts, and `game-server` must become healthy before NGINX starts. All three services should report `healthy`. Native clients connect through NGINX at:
 
 ```text
 ws://127.0.0.1:8080
 ```
 
-The game server is not published directly to the Windows host.
+PostgreSQL and the game server are not published to the Windows host. Only NGINX publishes the loopback port.
 
 ### Starting Two GUI Clients
 
@@ -638,6 +647,7 @@ docker compose logs -f
 Follow one service:
 
 ```powershell
+docker compose logs -f postgres
 docker compose logs -f game-server
 docker compose logs -f nginx
 ```
@@ -664,7 +674,7 @@ Stop and remove the Compose containers and application network:
 docker compose down
 ```
 
-`docker compose down` preserves the named SQLite volume. Recreate or start the deployment in the background with:
+`docker compose down` preserves the named PostgreSQL volume. Recreate or start the deployment in the background with:
 
 ```powershell
 docker compose up -d
@@ -676,29 +686,39 @@ Rebuild the game-server image before starting after source changes:
 docker compose up --build -d
 ```
 
-### SQLite Persistence
+### PostgreSQL and SQLite Persistence
 
-The database path inside `game-server` is:
+Docker Compose uses PostgreSQL as its persistence backend. PostgreSQL stores its data at the image-managed path:
 
 ```text
-/data/kungfu_chess.db
+/var/lib/postgresql/data
 ```
 
-`/data` is backed by the named volume `kung-fu-chess-sqlite-data`. The database and registered users persist across container restarts, game-server recreation, and `docker compose down` followed by `docker compose up -d`.
+That path is backed by `kung-fu-chess-postgres-data`. Registered users persist across PostgreSQL restarts, container recreation, and `docker compose down` followed by `docker compose up -d`.
+
+SQLite remains the default backend for native/local server execution when `KFC_DATABASE_TYPE` is omitted. Existing local SQLite files, `kfc-game-data`, and `kung-fu-chess-sqlite-data` remain separate from PostgreSQL. Existing SQLite users are retained but are not automatically imported into PostgreSQL; any future data-transfer tool must be a separate, explicit operation.
 
 > [!WARNING]
-> `docker compose down -v` deletes the named SQLite volume. This permanently deletes the stored database and registered users.
+> `docker compose down -v` deletes the named PostgreSQL volume. This permanently deletes the PostgreSQL database and registered users. Use `docker compose down` without `-v` for normal removal.
 
 ### Environment Configuration
 
-Compose starts with working defaults even when no local `.env` exists. Copy `.env.example` to `.env` only when local overrides are required. The local `.env` file is ignored by Git and must not contain committed secrets.
+Compose requires separate `KFC_POSTGRES_ADMIN_PASSWORD` and `KFC_POSTGRES_PASSWORD` values from the untracked local `.env`. Other values have development defaults. The bootstrap administrator creates the dedicated application role only when a fresh PostgreSQL volume is initialized; the game server receives only the application role and password. The application accepts only `sqlite` and `postgresql`; unsupported values fail startup without falling back to SQLite.
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `KFC_PUBLIC_PORT` | `8080` | Windows host port published by NGINX |
 | `KFC_SERVER_PORT` | `8080` | Private game-server port inside Docker; keep this at 8080 for the inherited health check |
 | `KFC_SERVER_BIND_ADDRESS` | `0.0.0.0` | Game-server listener address that permits access from the container network |
-| `KFC_DATABASE_PATH` | `/data/kungfu_chess.db` | Database path inside the game-server container |
+| `KFC_DATABASE_TYPE` | `postgresql` in Compose; `sqlite` when omitted natively | Selected `IDatabase` backend |
+| `KFC_POSTGRES_HOST` | `postgres` | Private Compose PostgreSQL service name |
+| `KFC_POSTGRES_PORT` | `5432` | Private PostgreSQL port; it is not published to Windows |
+| `KFC_POSTGRES_DATABASE` | `kungfu_chess` | PostgreSQL database name |
+| `KFC_POSTGRES_ADMIN_USER` | `kfc_admin` | Bootstrap administrator used only inside the PostgreSQL container |
+| `KFC_POSTGRES_ADMIN_PASSWORD` | no committed default | Required bootstrap password supplied through `.env`; use a value different from the application password |
+| `KFC_POSTGRES_USER` | `kfc` | Dedicated non-superuser PostgreSQL role used by the game server |
+| `KFC_POSTGRES_PASSWORD` | no committed default | Required application password supplied through `.env`; this is the only database password given to the game server |
+| `KFC_DATABASE_PATH` | `kungfu_chess.db` natively | SQLite path used only when `KFC_DATABASE_TYPE=sqlite` |
 
 ### Health and Status
 
@@ -708,13 +728,19 @@ Inspect service state:
 docker compose ps
 ```
 
-Both services should show `healthy`. The NGINX-only readiness endpoint is:
+All three services should show `healthy`. The NGINX-only readiness endpoint is:
 
 ```text
 http://127.0.0.1:8080/nginx-health
 ```
 
-The endpoint checks NGINX itself and is not forwarded to the game server. The game-server TCP health check runs privately inside its container.
+The endpoint checks NGINX itself and is not forwarded to the game server. PostgreSQL uses `pg_isready`; the game-server TCP health check runs privately inside its container.
+
+Inspect private PostgreSQL readiness without publishing port 5432:
+
+```powershell
+docker compose exec postgres pg_isready -U kfc_admin -d kungfu_chess
+```
 
 ### Troubleshooting
 
@@ -738,13 +764,14 @@ The endpoint checks NGINX itself and is not forwarded to the game server. The ga
 
    ```powershell
    docker compose ps
+   docker compose logs postgres
    docker compose logs game-server
    docker compose logs nginx
    ```
 
 4. **The GUI client cannot connect**
 
-   Confirm both services are healthy and check the NGINX readiness endpoint. The client endpoint must be `ws://127.0.0.1:8080`.
+   Confirm all three services are healthy and check the NGINX readiness endpoint. The client endpoint must be `ws://127.0.0.1:8080`.
 
    ```powershell
    Invoke-WebRequest http://127.0.0.1:8080/nginx-health
@@ -760,15 +787,19 @@ The endpoint checks NGINX itself and is not forwarded to the game server. The ga
    docker compose exec nginx nc -z -w 2 game-server 8080
    ```
 
-6. **SQLite permission errors**
+6. **PostgreSQL connection or authentication errors**
 
-   Inspect the non-root server identity, database ownership, and server logs:
+   Confirm `.env` exists, both password placeholders were replaced with different values, PostgreSQL is healthy, and the private service name is `postgres`:
 
    ```powershell
+   docker compose logs postgres
    docker compose exec game-server id
-   docker compose exec game-server ls -ln /data/kungfu_chess.db
+   docker compose exec game-server getent hosts postgres
+   docker compose exec game-server nc -z -w 2 postgres 5432
    docker compose logs game-server
    ```
+
+   Invalid hosts, credentials, ports, unsupported backend names, or migration failures prevent the game server from starting successfully. Changing either password variable does not rotate credentials already stored in an existing PostgreSQL volume; rotate the corresponding role deliberately before changing `.env`. PostgreSQL passwords are not written to application logs, and PostgreSQL selection never falls back to a local SQLite file.
 
 7. **Rebuilding after source changes**
 
@@ -791,19 +822,27 @@ The endpoint checks NGINX itself and is not forwarded to the game server. The ga
    docker compose logs -f game-server
    ```
 
-10. **Viewing NGINX logs**
+10. **Viewing PostgreSQL logs**
+
+    ```powershell
+    docker compose logs -f postgres
+    ```
+
+11. **Viewing NGINX logs**
 
     ```powershell
     docker compose logs -f nginx
     ```
 
-11. **HTTP-400 entries in game-server logs**
+12. **HTTP-400 entries in game-server logs**
 
     The inherited raw TCP health check opens the listener without completing a WebSocket handshake. IXWebSocket may log an HTTP-400 handshake message for that probe. These entries are expected and are not game failures.
 
 ### Validation Record
 
 Stage 3 automated two independent WebSocket clients through `ws://127.0.0.1:8080` and verified registration/login, room creation and joining, WHITE/BLACK assignment, `CLICK`, `COMMAND_RESULT`, `GAME_STATE`, unchanged framing, SQLite persistence, and graceful shutdown.
+
+Stage 5 repeats the authentication and two-client protocol flow through the same endpoint using PostgreSQL, and validates migration idempotency plus persistence across PostgreSQL recreation and Compose down/up.
 
 Manual GUI status: **USER-VERIFIED MANUAL PASS**. The user reported that two native Windows GUI windows opened and supported two-player operation through the same Compose endpoint. This user observation was not repeated by the automated Stage 4 audit.
 
@@ -812,5 +851,6 @@ Manual GUI status: **USER-VERIFIED MANUAL PASS**. The user reported that two nat
 * The GUI client remains a native Windows executable and is not containerized.
 * TLS/WSS termination is not implemented; the local endpoint uses `ws://`.
 * The deployment runs one authoritative game-server instance.
-* SQLite is used for the current single-server deployment.
+* PostgreSQL stores persistent user data but does not store or recover active game state.
+* Existing SQLite records are not automatically imported into PostgreSQL.
 * The raw TCP game-server health check may produce harmless HTTP-400 handshake logs.

@@ -3,11 +3,11 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include "DatabaseConfiguration.hpp"
 #include "MoveResult.hpp"
 
 class EventBus;
 class IDatabase;
-class SQLiteDatabase;
 class DatabaseInitializer;
 class UserRepository;
 class AuthService;
@@ -34,6 +34,11 @@ public:
     explicit Application(
         std::uint16_t port = 8080,
         std::string databasePath = "kungfu_chess.db",
+        std::string bindAddress = "127.0.0.1");
+
+    explicit Application(
+        std::uint16_t port,
+        DatabaseConfiguration databaseConfiguration,
         std::string bindAddress = "127.0.0.1");
 
     /**
@@ -90,7 +95,7 @@ private:
     std::unique_ptr<Server> m_server;
     std::unique_ptr<AuthoritativeGameLoop> m_gameLoop;
     std::uint16_t m_port;
-    std::string m_databasePath;
+    DatabaseConfiguration m_databaseConfiguration;
     std::string m_bindAddress;
     bool m_running{false};
 };

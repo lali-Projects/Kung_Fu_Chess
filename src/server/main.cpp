@@ -7,8 +7,10 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <utility>
 
 #include "Application.hpp"
+#include "DatabaseConfiguration.hpp"
 
 #include <ixwebsocket/IXNetSystem.h>
 
@@ -20,7 +22,7 @@ namespace
     {
         std::uint16_t port{8080};
         std::string bindAddress{"127.0.0.1"};
-        std::string databasePath{"kungfu_chess.db"};
+        DatabaseConfiguration database;
     };
 
     void handleSignal(int)
@@ -34,7 +36,9 @@ namespace
         return value ? value : defaultValue;
     }
 
-    std::uint16_t parsePort(const std::string& value)
+    std::uint16_t parsePort(
+        const std::string& value,
+        const char* variableName)
     {
         std::uint32_t parsedPort = 0;
         const auto result = std::from_chars(
@@ -49,7 +53,8 @@ namespace
             parsedPort > 65535)
         {
             throw std::invalid_argument(
-                "KFC_SERVER_PORT must be a number between 1 and 65535");
+                std::string(variableName) +
+                " must be a number between 1 and 65535");
         }
 
         return static_cast<std::uint16_t>(parsedPort);
@@ -62,13 +67,10 @@ namespace
         const std::string port = readEnvironmentValue(
             "KFC_SERVER_PORT",
             "8080");
-        configuration.port = parsePort(port);
+        configuration.port = parsePort(port, "KFC_SERVER_PORT");
         configuration.bindAddress = readEnvironmentValue(
             "KFC_SERVER_BIND_ADDRESS",
             "127.0.0.1");
-        configuration.databasePath = readEnvironmentValue(
-            "KFC_DATABASE_PATH",
-            "kungfu_chess.db");
 
         if (configuration.bindAddress.empty())
         {
@@ -76,10 +78,72 @@ namespace
                 "KFC_SERVER_BIND_ADDRESS cannot be empty");
         }
 
-        if (configuration.databasePath.empty())
+        const std::string databaseType = readEnvironmentValue(
+            "KFC_DATABASE_TYPE",
+            "sqlite");
+
+        if (databaseType == "sqlite")
+        {
+            configuration.database.type = DatabaseType::SQLITE;
+            configuration.database.sqlitePath = readEnvironmentValue(
+                "KFC_DATABASE_PATH",
+                "kungfu_chess.db");
+
+            if (configuration.database.sqlitePath.empty())
+            {
+                throw std::invalid_argument(
+                    "KFC_DATABASE_PATH cannot be empty");
+            }
+        }
+        else if (databaseType == "postgresql")
+        {
+            configuration.database.type = DatabaseType::POSTGRESQL;
+            auto& postgresql = configuration.database.postgresql;
+            postgresql.host = readEnvironmentValue(
+                "KFC_POSTGRES_HOST",
+                "127.0.0.1");
+            postgresql.port = parsePort(
+                readEnvironmentValue("KFC_POSTGRES_PORT", "5432"),
+                "KFC_POSTGRES_PORT");
+            postgresql.database = readEnvironmentValue(
+                "KFC_POSTGRES_DATABASE",
+                "kungfu_chess");
+            postgresql.user = readEnvironmentValue(
+                "KFC_POSTGRES_USER",
+                "kfc");
+            postgresql.password = readEnvironmentValue(
+                "KFC_POSTGRES_PASSWORD",
+                "");
+
+            if (postgresql.host.empty())
+            {
+                throw std::invalid_argument(
+                    "KFC_POSTGRES_HOST cannot be empty");
+            }
+
+            if (postgresql.database.empty())
+            {
+                throw std::invalid_argument(
+                    "KFC_POSTGRES_DATABASE cannot be empty");
+            }
+
+            if (postgresql.user.empty())
+            {
+                throw std::invalid_argument(
+                    "KFC_POSTGRES_USER cannot be empty");
+            }
+
+            if (postgresql.password.empty())
+            {
+                throw std::invalid_argument(
+                    "KFC_POSTGRES_PASSWORD is required when "
+                    "KFC_DATABASE_TYPE=postgresql");
+            }
+        }
+        else
         {
             throw std::invalid_argument(
-                "KFC_DATABASE_PATH cannot be empty");
+                "KFC_DATABASE_TYPE must be either sqlite or postgresql");
         }
 
         return configuration;
@@ -113,7 +177,7 @@ int main()
     {
         Application app(
             configuration.port,
-            configuration.databasePath,
+            std::move(configuration.database),
             configuration.bindAddress);
 
         app.start();
