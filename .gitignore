@@ -39,3 +39,6 @@ Makefile
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Local Docker Compose environment overrides
+.env

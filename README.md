@@ -548,3 +548,269 @@ Get-ChildItem -Recurse build -Filter client.exe
 9. Verify that OBSERVER clients cannot perform gameplay actions.
 10. Disconnect an observer and verify that the active match continues.
 11. Disconnect an active player and verify that observers remain connected and a newly joining client can claim the vacant active side.
+
+---
+
+## Docker Compose Deployment
+
+The Docker deployment runs the authoritative server and NGINX in containers while the existing GUI client remains a native Windows application.
+
+### Deployment Architecture
+
+```text
+Windows GUI Clients
+        -> WebSocket: ws://127.0.0.1:8080
+NGINX Container
+        -> private Docker network
+Authoritative Game Server Container (game-server:8080)
+        -> /data/kungfu_chess.db
+Persistent SQLite Named Volume
+```
+
+NGINX is the only host-accessible entry point. It forwards WebSocket traffic to the private `game-server:8080` service without parsing commands, changing JSON, or interpreting game state. The game server remains authoritative, and the existing `TYPE|payload` command and snapshot protocol is unchanged.
+
+The Compose deployment uses these images and persistent resources:
+
+* Local game-server image: `kung-fu-chess-server:compose`
+* NGINX image: `nginx:1.28.0-alpine`
+* Private application network: `kung-fu-chess-private`
+* SQLite volume: `kung-fu-chess-sqlite-data`
+
+### Prerequisites
+
+* Docker Desktop for Windows
+* A running Docker Engine
+* Docker Compose v2 or later
+* The native Windows GUI prerequisites listed in the existing [Requirements](#requirements) section
+
+The GUI client is built and executed on Windows; it is not built or run inside the Docker deployment.
+
+Verify Docker before starting:
+
+```powershell
+docker --version
+docker compose version
+docker info
+```
+
+### Quick Start
+
+From the project root:
+
+```powershell
+docker compose up --build -d
+docker compose ps
+```
+
+Both `game-server` and `nginx` should report `healthy`. Native clients connect through NGINX at:
+
+```text
+ws://127.0.0.1:8080
+```
+
+The game server is not published directly to the Windows host.
+
+### Starting Two GUI Clients
+
+The verified native Windows client executable is:
+
+```text
+.\build\client.exe
+```
+
+Start two instances from PowerShell:
+
+```powershell
+Start-Process .\build\client.exe
+Start-Process .\build\client.exe
+```
+
+Register or log in as two different users, then join the same room. The first active player is assigned WHITE and the second is assigned BLACK.
+
+### Logs
+
+Follow all Compose logs:
+
+```powershell
+docker compose logs -f
+```
+
+Follow one service:
+
+```powershell
+docker compose logs -f game-server
+docker compose logs -f nginx
+```
+
+`Ctrl+C` stops log viewing; it does not stop the containers.
+
+### Stop, Start, and Remove Containers
+
+Stop existing containers without removing them:
+
+```powershell
+docker compose stop
+```
+
+Start previously stopped containers:
+
+```powershell
+docker compose start
+```
+
+Stop and remove the Compose containers and application network:
+
+```powershell
+docker compose down
+```
+
+`docker compose down` preserves the named SQLite volume. Recreate or start the deployment in the background with:
+
+```powershell
+docker compose up -d
+```
+
+Rebuild the game-server image before starting after source changes:
+
+```powershell
+docker compose up --build -d
+```
+
+### SQLite Persistence
+
+The database path inside `game-server` is:
+
+```text
+/data/kungfu_chess.db
+```
+
+`/data` is backed by the named volume `kung-fu-chess-sqlite-data`. The database and registered users persist across container restarts, game-server recreation, and `docker compose down` followed by `docker compose up -d`.
+
+> [!WARNING]
+> `docker compose down -v` deletes the named SQLite volume. This permanently deletes the stored database and registered users.
+
+### Environment Configuration
+
+Compose starts with working defaults even when no local `.env` exists. Copy `.env.example` to `.env` only when local overrides are required. The local `.env` file is ignored by Git and must not contain committed secrets.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `KFC_PUBLIC_PORT` | `8080` | Windows host port published by NGINX |
+| `KFC_SERVER_PORT` | `8080` | Private game-server port inside Docker; keep this at 8080 for the inherited health check |
+| `KFC_SERVER_BIND_ADDRESS` | `0.0.0.0` | Game-server listener address that permits access from the container network |
+| `KFC_DATABASE_PATH` | `/data/kungfu_chess.db` | Database path inside the game-server container |
+
+### Health and Status
+
+Inspect service state:
+
+```powershell
+docker compose ps
+```
+
+Both services should show `healthy`. The NGINX-only readiness endpoint is:
+
+```text
+http://127.0.0.1:8080/nginx-health
+```
+
+The endpoint checks NGINX itself and is not forwarded to the game server. The game-server TCP health check runs privately inside its container.
+
+### Troubleshooting
+
+1. **Docker Desktop is not running**
+
+   Verify the daemon before retrying:
+
+   ```powershell
+   docker info
+   ```
+
+2. **Port 8080 is already in use**
+
+   Find the Windows process holding the configured public port and stop it before starting Compose:
+
+   ```powershell
+   Get-NetTCPConnection -LocalPort 8080 -State Listen
+   ```
+
+3. **A service remains unhealthy**
+
+   ```powershell
+   docker compose ps
+   docker compose logs game-server
+   docker compose logs nginx
+   ```
+
+4. **The GUI client cannot connect**
+
+   Confirm both services are healthy and check the NGINX readiness endpoint. The client endpoint must be `ws://127.0.0.1:8080`.
+
+   ```powershell
+   Invoke-WebRequest http://127.0.0.1:8080/nginx-health
+   ```
+
+5. **NGINX cannot reach the game server**
+
+   Validate configuration, private DNS, and upstream TCP access:
+
+   ```powershell
+   docker compose exec nginx nginx -t
+   docker compose exec nginx getent hosts game-server
+   docker compose exec nginx nc -z -w 2 game-server 8080
+   ```
+
+6. **SQLite permission errors**
+
+   Inspect the non-root server identity, database ownership, and server logs:
+
+   ```powershell
+   docker compose exec game-server id
+   docker compose exec game-server ls -ln /data/kungfu_chess.db
+   docker compose logs game-server
+   ```
+
+7. **Rebuilding after source changes**
+
+   ```powershell
+   docker compose up --build -d
+   ```
+
+8. **Stale Compose containers**
+
+   Recreate the deployment without deleting the database volume:
+
+   ```powershell
+   docker compose down
+   docker compose up --build -d
+   ```
+
+9. **Viewing game-server logs**
+
+   ```powershell
+   docker compose logs -f game-server
+   ```
+
+10. **Viewing NGINX logs**
+
+    ```powershell
+    docker compose logs -f nginx
+    ```
+
+11. **HTTP-400 entries in game-server logs**
+
+    The inherited raw TCP health check opens the listener without completing a WebSocket handshake. IXWebSocket may log an HTTP-400 handshake message for that probe. These entries are expected and are not game failures.
+
+### Validation Record
+
+Stage 3 automated two independent WebSocket clients through `ws://127.0.0.1:8080` and verified registration/login, room creation and joining, WHITE/BLACK assignment, `CLICK`, `COMMAND_RESULT`, `GAME_STATE`, unchanged framing, SQLite persistence, and graceful shutdown.
+
+Manual GUI status: **USER-VERIFIED MANUAL PASS**. The user reported that two native Windows GUI windows opened and supported two-player operation through the same Compose endpoint. This user observation was not repeated by the automated Stage 4 audit.
+
+### Current Limitations
+
+* The GUI client remains a native Windows executable and is not containerized.
+* TLS/WSS termination is not implemented; the local endpoint uses `ws://`.
+* The deployment runs one authoritative game-server instance.
+* SQLite is used for the current single-server deployment.
+* The raw TCP game-server health check may produce harmless HTTP-400 handshake logs.
